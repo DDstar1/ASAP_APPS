@@ -9,6 +9,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        tabBarHideOnKeyboard: true,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -54,7 +55,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="chat"
+        name="chats"
         options={{
           title: "Chat",
           tabBarIcon: ({ color, focused }) => (
