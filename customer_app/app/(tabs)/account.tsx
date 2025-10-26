@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AccountScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-[#1c1c1e]">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#1c1c1e]">
       <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         {/* Profile Header */}
         <View className="items-center mt-6">

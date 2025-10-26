@@ -191,7 +191,7 @@ const OrdersPage = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4">
         <Text className="text-white text-2xl font-semibold">My Orders</Text>

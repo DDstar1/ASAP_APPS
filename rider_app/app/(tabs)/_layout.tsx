@@ -9,19 +9,17 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarHideOnKeyboard: true,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopColor: "#E5E7EB",
-          borderTopWidth: 1,
+          backgroundColor: "#111827", // same as bg-gray-900
+          borderTopColor: "transparent",
         },
-        tabBarActiveTintColor: "#10B981", // green-500
+        tabBarActiveTintColor: "#f97316", // orange-500
         tabBarInactiveTintColor: "#9CA3AF", // gray-400
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: "600",
         },
       }}

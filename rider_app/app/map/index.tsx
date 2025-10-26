@@ -1,59 +1,74 @@
-import MapboxGL from "@rnmapbox/maps";
 import React, { useEffect, useState } from "react";
-import { PermissionsAndroid, Platform, StyleSheet, View } from "react-native";
-
-// ✅ Set your Mapbox access token
-MapboxGL.setAccessToken(
-  "pk.eyJ1IjoiZGRoYXZlbiIsImEiOiJjbWdrOHRzdzIwcTBpMmxzbHVod3JoMDlnIn0.LJ4i7n2HINrY_QNllddYPA"
-);
+import {
+  PermissionsAndroid,
+  Platform,
+  StyleSheet,
+  View,
+  ActivityIndicator,
+} from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import * as Location from "expo-location";
 
 export default function MapScreen() {
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(
-    null
-  );
+  const [region, setRegion] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ Request location permission (Android)
+  // ✅ Request location permission and get user's current position
   useEffect(() => {
-    const requestPermission = async () => {
-      if (Platform.OS === "android") {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+    const getLocation = async () => {
+      try {
+        // Ask for permission
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
           console.warn("Location permission denied");
+          setLoading(false);
+          return;
         }
+
+        // Get current location
+        const location = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = location.coords;
+
+        setRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+      } catch (err) {
+        console.error("Error getting location:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    requestPermission();
+
+    getLocation();
   }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <MapboxGL.MapView
-        style={styles.map}
-        styleURL={MapboxGL.StyleURL.Street}
-        logoEnabled={false}
-        compassEnabled
-      >
-        {/* 👇 Show the user's location */}
-        <MapboxGL.UserLocation
-          visible={true}
-          onUpdate={(location) => {
-            const { longitude, latitude } = location.coords;
-            setUserLocation([longitude, latitude]);
-          }}
-        />
-
-        {/* 👇 Automatically snap camera to user location */}
-        {userLocation && (
-          <MapboxGL.Camera
-            zoomLevel={14}
-            centerCoordinate={userLocation}
-            animationMode="flyTo"
-            animationDuration={1000}
-          />
-        )}
-      </MapboxGL.MapView>
+      {region && (
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          region={region}
+          showsUserLocation={true}
+          showsCompass={true}
+          showsMyLocationButton={true}
+          onRegionChangeComplete={(newRegion) => setRegion(newRegion)}
+        >
+          {/* 👇 Optional marker at user location */}
+          <Marker coordinate={region} title="You are here" />
+        </MapView>
+      )}
     </View>
   );
 }
@@ -61,4 +76,10 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "black",
+  },
 });

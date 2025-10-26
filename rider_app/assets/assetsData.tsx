@@ -11,6 +11,9 @@ export const IMAGES = {
   icon: require("./images/icon.png"),
   splashIcon: require("./images/splash-icon.png"),
   riderScooter: require("./images/rider_scooter.svg"),
+  riderIllustraion: require("./images/rider_illustration.png"),
+  indomie_package: require("./images/indomie_package.jpg"),
+
   // 👉 add more images here if needed
 };
 

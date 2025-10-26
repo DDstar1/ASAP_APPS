@@ -118,20 +118,6 @@ const OrdersPage = () => {
       statusColor: "#22c55e",
       map: IMAGES.dummy_map,
     },
-    {
-      id: "TRK-8D7L-5Q3C",
-      location: "Lekki Phase 1",
-      status: "Pending Pickup",
-      statusColor: "#facc15",
-      map: IMAGES.dummy_map,
-    },
-    {
-      id: "TRK-1H9J-4T7Z",
-      location: "Abuja Garki",
-      status: "Delivered",
-      statusColor: "#3b82f6",
-      map: IMAGES.dummy_map,
-    },
   ];
 
   const DirectionArrows = ({ direction }: { direction: string }) => (
@@ -191,58 +177,52 @@ const OrdersPage = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4">
-        <Text className="text-white text-2xl font-semibold">My Orders</Text>
+        <Text className="text-white text-2xl font-semibold">
+          All Deliveries
+        </Text>
         {MY_ICONS.message("white", 24)}
       </View>
 
       {/* Current Tracking Cards (Horizontal Scroll) */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="px-4 mb-6"
-        contentContainerStyle={{ alignItems: "center" }}
-        style={{ maxHeight: 180 }}
-      >
-        {currentTrackings.map((item, index) => (
-          <View
-            key={index}
-            style={{ width: width * 0.85 }}
-            className="bg-[#3C3C43] rounded-2xl flex flex-row overflow-hidden h-full relative mr-4 p-3"
-          >
-            {/* Left Side */}
-            <View className="flex-1 pr-2">
-              <Text className="text-white text-sm font-medium mb-1">
-                Current Tracking
-              </Text>
-              <Text className="text-white text-lg font-bold mb-2">
-                #{item.id}
-              </Text>
+      <Text className="text-white text-center text-2xl font-medium mb-1">
+        Current Delivery
+      </Text>
+      {currentTrackings.map((item, index) => (
+        <View
+          key={index}
+          className="bg-[#3C3C43] h-fit rounded-2xl flex flex-row overflow-hidden relative  p-3 m-5"
+        >
+          {/* Left Side */}
+          <View className="flex-1 pr-2">
+            <Text className="text-white text-lg font-bold mb-2">
+              #{item.id}
+            </Text>
 
-              <Text className="text-gray-400 text-xs mb-1">
-                Current Location
-              </Text>
-              <View className="flex-row items-center mb-2">
-                {MY_ICONS.location("#9CA3AF", 14)}
-                <Text className="text-white text-sm ml-2">{item.location}</Text>
-              </View>
-
-              <Text className="text-gray-400 text-xs mb-1">Status</Text>
-              <View className="flex-row items-center">
-                {MY_ICONS.circle(item.statusColor, 7)}
-                <Text className="text-white text-sm ml-2">{item.status}</Text>
-              </View>
+            <Text className="text-gray-400 text-xs mb-1">Current Location</Text>
+            <View className="flex-row items-center mb-2">
+              {MY_ICONS.location("#9CA3AF", 14)}
+              <Text className="text-white text-sm ml-2">{item.location}</Text>
             </View>
 
-            {/* Map Image */}
-            <Image source={item.map} className="w-2/5 h-32 rounded-lg" />
+            <Text className="text-gray-400 text-xs mb-1">Status</Text>
+            <View className="flex-row items-center">
+              {MY_ICONS.circle(item.statusColor, 7)}
+              <Text className="text-white text-sm ml-2">{item.status}</Text>
+            </View>
           </View>
-        ))}
-      </ScrollView>
+
+          {/* Map Image */}
+          <Image source={item.map} className="w-2/5 h-32 rounded-lg" />
+        </View>
+      ))}
 
       {/* Orders History List with Sticky Headers */}
+      <Text className="text-white text-center text-2xl font-medium mb-1">
+        Completed Deliveries
+      </Text>
       <SectionList
         sections={orderSections}
         keyExtractor={(item, index) => item.id + index}

@@ -26,6 +26,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "config": {
+        "googleMaps": { "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y" }
+      },
       "package": "com.ddhaven.asap_rider"
     },
     "web": {
@@ -45,19 +48,22 @@
         }
       ],
       [
-        "@rnmapbox/maps",
+        "expo-maps",
         {
-          "RNMapboxMapsDownloadToken": "sk.eyJ1IjoiZGRoYXZlbiIsImEiOiJjbWdrOHY3ejAwb3JtMmtyNHNzbmwydTFsIn0.RHYKkuj3-cBtsastgcrTKw"
+          "requestLocationPermission": true,
+          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
         "projectId": "a5920a6b-2597-44b3-a63b-f3dda41504cb"
-      }
+      },
+      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y"
     },
     "owner": "ddhaven"
   }

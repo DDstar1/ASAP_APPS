@@ -54,7 +54,7 @@ const ShippingTrackerApp = () => {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
       <StatusBar barStyle="light-content" backgroundColor="#111827" />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>

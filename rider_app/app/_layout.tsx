@@ -53,7 +53,23 @@ export default function RootLayout() {
             ),
           })}
         />
-
+        <Stack.Screen
+          name="order_detail/index"
+          options={{
+            headerShown: true,
+            title: "Order Details",
+            headerStyle: {
+              backgroundColor: "#111827", // Primary Background
+              shadowColor: "#000",
+              shadowOpacity: 0.2,
+              shadowRadius: 5,
+            },
+            headerTintColor: "#FFFFFF", // Primary Text
+            headerTitleStyle: {
+              fontWeight: "bold",
+            },
+          }}
+        />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />

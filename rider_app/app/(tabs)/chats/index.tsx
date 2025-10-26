@@ -134,7 +134,7 @@ const ChatsListPage = () => {
   const handleChatPress = async (chat: any) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
-      pathname: "/(tabs)/chats/[chat_id]",
+      pathname: "chat_details/[chat_id]",
       params: { id: chat.id, name: chat.clientName },
     });
   };
@@ -192,7 +192,7 @@ const ChatsListPage = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-900">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-4">
         <Text className="text-white text-2xl font-semibold">Messages</Text>

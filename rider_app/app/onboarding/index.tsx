@@ -84,7 +84,7 @@ export default function Onboarding() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-white">
       <FlatList
         data={slides}
         renderItem={renderItem}

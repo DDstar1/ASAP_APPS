@@ -10,3 +10,25 @@
 | **Status Green**       | `#34D399` | `text-green-400`  | Completed status                             |
 | **Border Gray**        | `#9CA3AF` | `border-gray-400` | Search input border, dividers                |
 | **Accent Blue**        | `#2563EB` | `text-blue-600`   | (Optional) route polyline / highlights       |
+
+
+white abd yellow tab layout theme
+   <Tabs
+      screenOptions={{
+        tabBarHideOnKeyboard: true,
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarBackground: TabBarBackground,
+        tabBarStyle: {
+          backgroundColor: "#ffffff",
+          borderTopColor: "#E5E7EB",
+          borderTopWidth: 2,
+        },
+        tabBarActiveTintColor: "#10B981", // green-500
+        tabBarInactiveTintColor: "#9CA3AF", // gray-400
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+        },
+      }}
+    >
