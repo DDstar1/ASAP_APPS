@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "asap_customer",
+    "scheme": "com.asapCustomer",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -63,7 +63,9 @@
     "extra": {
       "eas": {
         "projectId": "691b63ab-2d6e-4a89-9cf4-72fe45aff10d"
-      }
+      },
+      "SUPABASE_URL": "https://edtsmqjnkakaaujmmhip.supabase.co",
+      "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkdHNtcWpua2FrYWF1am1taGlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQzNDk0MSwiZXhwIjoyMDc3MDEwOTQxfQ.vRZZE1pZ5koj3cxoRPtxgUPlO7I1ZrOP-Mk_2dMfKx8"
     },
     "owner": "ddhaven"
   }

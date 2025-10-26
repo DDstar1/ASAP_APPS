@@ -1,19 +1,19 @@
 import { IMAGES } from "@/assets/assetsData";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useLayoutEffect, useRef, useState } from "react";
-import { ImageBackground } from "react-native";
-
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import {
+  ImageBackground,
   Dimensions,
   FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Text,
   TouchableOpacity,
   View,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "@/lib/supabase";
 
 const { width, height } = Dimensions.get("window");
 
@@ -43,13 +43,21 @@ const slides = [
 
 export default function Onboarding() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [userSession, setUserSession] = useState(null);
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: false,
+    navigation.setOptions({ headerShown: false });
+  }, []);
+
+  // Check auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUserSession(data.session as any);
+      setLoading(false); // ✅ Important
     });
   }, []);
 
@@ -57,7 +65,8 @@ export default function Onboarding() {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      router.replace("/home"); // Go to main tabs after onboarding
+      if (userSession) router.replace("/(tabs)/home");
+      else router.replace("/auth/login");
     }
   };
 
@@ -65,6 +74,8 @@ export default function Onboarding() {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
     setCurrentIndex(index);
   };
+
+  if (loading) return null; // Prevent flicker before auth check
 
   const renderItem = ({ item }: any) => (
     <ImageBackground
