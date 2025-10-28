@@ -117,3 +117,35 @@ export async function getCusUserById(userId: string) {
     return null;
   }
 }
+
+
+
+export async function uploadDeliveryImage(file: File | Blob, folder = "package_images") {
+  try {
+    // Generate a unique filename with timestamp
+    const fileExt = file instanceof File ? file.name.split(".").pop() : "jpg";
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    // Upload image
+    const { error } = await supabase.storage
+      .from("images") // 👈 your bucket name
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data } = supabase.storage.from("images").getPublicUrl(filePath);
+
+    return {
+      publicUrl: data.publicUrl,
+      path: filePath,
+    };
+  } catch (err: any) {
+    console.error("Image upload failed:", err.message);
+    throw new Error(err.message);
+  }
+}

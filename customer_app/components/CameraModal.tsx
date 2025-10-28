@@ -5,6 +5,7 @@ import { Directory, File, Paths } from "expo-file-system";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {uploadDeliveryImage} from "@/lib/supabase-functions"
 
 export default function CameraModal({
   visible,
@@ -77,7 +78,6 @@ export default function CameraModal({
     if (!cameraRef.current) return;
 
     try {
-      // Take the picture
         // Take the picture
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
@@ -98,6 +98,10 @@ export default function CameraModal({
       const filename = photo.uri.split("/").pop() || `photo_${Date.now()}.jpg`;
       const newFile = new File(appFolder, filename);
 
+      const imageBlob = await fetch(newFile.uri).then(res => res.blob());
+      const { publicUrl } = await uploadDeliveryImage(imageBlob, "deliveries");
+      console.log("🌐 Uploaded to Supabase:", publicUrl);
+
       // Move the file using the File class
       const tempFile = new File(photo.uri);
       tempFile.move(newFile);
@@ -105,7 +109,11 @@ export default function CameraModal({
       console.log("✅ File moved to:", newFile.uri);
 
       // Save path in AsyncStorage
-      await AsyncStorage.setItem("lastPhoto", newFile.uri);
+      await AsyncStorage.multiSet([
+      ["lastPhoto", newFile.uri],
+      ["lastPhotoUrl", publicUrl],
+    ]);
+    
       console.log("💾 Saved path to AsyncStorage");
 
       // Pass safe URI to parent
