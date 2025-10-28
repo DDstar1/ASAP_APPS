@@ -78,6 +78,7 @@ export default function CameraModal({
 
     try {
       // Take the picture
+        // Take the picture
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
