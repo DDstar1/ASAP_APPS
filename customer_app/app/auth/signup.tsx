@@ -1,161 +1,178 @@
-import React, { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  Alert,
-  StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  AppState,
+  Alert,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
+import { Input, Icon } from "@rneui/themed";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
+import { makeRedirectUri } from "expo-auth-session";
+import * as QueryParams from "expo-auth-session/build/QueryParams";
+import * as Linking from "expo-linking";
+import { signUpUser } from "@/lib/supabase-functions";
 
-// Automatically manage token refresh when app is active
-AppState.addEventListener("change", (state) => {
-  if (state === "active") {
-    supabase.auth.startAutoRefresh();
-  } else {
-    supabase.auth.stopAutoRefresh();
+const createSessionFromUrl = async (url: string) => {
+  const { params } = QueryParams.getQueryParams(url);
+  const { access_token, refresh_token } = params;
+
+  if (access_token) {
+    const { error } = await supabase.auth.setSession({
+      access_token,
+      refresh_token,
+    });
+    if (error) console.error(error);
   }
-});
+};
 
-export default function Auth() {
+export default function SignUpScreen() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  async function signInWithEmail() {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
-      return;
+  const url = Linking.useURL();
+  useEffect(() => {
+    if (url) {
+      createSessionFromUrl(url);
+      router.replace("/(tabs)/home");
     }
+  }, [url]);
+
+  const handleSignUp = async () => {
     setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
-    if (error) Alert.alert("Login Error", error.message);
-    else Alert.alert("Success", "Signed in successfully!");
-  }
-
-  async function signUpWithEmail() {
-    if (!email || !password) {
-      Alert.alert("Error", "Please enter both email and password.");
-      return;
+    try {
+      const user = await signUpUser(email, password, username);
+      Alert.alert(
+        "Verify Your Email",
+        "A verification link has been sent to your inbox."
+      );
+      router.push("/(tabs)/home");
+    } catch (err: any) {
+      Alert.alert("Signup Failed", err.message || "An error occurred");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    setLoading(false);
-    if (error) Alert.alert("Signup Error", error.message);
-    else if (!data.session)
-      Alert.alert("Check your inbox!", "Please verify your email to continue.");
-    else Alert.alert("Success", "Account created!");
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome</Text>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+      keyboardShouldPersistTaps="handled"
+      className="bg-[#1c1c1e]"
+    >
+      <View className="px-6">
+        <Text className="text-white text-3xl font-bold mb-8 text-center">
+          Create an Account
+        </Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
+        <Input
+          placeholder="Username"
+          value={username}
+          onChangeText={setUsername}
+          leftIcon={<Icon name="person" type="material" color="#aaa" />}
+          inputContainerStyle={{
+            backgroundColor: "#2c2c2e",
+            borderRadius: 12,
+            borderBottomWidth: 0,
+            paddingHorizontal: 10,
+          }}
+          inputStyle={{ color: "#fff" }}
+        />
+
+        <Input
+          placeholder="Email"
           value={email}
           onChangeText={setEmail}
-          placeholder="email@address.com"
           keyboardType="email-address"
           autoCapitalize="none"
-          style={styles.input}
+          leftIcon={<Icon name="email" type="material" color="#aaa" />}
+          inputContainerStyle={{
+            backgroundColor: "#2c2c2e",
+            borderRadius: 12,
+            borderBottomWidth: 0,
+            paddingHorizontal: 10,
+          }}
+          inputStyle={{ color: "#fff" }}
         />
-      </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Password</Text>
-        <TextInput
+        <Input
+          placeholder="Password"
           value={password}
           onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          autoCapitalize="none"
-          style={styles.input}
+          secureTextEntry={!showPassword}
+          leftIcon={<Icon name="lock" type="material" color="#aaa" />}
+          rightIcon={
+            <Icon
+              name={showPassword ? "visibility" : "visibility-off"}
+              type="material"
+              color="#aaa"
+              onPress={() => setShowPassword(!showPassword)}
+            />
+          }
+          inputContainerStyle={{
+            backgroundColor: "#2c2c2e",
+            borderRadius: 12,
+            borderBottomWidth: 0,
+            paddingHorizontal: 10,
+          }}
+          inputStyle={{ color: "#fff" }}
         />
+
+        <Input
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showConfirm}
+          leftIcon={<Icon name="lock" type="material" color="#aaa" />}
+          rightIcon={
+            <Icon
+              name={showConfirm ? "visibility" : "visibility-off"}
+              type="material"
+              color="#aaa"
+              onPress={() => setShowConfirm(!showConfirm)}
+            />
+          }
+          inputContainerStyle={{
+            backgroundColor: "#2c2c2e",
+            borderRadius: 12,
+            borderBottomWidth: 0,
+            paddingHorizontal: 10,
+          }}
+          inputStyle={{ color: "#fff" }}
+        />
+
+        <TouchableOpacity
+          onPress={handleSignUp}
+          disabled={loading}
+          className="bg-green-600 py-4 rounded-2xl mb-4"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white text-center text-base font-semibold">
+              Create Account
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.push("/auth/login")}>
+          <Text className="text-green-400 text-center text-base font-semibold">
+            Already have an account? Sign In
+          </Text>
+        </TouchableOpacity>
+
+        <Text className="text-gray-400 text-xs text-center mt-6">
+          By signing up, you agree to our Terms & Privacy Policy.
+        </Text>
       </View>
-
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: "#10B981" }]}
-        onPress={signInWithEmail}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign In</Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: "#3B82F6" }]}
-        onPress={signUpWithEmail}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign Up</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 20,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111",
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: "#444",
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
-  },
-  button: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

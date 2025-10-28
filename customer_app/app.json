@@ -39,7 +39,9 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      ["expo-camera"],
+      [
+        "expo-camera"
+      ],
       [
         "expo-splash-screen",
         {
@@ -55,7 +57,8 @@
           "requestLocationPermission": true,
           "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

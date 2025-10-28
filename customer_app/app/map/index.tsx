@@ -31,7 +31,6 @@ export default function MapScreen() {
   const [packageImage, setPackageImage] = useState<any>(null);
 
   const mapRef = useRef<MapView>(null);
-
   // Load package image from AsyncStorage
   useEffect(() => {
     loadPackageImage();
@@ -181,10 +180,7 @@ export default function MapScreen() {
       </MapView>
 
       {/* Bottom overlay */}
-      <SafeAreaView
-        edges={["top"]}
-        className="absolute bottom-0 left-0 right-0 px-4"
-      >
+      <SafeAreaView className="absolute bottom-0 left-0 right-0 px-4">
         <View className="bg-[#3C3C43] rounded-t-2xl px-4 py-3">
           <Text className="text-lg font-semibold text-white text-center">
             Select Pickup & Destination

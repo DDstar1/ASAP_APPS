@@ -1,9 +1,10 @@
 import { IMAGES } from "@/assets/assetsData";
-import CameraModal from "@/components/CameraModal"; // ⬅️ import the modal
+import CameraModal from "@/components/CameraModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getFormattedToday } from "@/utils/home_utils";
 import {
   Alert,
   Image,
@@ -15,9 +16,36 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useUserStore } from "@/store/useUserStore";
+import { getCusUserById } from "@/lib/supabase-functions";
 
 const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [customUser, setCustomUser] = useState<any>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const userId = useUserStore((state) => state.user?.id);
+
+  // ✅ Fetch custom user when userId changes
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!userId) {
+        console.warn("⚠️ No user ID found in store");
+        setLoadingUser(false);
+        return;
+      }
+
+      try {
+        const data = await getCusUserById(userId);
+        setCustomUser(data);
+      } catch (error) {
+        console.error("❌ Error fetching user:", error);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUser();
+  }, [userId]);
 
   const shipments = [
     {
@@ -59,20 +87,23 @@ const ShippingTrackerApp = () => {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="flex-row justify-between items-center  px-4 py-3">
+        <View className="flex-row justify-between items-center px-4 py-3">
           <View className="flex-row bg-[#3C3C43] p-3 px-5 justify-evenly rounded-full items-center">
             <View className="w-10 h-10 rounded-full bg-orange-500 justify-center items-center mr-3">
-              <Text className="text-white text-base font-bold">M</Text>
+              <Text className="text-white text-base font-bold">
+                {customUser?.username?.[0]?.toUpperCase() ?? "U"}
+              </Text>
             </View>
             <View className="justify-center">
               <Text className="text-white text-lg font-semibold">
-                Mithun MR
+                {loadingUser ? "Loading..." : customUser?.username || "User"}
               </Text>
               <Text className="text-gray-400 text-xs mt-0.5">
-                24th Nov 2024
+                {getFormattedToday()}
               </Text>
             </View>
           </View>
+
           <TouchableOpacity className="ml-4 aspect-square flex-row items-center justify-center bg-[#3C3C43] p-3 rounded-full">
             <Ionicons name="settings-outline" size={20} color="#9CA3AF" />
           </TouchableOpacity>
@@ -130,7 +161,7 @@ const ShippingTrackerApp = () => {
               }}
             >
               <View className="w-16 h-16 rounded-full bg-[#3C3C43] justify-center items-center mb-2">
-                <Ionicons name={action.icon} size={24} color="white" />
+                <Ionicons name={action.icon as any} size={24} color="white" />
               </View>
               <Text className="text-gray-400 text-xs">{action.label}</Text>
             </TouchableOpacity>
@@ -187,7 +218,7 @@ const ShippingTrackerApp = () => {
         visible={cameraVisible}
         onClose={() => setCameraVisible(false)}
         onConfirm={async (uri: any) => {
-          console.log("Package photo URI has being saved");
+          console.log("📦 Package photo URI saved");
           try {
             await AsyncStorage.setItem("packageImage", uri);
             console.log("✅ Image saved to AsyncStorage");

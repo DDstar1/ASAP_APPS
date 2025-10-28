@@ -13,7 +13,8 @@ import {
   NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { supabase } from "@/lib/supabase";
+import { useUserStore } from "@/store/useUserStore";
+import * as SystemUI from "expo-system-ui";
 
 const { width, height } = Dimensions.get("window");
 
@@ -43,29 +44,31 @@ const slides = [
 
 export default function Onboarding() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [userSession, setUserSession] = useState(null);
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   const navigation = useNavigation();
+
+  const { user, loading, fetchUserSession } = useUserStore();
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, []);
 
-  // Check auth session
+  // ✅ Fetch user session from Supabase
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUserSession(data.session as any);
-      setLoading(false); // ✅ Important
-    });
+    fetchUserSession();
+  }, []);
+
+  useEffect(() => {
+    // Make Android navigation bar transparent
+    SystemUI.setBackgroundColorAsync("transparent");
   }, []);
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      if (userSession) router.replace("/(tabs)/home");
+      if (user) router.replace("/(tabs)/home");
       else router.replace("/auth/login");
     }
   };
@@ -75,7 +78,7 @@ export default function Onboarding() {
     setCurrentIndex(index);
   };
 
-  if (loading) return null; // Prevent flicker before auth check
+  if (loading) return null; // avoid flicker before session check completes
 
   const renderItem = ({ item }: any) => (
     <ImageBackground
