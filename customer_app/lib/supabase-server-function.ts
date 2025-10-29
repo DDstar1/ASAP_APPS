@@ -1,0 +1,2 @@
+// Create Supabase client using service role key (SERVER ONLY)
+// DONT FORGET TO PUT THIS ON NEXT AND NOT IN REACT NATIVE THAT IS SIGNED URL LOGIC

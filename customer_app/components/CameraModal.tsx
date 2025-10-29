@@ -5,7 +5,8 @@ import { Directory, File, Paths } from "expo-file-system";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {uploadDeliveryImage} from "@/lib/supabase-functions"
+import { uploadDeliveryImage } from "@/lib/supabase-functions";
+import * as Progress from "react-native-progress";
 
 export default function CameraModal({
   visible,
@@ -20,6 +21,8 @@ export default function CameraModal({
   const [permission, requestPermission] = useCameraPermissions();
   const [isReady, setIsReady] = useState(false);
   const cameraRef = useRef<any>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (visible && !permission?.granted) {
@@ -78,7 +81,10 @@ export default function CameraModal({
     if (!cameraRef.current) return;
 
     try {
-        // Take the picture
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // Take the picture
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
@@ -91,36 +97,46 @@ export default function CameraModal({
 
       // Ensure the folder exists
       if (!appFolder.exists) {
-        appFolder.create();
+        await appFolder.create();
       }
 
       // Move file into app folder
       const filename = photo.uri.split("/").pop() || `photo_${Date.now()}.jpg`;
       const newFile = new File(appFolder, filename);
 
-      const imageBlob = await fetch(newFile.uri).then(res => res.blob());
-      const { publicUrl } = await uploadDeliveryImage(imageBlob, "deliveries");
-      console.log("🌐 Uploaded to Supabase:", publicUrl);
-
-      // Move the file using the File class
+      // Copy the file using the File class
       const tempFile = new File(photo.uri);
-      tempFile.move(newFile);
+      await tempFile.copy(newFile);
 
-      console.log("✅ File moved to:", newFile.uri);
+      console.log("✅ File saved to:", newFile.uri);
+
+      // Upload to Supabase with progress tracking
+      const publicUrl = await uploadDeliveryImage(
+        newFile.uri,
+        "package_images",
+        (progress) => {
+          const percent = Math.round(progress * 100);
+          setUploadProgress(progress);
+          console.log(`📤 Upload progress: ${percent}%`);
+        }
+      );
 
       // Save path in AsyncStorage
       await AsyncStorage.multiSet([
-      ["lastPhoto", newFile.uri],
-      ["lastPhotoUrl", publicUrl],
-    ]);
-    
+        ["lastPhoto", newFile.uri],
+        ["lastPhotoUrl", publicUrl],
+      ]);
       console.log("💾 Saved path to AsyncStorage");
 
       // Pass safe URI to parent
-      onConfirm(newFile.uri);
+      onConfirm(publicUrl);
+      setIsUploading(false);
+      setUploadProgress(null);
       onClose();
     } catch (error) {
       console.error("Error taking picture:", error);
+      setIsUploading(false);
+      setUploadProgress(null);
       Alert.alert("Error", "Failed to take picture. Please try again.");
     }
   };
@@ -155,9 +171,32 @@ export default function CameraModal({
         </SafeAreaView>
 
         {/* Camera not ready overlay */}
-        {!isReady && (
+        {!isReady && !isUploading && (
           <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-20">
             <Text className="text-white text-lg">Initializing camera...</Text>
+          </View>
+        )}
+
+        {/* Upload Progress Overlay */}
+        {isUploading && uploadProgress !== null && (
+          <View className="absolute inset-0 bg-black bg-opacity-80 items-center justify-center z-30">
+            <View className="items-center">
+              <Progress.Circle
+                size={80}
+                progress={uploadProgress}
+                showsText={true}
+                color="#f97316"
+                unfilledColor="#374151"
+                borderWidth={0}
+                thickness={8}
+                formatText={(progress) => `${Math.round(progress * 100)}%`}
+                textStyle={{ color: "white", fontSize: 16, fontWeight: "bold" }}
+              />
+              <Text className="text-white text-lg mt-4">Uploading...</Text>
+              <Text className="text-gray-400 text-sm mt-2">
+                Please wait while we save your photo
+              </Text>
+            </View>
           </View>
         )}
 
@@ -166,25 +205,35 @@ export default function CameraModal({
           <TouchableOpacity
             className="bg-gray-800 p-3 rounded-full"
             onPress={onClose}
+            disabled={isUploading}
           >
-            <Ionicons name="close" size={28} color="white" />
+            <Ionicons
+              name="close"
+              size={28}
+              color={isUploading ? "#6B7280" : "white"}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
             className={`w-16 h-16 rounded-full border-4 ${
-              isReady
+              isReady && !isUploading
                 ? "bg-white border-gray-400"
                 : "bg-gray-600 border-gray-600"
             }`}
             onPress={takePicture}
-            disabled={!isReady}
+            disabled={!isReady || isUploading}
           />
 
           <TouchableOpacity
             className="bg-gray-800 p-3 rounded-full"
             onPress={toggleCameraFacing}
+            disabled={isUploading}
           >
-            <Ionicons name="camera-reverse" size={28} color="white" />
+            <Ionicons
+              name="camera-reverse"
+              size={28}
+              color={isUploading ? "#6B7280" : "white"}
+            />
           </TouchableOpacity>
         </SafeAreaView>
       </SafeAreaView>

@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { makeRedirectUri } from "expo-auth-session";
 import { useUserStore } from "@/store/useUserStore";
+import * as FileSystem from "expo-file-system";
+import { createUploadTask } from "expo-file-system/legacy";
 
 export const handleLogout = async () => {
   try {
@@ -118,34 +120,59 @@ export async function getCusUserById(userId: string) {
   }
 }
 
-
-
-export async function uploadDeliveryImage(file: File | Blob, folder = "package_images") {
+export async function uploadDeliveryImage(
+  fileUri,
+  folder = "package_images",
+  setUploadProgress
+) {
   try {
-    // Generate a unique filename with timestamp
-    const fileExt = file instanceof File ? file.name.split(".").pop() : "jpg";
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
+    // 1️⃣ Create signed upload URL from Supabase
+    const fileName = `${Date.now()}.jpg`;
+    const filePath = `${fileName}`;
 
-    // Upload image
-    const { error } = await supabase.storage
-      .from("images") // 👈 your bucket name
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+    const { data, error } = await supabase.storage
+      .from(folder)
+      .createSignedUploadUrl(filePath);
 
     if (error) throw error;
 
-    // Get public URL
-    const { data } = supabase.storage.from("images").getPublicUrl(filePath);
+    const signedUrl = data.signedUrl;
 
-    return {
-      publicUrl: data.publicUrl,
-      path: filePath,
-    };
-  } catch (err: any) {
-    console.error("Image upload failed:", err.message);
-    throw new Error(err.message);
+    // 2️⃣ Create upload task with progress tracking
+    const uploadTask = createUploadTask(
+      signedUrl,
+      fileUri,
+      {
+        httpMethod: "PUT",
+
+        headers: {
+          "Content-Type": "image/jpeg",
+        },
+      },
+      ({ totalBytesSent, totalBytesExpectedToSend }) => {
+        const progress = totalBytesExpectedToSend
+          ? totalBytesSent / totalBytesExpectedToSend
+          : 0;
+        setUploadProgress(Number(progress.toFixed(2)));
+      }
+    );
+
+    // 3️⃣ Await task result
+    const result = await uploadTask.uploadAsync();
+
+    if (result.status !== 200)
+      throw new Error("Upload failed with status " + result.status);
+
+    console.log("✅ Uploaded via signed URL:", result);
+
+    // 4️⃣ Get public URL
+    const { data: publicData } = supabase.storage
+      .from("images")
+      .getPublicUrl(filePath);
+
+    return publicData.publicUrl;
+  } catch (err) {
+    console.error("❌ Upload failed:", err.message);
+    throw err;
   }
 }
