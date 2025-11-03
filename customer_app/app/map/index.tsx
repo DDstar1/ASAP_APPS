@@ -1,4 +1,3 @@
-// app/map/MapScreen.tsx
 import { IMAGES } from "@/assets/assetsData";
 import DestinationSearchModal from "@/components/DestinationSearchModal";
 import RiderSearchModal from "@/components/RiderSearchModal";
@@ -17,8 +16,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import MapView, { Marker } from "react-native-maps";
+import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
+
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
 export default function MapScreen() {
   const [pickup, setPickup] = useState<any>(null);
@@ -30,48 +33,26 @@ export default function MapScreen() {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [packageImage, setPackageImage] = useState<any>(null);
 
+  const [distance, setDistance] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+
   const mapRef = useRef<MapView>(null);
+
   // Load package image from AsyncStorage
   useEffect(() => {
-    loadPackageImage();
+    (async () => {
+      const uri = await AsyncStorage.getItem("packageImage");
+      if (uri) setPackageImage({ uri });
+    })();
   }, []);
 
-  const loadPackageImage = async () => {
-    try {
-      const uri = await AsyncStorage.getItem("packageImage");
-      if (uri) {
-        setPackageImage({ uri });
-        console.log("✅ Package image loaded from AsyncStorage");
-      } else {
-        console.log("ℹ️ No package image found in AsyncStorage");
-      }
-    } catch (error) {
-      console.error("Error loading package image:", error);
-    }
-  };
-
-  // Clear package image from AsyncStorage
-  const clearPackageImage = async () => {
-    try {
-      await AsyncStorage.removeItem("packageImage");
-      setPackageImage(null);
-      console.log("🗑️ Package image cleared from AsyncStorage");
-    } catch (error) {
-      console.error("Error clearing package image:", error);
-    }
-  };
-
-  // Generate riders when pickup changes
+  // Generate riders near pickup
   useEffect(() => {
-    const baseLocation = pickup?.coordinates || {
-      latitude: 6.5244,
-      longitude: 3.3792,
-    };
-    const generated = generateRidersWithCoords(baseLocation);
-    setRiders(generated);
+    const base = pickup?.coordinates || { latitude: 6.5244, longitude: 3.3792 };
+    setRiders(generateRidersWithCoords(base));
   }, [pickup]);
 
-  // Move riders smoothly every 3s
+  // Animate riders movement
   useEffect(() => {
     const interval = setInterval(() => {
       setRiders((prev) => moveRiders(prev));
@@ -79,25 +60,9 @@ export default function MapScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto zoom logic
+  // Auto-zoom to pickup & destination
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    if (pickup && !destination) {
-      mapRef.current.animateToRegion(
-        { ...pickup.coordinates, latitudeDelta: 0.05, longitudeDelta: 0.05 },
-        1000
-      );
-    } else if (destination && !pickup) {
-      mapRef.current.animateToRegion(
-        {
-          ...destination.coordinates,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        },
-        1000
-      );
-    } else if (pickup && destination) {
+    if (pickup && destination && mapRef.current) {
       mapRef.current.fitToCoordinates(
         [pickup.coordinates, destination.coordinates],
         {
@@ -108,7 +73,7 @@ export default function MapScreen() {
     }
   }, [pickup, destination]);
 
-  // Calculate fare when both points are selected
+  // Fare calculation
   useEffect(() => {
     const fetchFare = async () => {
       if (!pickup || !destination) return;
@@ -118,12 +83,11 @@ export default function MapScreen() {
       setPrice(fare);
       setLoading(false);
     };
-    if (pickup && destination) fetchFare();
+    fetchFare();
   }, [pickup, destination]);
 
   return (
     <View className="flex-1 bg-gray-900">
-      {/* Map */}
       <MapView
         ref={mapRef}
         style={{ flex: 1 }}
@@ -134,13 +98,28 @@ export default function MapScreen() {
           longitudeDelta: 0.2,
         }}
       >
+        {/* Markers */}
+        {pickup?.coordinates && (
+          <Marker
+            coordinate={pickup.coordinates}
+            title="Pickup"
+            pinColor="green"
+          />
+        )}
+        {destination?.coordinates && (
+          <Marker
+            coordinate={destination.coordinates}
+            title="Destination"
+            pinColor="red"
+          />
+        )}
+
         {riders.map((rider) => (
           <Marker.Animated
             key={rider.id}
             coordinate={rider.coordinate}
             anchor={{ x: 0.5, y: 0.5 }}
-            title={rider.name} // 👈 built-in tooltip
-            description={`⭐ ${rider.rating} • ${rider.deliveries}`} // optional
+            title={rider.name}
           >
             <Image
               source={IMAGES.map_rider}
@@ -154,32 +133,29 @@ export default function MapScreen() {
           </Marker.Animated>
         ))}
 
-        {pickup && (
-          <Marker
-            coordinate={pickup.coordinates}
-            title="Pickup"
-            description={pickup.name}
-            pinColor="green"
-          />
-        )}
-        {destination && (
-          <Marker
-            coordinate={destination.coordinates}
-            title="Destination"
-            description={destination.name}
-            pinColor="red"
-          />
-        )}
-        {pickup && destination && (
-          <Polyline
-            coordinates={[pickup.coordinates, destination.coordinates]}
-            strokeColor="#2563EB"
-            strokeWidth={4}
+        {/* 🚗 Directions line (only when both points are set) */}
+        {pickup?.coordinates && destination?.coordinates && (
+          <MapViewDirections
+            origin={pickup.coordinates}
+            destination={destination.coordinates}
+            apikey={GOOGLE_MAPS_API_KEY}
+            strokeWidth={5}
+            strokeColor="#F97316"
+            optimizeWaypoints={true}
+            onReady={(result) => {
+              setDistance(result.distance);
+              setDuration(result.duration);
+              mapRef.current?.fitToCoordinates(result.coordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
+                animated: true,
+              });
+            }}
+            onError={(err) => console.warn("Directions error:", err)}
           />
         )}
       </MapView>
 
-      {/* Bottom overlay */}
+      {/* 🧭 Bottom Panel */}
       <SafeAreaView className="absolute bottom-0 left-0 right-0 px-4">
         <View className="bg-[#3C3C43] rounded-t-2xl px-4 py-3">
           <Text className="text-lg font-semibold text-white text-center">
@@ -190,7 +166,7 @@ export default function MapScreen() {
         <View className="bg-[#3C3C43] p-4 rounded-b-2xl">
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
-              className="flex-1 bg-white rounded-xl px-4 py-3 shadow-lg"
+              className="flex-1 bg-white rounded-xl px-4 py-3"
               onPress={() => setActiveField("from")}
             >
               <Text className="text-gray-700 font-medium">
@@ -201,7 +177,7 @@ export default function MapScreen() {
             <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
 
             <TouchableOpacity
-              className="flex-1 bg-white rounded-xl px-4 py-3 shadow-lg"
+              className="flex-1 bg-white rounded-xl px-4 py-3"
               onPress={() => setActiveField("to")}
             >
               <Text className="text-gray-700 font-medium">
@@ -210,7 +186,7 @@ export default function MapScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Confirm Delivery */}
+          {/* Book Ride */}
           <TouchableOpacity
             className={`mt-4 rounded-xl px-4 py-4 bg-orange-500 ${
               pickup && destination && !loading ? "" : "opacity-50"
@@ -230,6 +206,16 @@ export default function MapScreen() {
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Distance info */}
+          {pickup && destination && (
+            <View className="mt-2 items-center">
+              <Text className="text-gray-300 text-sm">
+                Distance: {distance.toFixed(1)} km | ETA: {Math.ceil(duration)}{" "}
+                min
+              </Text>
+            </View>
+          )}
         </View>
       </SafeAreaView>
 
@@ -246,11 +232,7 @@ export default function MapScreen() {
 
       <RiderSearchModal
         visible={showSearchModal}
-        onClose={() => {
-          setShowSearchModal(false);
-          // Optional: Clear image after delivery is complete
-          // clearPackageImage();
-        }}
+        onClose={() => setShowSearchModal(false)}
         price={price}
         packageImage={packageImage || IMAGES.riderWithPizza}
         pickup={pickup}

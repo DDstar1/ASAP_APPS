@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { Input, Icon } from "@rneui/themed";
+import { TextInput } from "react-native-paper";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
@@ -50,14 +50,14 @@ export default function AuthScreen() {
     }
   }, [url]);
 
-  // ✅ Login handler using our reusable function
+  // ✅ Login handler using reusable function
   const handleSignIn = async () => {
     if (!email || !password)
       return Alert.alert("Error", "Email and password required");
 
     setLoading(true);
     try {
-      await signInUser(email, password); // this also sets Zustand user
+      await signInUser(email, password);
       router.replace("/(tabs)/home");
     } catch (err: any) {
       Alert.alert("Login Failed", err.message);
@@ -77,50 +77,67 @@ export default function AuthScreen() {
           Welcome Back
         </Text>
 
-        {/* Email Input */}
-        <Input
-          placeholder="Email"
-          placeholderTextColor="#aaa"
-          leftIcon={<Icon name="mail-outline" type="ionicon" color="#aaa" />}
-          keyboardType="email-address"
-          autoCapitalize="none"
+        {/* ✅ Email Input */}
+        <TextInput
+          label="Email"
+          mode="outlined"
+          placeholder="Enter your email"
           value={email}
           onChangeText={setEmail}
-          inputStyle={{ color: "#fff" }}
-          inputContainerStyle={{
+          left={<TextInput.Icon icon="email-outline" color="#aaa" />}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          textColor="#fff"
+          outlineColor="#333"
+          activeOutlineColor="#4ade80"
+          style={{
             backgroundColor: "#2c2c2e",
-            borderBottomWidth: 0,
+            marginBottom: 16,
             borderRadius: 12,
-            paddingHorizontal: 10,
           }}
-          containerStyle={{ paddingHorizontal: 0, marginBottom: 10 }}
+          theme={{
+            colors: {
+              onSurfaceVariant: "#fff",
+              outline: "#444",
+              surfaceVariant: "#2c2c2e",
+            },
+          }}
         />
 
-        {/* Password Input */}
-        <Input
-          placeholder="Password"
+        {/* ✅ Password Input */}
+        <TextInput
+          label="Password"
+          mode="outlined"
+          placeholder="Enter your password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
-          leftIcon={<Icon name="lock" type="material" color="#aaa" />}
-          rightIcon={
-            <Icon
-              name={showPassword ? "visibility" : "visibility-off"}
-              type="material"
-              color="#aaa"
+          left={<TextInput.Icon icon="lock-outline" color="#aaa" />}
+          right={
+            <TextInput.Icon
+              icon={showPassword ? "eye-off-outline" : "eye-outline"}
               onPress={() => setShowPassword(!showPassword)}
+              color="#aaa"
             />
           }
-          inputContainerStyle={{
+          textColor="#fff"
+          outlineColor="#333"
+          activeOutlineColor="#4ade80"
+          style={{
             backgroundColor: "#2c2c2e",
+            marginBottom: 24,
             borderRadius: 12,
-            borderBottomWidth: 0,
-            paddingHorizontal: 10,
           }}
-          inputStyle={{ color: "#fff" }}
+          theme={{
+            colors: {
+              onSurfaceVariant: "#fff",
+              outline: "#444",
+              surfaceVariant: "#2c2c2e",
+            },
+          }}
         />
 
-        {/* Sign In Button */}
+        {/* ✅ Sign In Button */}
         <TouchableOpacity
           onPress={handleSignIn}
           disabled={loading}
@@ -135,7 +152,7 @@ export default function AuthScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Create Account Link */}
+        {/* ✅ Create Account Link */}
         <TouchableOpacity onPress={() => router.push("/auth/signup")}>
           <Text className="text-green-400 text-right text-base font-semibold">
             Create Account

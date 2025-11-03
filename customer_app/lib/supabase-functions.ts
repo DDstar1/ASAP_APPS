@@ -176,3 +176,27 @@ export async function uploadDeliveryImage(
     throw err;
   }
 }
+
+export async function addPackageImage(url) {
+  try {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error("User not logged in");
+
+    const { data, error } = await supabase
+      .from("package_images")
+      .insert([
+        {
+          url,
+          user_id: user.id, // optional if you have default auth.uid() in table
+        },
+      ])
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error adding package image:", error.message);
+    return { data: null, error };
+  }
+}

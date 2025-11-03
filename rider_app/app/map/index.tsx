@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  PermissionsAndroid,
-  Platform,
-  StyleSheet,
-  View,
-  ActivityIndicator,
-} from "react-native";
+import { StyleSheet, View, ActivityIndicator } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 

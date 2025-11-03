@@ -1,5 +1,6 @@
 import { IMAGES } from "@/assets/assetsData";
 import CameraModal from "@/components/CameraModal";
+import ShareScreenModal from "@/components/ShareScreenModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -14,13 +15,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "@/store/useUserStore";
 import { getCusUserById } from "@/lib/supabase-functions";
+import { shipments } from "@/utils/dummyData";
 
 const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
   const [customUser, setCustomUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const userId = useUserStore((state) => state.user?.id);
@@ -47,38 +51,31 @@ const ShippingTrackerApp = () => {
     fetchUser();
   }, [userId]);
 
-  const shipments = [
-    {
-      id: "FNL1345603",
-      recipient: "Ramesh",
-      status: "In Delivery",
-      statusColor: "text-orange-400",
-    },
-    {
-      id: "FNL1345403",
-      sender: "Ramesh",
-      status: "Completed",
-      statusColor: "text-green-400",
-    },
-    {
-      id: "FNL1888403",
-      sender: "Anu",
-      status: "Completed",
-      statusColor: "text-green-400",
-    },
-    {
-      id: "FMD348403",
-      recipient: "David",
-      status: "Completed",
-      statusColor: "text-green-400",
-    },
-  ];
+  const handleShareLocation = async () => {
+    try {
+      // Generate random fake coordinates (roughly within Nigeria)
+      const fakeLatitude = 4 + Math.random() * 6; // range: 4–10
+      const fakeLongitude = 3 + Math.random() * 7; // range: 3–10
+      const fakeName = "Random Spot in Nigeria";
+
+      // Google Maps link format
+      const locationUrl = `https://www.google.com/maps?q=${fakeLatitude.toFixed(
+        5
+      )},${fakeLongitude.toFixed(5)}(${encodeURIComponent(fakeName)})`;
+
+      await Share.share({
+        message: `📍 Check out this location: ${fakeName}\n${locationUrl}`,
+      });
+    } catch (error) {
+      Alert.alert("Error", "Unable to share location");
+    }
+  };
 
   const quickActions = [
-    { icon: "car-outline", label: "Send" },
-    { icon: "location-outline", label: "Location" },
-    { icon: "card-outline", label: "Payments" },
-    { icon: "information-circle-outline", label: "Info" },
+    { icon: "send-outline", label: "Send" }, // for sending or requesting
+    { icon: "navigate-outline", label: "Share Location" }, // better than 'location-outline'
+    // { icon: "card-outline", label: "Payments" }, correct for payments
+    { icon: "bookmark-outline", label: "Saved Locations" }, // clearer than 'information-circle-outline'
   ];
 
   return (
@@ -158,6 +155,9 @@ const ShippingTrackerApp = () => {
               className="items-center"
               onPress={() => {
                 if (action.label === "Send") setCameraVisible(true);
+                else if (action.label === "Share Location") {
+                  setShareVisible(true);
+                }
               }}
             >
               <View className="w-16 h-16 rounded-full bg-[#3C3C43] justify-center items-center mb-2">
@@ -228,6 +228,10 @@ const ShippingTrackerApp = () => {
             Alert.alert("Error", "Failed to save image");
           }
         }}
+      />
+      <ShareScreenModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
       />
     </SafeAreaView>
   );

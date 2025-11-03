@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { Input, Icon } from "@rneui/themed";
+import { TextInput, IconButton } from "react-native-paper";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { makeRedirectUri } from "expo-auth-session";
@@ -47,9 +47,16 @@ export default function SignUpScreen() {
   }, [url]);
 
   const handleSignUp = async () => {
+    if (!username || !email || !password || !confirmPassword) {
+      return Alert.alert("Error", "All fields are required");
+    }
+    if (password !== confirmPassword) {
+      return Alert.alert("Error", "Passwords do not match");
+    }
+
     setLoading(true);
     try {
-      const user = await signUpUser(email, password, username);
+      await signUpUser(email, password, username);
       Alert.alert(
         "Verify Your Email",
         "A verification link has been sent to your inbox."
@@ -73,82 +80,73 @@ export default function SignUpScreen() {
           Create an Account
         </Text>
 
-        <Input
-          placeholder="Username"
+        {/* Username */}
+        <TextInput
+          label="Username"
+          mode="outlined"
           value={username}
           onChangeText={setUsername}
-          leftIcon={<Icon name="person" type="material" color="#aaa" />}
-          inputContainerStyle={{
-            backgroundColor: "#2c2c2e",
-            borderRadius: 12,
-            borderBottomWidth: 0,
-            paddingHorizontal: 10,
-          }}
-          inputStyle={{ color: "#fff" }}
+          style={{ marginBottom: 12, backgroundColor: "#2c2c2e" }}
+          outlineStyle={{ borderColor: "#3a3a3c" }}
+          textColor="#fff"
+          theme={{ colors: { primary: "#34D399" } }}
         />
 
-        <Input
-          placeholder="Email"
+        {/* Email */}
+        <TextInput
+          label="Email"
+          mode="outlined"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          leftIcon={<Icon name="email" type="material" color="#aaa" />}
-          inputContainerStyle={{
-            backgroundColor: "#2c2c2e",
-            borderRadius: 12,
-            borderBottomWidth: 0,
-            paddingHorizontal: 10,
-          }}
-          inputStyle={{ color: "#fff" }}
+          style={{ marginBottom: 12, backgroundColor: "#2c2c2e" }}
+          outlineStyle={{ borderColor: "#3a3a3c" }}
+          textColor="#fff"
+          theme={{ colors: { primary: "#34D399" } }}
         />
 
-        <Input
-          placeholder="Password"
+        {/* Password */}
+        <TextInput
+          label="Password"
+          mode="outlined"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
-          leftIcon={<Icon name="lock" type="material" color="#aaa" />}
-          rightIcon={
-            <Icon
-              name={showPassword ? "visibility" : "visibility-off"}
-              type="material"
-              color="#aaa"
+          right={
+            <TextInput.Icon
+              icon={showPassword ? "eye-off" : "eye"}
               onPress={() => setShowPassword(!showPassword)}
+              color="#aaa"
             />
           }
-          inputContainerStyle={{
-            backgroundColor: "#2c2c2e",
-            borderRadius: 12,
-            borderBottomWidth: 0,
-            paddingHorizontal: 10,
-          }}
-          inputStyle={{ color: "#fff" }}
+          style={{ marginBottom: 12, backgroundColor: "#2c2c2e" }}
+          outlineStyle={{ borderColor: "#3a3a3c" }}
+          textColor="#fff"
+          theme={{ colors: { primary: "#34D399" } }}
         />
 
-        <Input
-          placeholder="Confirm Password"
+        {/* Confirm Password */}
+        <TextInput
+          label="Confirm Password"
+          mode="outlined"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry={!showConfirm}
-          leftIcon={<Icon name="lock" type="material" color="#aaa" />}
-          rightIcon={
-            <Icon
-              name={showConfirm ? "visibility" : "visibility-off"}
-              type="material"
-              color="#aaa"
+          right={
+            <TextInput.Icon
+              icon={showConfirm ? "eye-off" : "eye"}
               onPress={() => setShowConfirm(!showConfirm)}
+              color="#aaa"
             />
           }
-          inputContainerStyle={{
-            backgroundColor: "#2c2c2e",
-            borderRadius: 12,
-            borderBottomWidth: 0,
-            paddingHorizontal: 10,
-          }}
-          inputStyle={{ color: "#fff" }}
+          style={{ marginBottom: 20, backgroundColor: "#2c2c2e" }}
+          outlineStyle={{ borderColor: "#3a3a3c" }}
+          textColor="#fff"
+          theme={{ colors: { primary: "#34D399" } }}
         />
 
+        {/* Sign Up Button */}
         <TouchableOpacity
           onPress={handleSignUp}
           disabled={loading}
@@ -163,6 +161,7 @@ export default function SignUpScreen() {
           )}
         </TouchableOpacity>
 
+        {/* Login Redirect */}
         <TouchableOpacity onPress={() => router.push("/auth/login")}>
           <Text className="text-green-400 text-center text-base font-semibold">
             Already have an account? Sign In

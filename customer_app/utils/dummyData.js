@@ -52,3 +52,30 @@ export const RIDERS = [
     eta: "7 min",
   },
 ];
+
+export const shipments = [
+  {
+    id: "FNL1345603",
+    recipient: "Ramesh",
+    status: "In Delivery",
+    statusColor: "text-orange-400",
+  },
+  {
+    id: "FNL1345403",
+    sender: "Ramesh",
+    status: "Completed",
+    statusColor: "text-green-400",
+  },
+  {
+    id: "FNL1888403",
+    sender: "Anu",
+    status: "Completed",
+    statusColor: "text-green-400",
+  },
+  {
+    id: "FMD348403",
+    recipient: "David",
+    status: "Completed",
+    statusColor: "text-green-400",
+  },
+];

@@ -5,7 +5,7 @@ import { Directory, File, Paths } from "expo-file-system";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { uploadDeliveryImage } from "@/lib/supabase-functions";
+import { addPackageImage, uploadDeliveryImage } from "@/lib/supabase-functions";
 import * as Progress from "react-native-progress";
 
 export default function CameraModal({
@@ -120,6 +120,7 @@ export default function CameraModal({
           console.log(`📤 Upload progress: ${percent}%`);
         }
       );
+      const AddImageToTable = addPackageImage(publicUrl);
 
       // Save path in AsyncStorage
       await AsyncStorage.multiSet([
@@ -127,6 +128,10 @@ export default function CameraModal({
         ["lastPhotoUrl", publicUrl],
       ]);
       console.log("💾 Saved path to AsyncStorage");
+      console.log([
+        ["lastPhoto", newFile.uri],
+        ["lastPhotoUrl", publicUrl],
+      ]);
 
       // Pass safe URI to parent
       onConfirm(publicUrl);
@@ -172,31 +177,31 @@ export default function CameraModal({
 
         {/* Camera not ready overlay */}
         {!isReady && !isUploading && (
-          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-20">
+          <View className="absolute inset-0 bg-black/60 items-center justify-center z-20">
             <Text className="text-white text-lg">Initializing camera...</Text>
           </View>
         )}
 
-        {/* Upload Progress Overlay */}
+        {/* ✅ Upload Progress Overlay */}
         {isUploading && uploadProgress !== null && (
-          <View className="absolute inset-0 bg-black bg-opacity-80 items-center justify-center z-30">
-            <View className="items-center">
-              <Progress.Circle
-                size={80}
-                progress={uploadProgress}
-                showsText={true}
-                color="#f97316"
-                unfilledColor="#374151"
-                borderWidth={0}
-                thickness={8}
-                formatText={(progress) => `${Math.round(progress * 100)}%`}
-                textStyle={{ color: "white", fontSize: 16, fontWeight: "bold" }}
-              />
-              <Text className="text-white text-lg mt-4">Uploading...</Text>
-              <Text className="text-gray-400 text-sm mt-2">
-                Please wait while we save your photo
-              </Text>
-            </View>
+          <View className="absolute inset-0 bg-black/70 items-center justify-center z-30">
+            <Progress.Circle
+              size={90}
+              progress={uploadProgress}
+              showsText={true}
+              color="#f97316"
+              unfilledColor="#374151"
+              borderWidth={0}
+              fill="white"
+              thickness={8}
+              formatText={(progress) =>
+                progress === 0 ? "" : `${Math.round(progress * 100)}%`
+              }
+              textStyle={{ color: "black", fontSize: 18, fontWeight: "bold" }}
+            />
+            <Text className="text-white text-base mt-4">
+              Uploading image...
+            </Text>
           </View>
         )}
 
@@ -214,15 +219,14 @@ export default function CameraModal({
             />
           </TouchableOpacity>
 
+          {/* ✅ Normal capture button (no loader inside) */}
           <TouchableOpacity
-            className={`w-16 h-16 rounded-full border-4 ${
-              isReady && !isUploading
-                ? "bg-white border-gray-400"
-                : "bg-gray-600 border-gray-600"
-            }`}
             onPress={takePicture}
             disabled={!isReady || isUploading}
-          />
+            className="bg-white p-4 rounded-full"
+          >
+            <Ionicons name="camera" size={36} color="#f97316" />
+          </TouchableOpacity>
 
           <TouchableOpacity
             className="bg-gray-800 p-3 rounded-full"

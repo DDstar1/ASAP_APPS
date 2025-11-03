@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "com.asapCustomer",
+    "scheme": "asapcustomer",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -39,9 +39,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      [
-        "expo-camera"
-      ],
+      ["expo-camera"],
       [
         "expo-splash-screen",
         {
@@ -67,6 +65,7 @@
       "eas": {
         "projectId": "691b63ab-2d6e-4a89-9cf4-72fe45aff10d"
       },
+      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y",
       "SUPABASE_URL": "https://edtsmqjnkakaaujmmhip.supabase.co",
       "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkdHNtcWpua2FrYWF1am1taGlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQzNDk0MSwiZXhwIjoyMDc3MDEwOTQxfQ.vRZZE1pZ5koj3cxoRPtxgUPlO7I1ZrOP-Mk_2dMfKx8"
     },
