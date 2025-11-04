@@ -79,3 +79,55 @@ export const shipments = [
     statusColor: "text-green-400",
   },
 ];
+
+export const INITIAL_LOCATIONS = [
+  {
+    id: "1",
+    name: "Home",
+    lat: 6.5244,
+    lng: 3.3792,
+    date: "Nov 1, 2025",
+  },
+  {
+    id: "2",
+    name: "Work",
+    lat: 6.6018,
+    lng: 3.3515,
+    date: "Oct 30, 2025",
+  },
+  {
+    id: "3",
+    name: "Gym",
+    lat: 6.4667,
+    lng: 3.45,
+    date: "Oct 28, 2025",
+  },
+  {
+    id: "4",
+    name: "Gym",
+    lat: 6.4667,
+    lng: 3.45,
+    date: "Oct 28, 2025",
+  },
+  {
+    id: "5",
+    name: "Gym",
+    lat: 6.4667,
+    lng: 3.45,
+    date: "Oct 28, 2025",
+  },
+  {
+    id: "6",
+    name: "Gym",
+    lat: 6.4667,
+    lng: 3.45,
+    date: "Oct 28, 2025",
+  },
+  {
+    id: "7",
+    name: "Gym",
+    lat: 6.4667,
+    lng: 3.45,
+    date: "Oct 28, 2025",
+  },
+];

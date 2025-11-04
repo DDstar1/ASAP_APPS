@@ -5,7 +5,9 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import * as Linking from "expo-linking";
 import { getFormattedToday } from "@/utils/home_utils";
+import { useLocalSearchParams } from "expo-router";
 import {
   Alert,
   Image,
@@ -21,15 +23,38 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "@/store/useUserStore";
 import { getCusUserById } from "@/lib/supabase-functions";
 import { shipments } from "@/utils/dummyData";
+import SavedLocationsModal from "@/components/SavedLocationsModal";
 
 const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
   const [shareVisible, setShareVisible] = useState(false);
+  const [savedVisible, setSavedVisible] = useState(false);
+
   const [customUser, setCustomUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const userId = useUserStore((state) => state.user?.id);
 
-  // ✅ Fetch custom user when userId changes
+  // 🧭 For deep link data
+  const { modal, edit, lat, lng } = useLocalSearchParams();
+  const SharedlocationDetails = {
+    modal,
+    edit,
+    lat: lat ? parseFloat(lat) : null,
+    lng: lng ? parseFloat(lng) : null,
+  };
+
+  // ✅ Deep link setup
+  useEffect(() => {
+    if (
+      SharedlocationDetails.modal === "sharedlocation" &&
+      SharedlocationDetails.edit === "true"
+    ) {
+      setSavedVisible(true);
+      console.log("🗺 Opening modal for:", lat, lng);
+    }
+  }, [modal, edit, lat, lng]);
+
+  // ✅ Fetch custom user from Supabase
   useEffect(() => {
     const fetchUser = async () => {
       if (!userId) {
@@ -51,31 +76,10 @@ const ShippingTrackerApp = () => {
     fetchUser();
   }, [userId]);
 
-  const handleShareLocation = async () => {
-    try {
-      // Generate random fake coordinates (roughly within Nigeria)
-      const fakeLatitude = 4 + Math.random() * 6; // range: 4–10
-      const fakeLongitude = 3 + Math.random() * 7; // range: 3–10
-      const fakeName = "Random Spot in Nigeria";
-
-      // Google Maps link format
-      const locationUrl = `https://www.google.com/maps?q=${fakeLatitude.toFixed(
-        5
-      )},${fakeLongitude.toFixed(5)}(${encodeURIComponent(fakeName)})`;
-
-      await Share.share({
-        message: `📍 Check out this location: ${fakeName}\n${locationUrl}`,
-      });
-    } catch (error) {
-      Alert.alert("Error", "Unable to share location");
-    }
-  };
-
   const quickActions = [
-    { icon: "send-outline", label: "Send" }, // for sending or requesting
-    { icon: "navigate-outline", label: "Share Location" }, // better than 'location-outline'
-    // { icon: "card-outline", label: "Payments" }, correct for payments
-    { icon: "bookmark-outline", label: "Saved Locations" }, // clearer than 'information-circle-outline'
+    { icon: "send-outline", label: "Send" },
+    { icon: "navigate-outline", label: "Share Location" },
+    { icon: "bookmark-outline", label: "Saved Locations" },
   ];
 
   return (
@@ -127,11 +131,10 @@ const ShippingTrackerApp = () => {
             </Text>
             <Text className="text-white text-xs opacity-90 leading-4 mb-3">
               Get <Text className="font-extrabold">25%</Text> Off when you pay
-              with <Text className="font-extrabold">Solana</Text>.{"\n"}
-              Fast, secure, and low fees.
+              with <Text className="font-extrabold">Solana</Text>.{"\n"}Fast,
+              secure, and low fees.
             </Text>
 
-            {/* CTA Button */}
             <TouchableOpacity className="bg-orange-500 rounded-full px-4 py-2 self-start">
               <Text className="text-white text-sm font-semibold">
                 Link Phantom Wallet
@@ -157,6 +160,8 @@ const ShippingTrackerApp = () => {
                 if (action.label === "Send") setCameraVisible(true);
                 else if (action.label === "Share Location") {
                   setShareVisible(true);
+                } else if (action.label === "Saved Locations") {
+                  setSavedVisible(true);
                 }
               }}
             >
@@ -192,7 +197,6 @@ const ShippingTrackerApp = () => {
                     color="#9CA3AF"
                     style={{ marginRight: 12 }}
                   />
-
                   <View className="justify-center">
                     <Text className="text-white text-sm">
                       {shipment.recipient
@@ -218,20 +222,28 @@ const ShippingTrackerApp = () => {
         visible={cameraVisible}
         onClose={() => setCameraVisible(false)}
         onConfirm={async (uri: any) => {
-          console.log("📦 Package photo URI saved");
           try {
             await AsyncStorage.setItem("packageImage", uri);
-            console.log("✅ Image saved to AsyncStorage");
             router.push("/map");
           } catch (error) {
-            console.error("Error saving image:", error);
             Alert.alert("Error", "Failed to save image");
           }
         }}
       />
+
+      {/* Share Modal */}
       <ShareScreenModal
         visible={shareVisible}
         onClose={() => setShareVisible(false)}
+      />
+
+      {/* Saved Locations Modal */}
+      <SavedLocationsModal
+        visible={savedVisible}
+        onClose={() => {
+          setSavedVisible(false);
+        }}
+        SharedlocationDetails
       />
     </SafeAreaView>
   );
