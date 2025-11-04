@@ -93,12 +93,12 @@ export default function ShareScreenModal({
       const { coords } = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = coords;
 
-      // 3️⃣ Create Google Maps link
-      const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      // 3️⃣ Create your website deep link
+      const webAppUrl = `https://asap-apps.vercel.app/sharelocation?lat=${latitude}&lng=${longitude}`;
 
       // 4️⃣ Share via system share sheet
       await Share.share({
-        message: `📍 Here's my current location:\n${googleMapsUrl}`,
+        message: `📍 Here's my current location:\n${webAppUrl}`,
       });
     } catch (error) {
       console.error(error);
