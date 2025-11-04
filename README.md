@@ -57,10 +57,11 @@ Both scripts will:
 
 ## 🌐 Default URLs
 
-| App      | Port | URL                                            |
-| -------- | ---- | ---------------------------------------------- |
-| Customer | 8081 | [http://localhost:8081](http://localhost:8081) |
-| Rider    | 8082 | [http://localhost:8082](http://localhost:8082) |
+| App      | Port | URL                                                    |
+| -------- | ---- | ------------------------------------------------------ |
+| Customer | 8081 | [http://localhost:8081](http://localhost:8081)         |
+| Rider    | 8082 | [http://localhost:8082](http://localhost:8082)         |
+| Website  | 8082 | [http://localhost:3000](https://asap-apps.vercel.app/) |
 
 Scan the QR code in **Expo Go** to open on a device.
 
