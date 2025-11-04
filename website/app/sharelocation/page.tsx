@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function LocationPage() {
+function LocationPageInner() {
   const params = useSearchParams();
   const lat = params.get("lat");
   const lng = params.get("lng");
@@ -86,5 +86,13 @@ export default function LocationPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LocationPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <LocationPageInner />
+    </Suspense>
   );
 }
