@@ -1,13 +1,11 @@
 import { IMAGES } from "@/assets/assetsData";
 import CameraModal from "@/components/CameraModal";
 import ShareScreenModal from "@/components/ShareScreenModal";
+import SavedLocationsModal from "@/components/SavedLocationsModal";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import * as Linking from "expo-linking";
-import { getFormattedToday } from "@/utils/home_utils";
-import { useLocalSearchParams } from "expo-router";
 import {
   Alert,
   Image,
@@ -17,13 +15,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "@/store/useUserStore";
 import { getCusUserById } from "@/lib/supabase-functions";
+import { getFormattedToday } from "@/utils/home_utils";
 import { shipments } from "@/utils/dummyData";
-import SavedLocationsModal from "@/components/SavedLocationsModal";
 
 const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -34,25 +31,60 @@ const ShippingTrackerApp = () => {
   const [loadingUser, setLoadingUser] = useState(true);
   const userId = useUserStore((state) => state.user?.id);
 
-  // 🧭 For deep link data
+  // 🧭 Deep link params
   const { modal, edit, lat, lng } = useLocalSearchParams();
-  const SharedlocationDetails = {
-    modal,
-    edit,
-    lat: lat ? parseFloat(lat) : null,
-    lng: lng ? parseFloat(lng) : null,
+
+  console.log("🏠 Home params:", { modal, edit, lat, lng });
+
+  // 🧱 Shared location state (syncs with params)
+  const [SharedlocationDetails, setSharedlocationDetailsParam] = useState<any>({
+    modal: null,
+    edit: null,
+    lat: null,
+    lng: null,
+  });
+
+  // 🧹 Function to clear shared location
+  const handleClearSharedDetails = () => {
+    console.log("🧹 Clearing SharedlocationDetails...");
+    setSharedlocationDetailsParam({
+      modal: null,
+      edit: null,
+      lat: null,
+      lng: null,
+    });
+    router.replace("/(tabs)/home");
   };
 
-  // ✅ Deep link setup
+  // ✅ Whenever params change, sync to state
+  useEffect(() => {
+    if (modal || edit || lat || lng) {
+      const parsed = {
+        modal,
+        edit,
+        lat: lat ? parseFloat(lat as string) : null,
+        lng: lng ? parseFloat(lng as string) : null,
+      };
+      console.log("🧭 Updated SharedlocationDetails:", parsed);
+      setSharedlocationDetailsParam(parsed);
+    }
+  }, [modal, edit, lat, lng]);
+
+  // ✅ Auto-open Saved Locations modal when deep link triggers
   useEffect(() => {
     if (
+      SharedlocationDetails &&
       SharedlocationDetails.modal === "sharedlocation" &&
       SharedlocationDetails.edit === "true"
     ) {
+      console.log(
+        "🗺 Opening SavedLocationsModal for:",
+        SharedlocationDetails.lat,
+        SharedlocationDetails.lng
+      );
       setSavedVisible(true);
-      console.log("🗺 Opening modal for:", lat, lng);
     }
-  }, [modal, edit, lat, lng]);
+  }, [SharedlocationDetails]);
 
   // ✅ Fetch custom user from Supabase
   useEffect(() => {
@@ -77,8 +109,8 @@ const ShippingTrackerApp = () => {
   }, [userId]);
 
   const quickActions = [
-    { icon: "send-outline", label: "Send" },
     { icon: "navigate-outline", label: "Share Location" },
+    { icon: "send-outline", label: "Send Package" },
     { icon: "bookmark-outline", label: "Saved Locations" },
   ];
 
@@ -157,18 +189,23 @@ const ShippingTrackerApp = () => {
               key={index}
               className="items-center"
               onPress={() => {
-                if (action.label === "Send") setCameraVisible(true);
-                else if (action.label === "Share Location") {
+                if (action.label === "Send Package") setCameraVisible(true);
+                else if (action.label === "Share Location")
                   setShareVisible(true);
-                } else if (action.label === "Saved Locations") {
+                else if (action.label === "Saved Locations")
                   setSavedVisible(true);
-                }
               }}
             >
-              <View className="w-16 h-16 rounded-full bg-[#3C3C43] justify-center items-center mb-2">
-                <Ionicons name={action.icon as any} size={24} color="white" />
+              <View
+                className={`w-16 h-16 rounded-full justify-center items-center mb-2 bg-[#3C3C43]`}
+              >
+                {action.label === "Send Package" ? (
+                  <Text className="text-2xl">🚴‍♂️</Text>
+                ) : (
+                  <Ionicons name={action.icon as any} size={24} color="white" />
+                )}
               </View>
-              <Text className="text-gray-400 text-xs">{action.label}</Text>
+              <Text className={`text-xs text-gray-400`}>{action.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -220,13 +257,17 @@ const ShippingTrackerApp = () => {
       {/* Camera Modal */}
       <CameraModal
         visible={cameraVisible}
-        onClose={() => setCameraVisible(false)}
+        onClose={() => {
+          setCameraVisible(false);
+          router.push("/map"); // ✅ Even if they close camera, go to map
+        }}
         onConfirm={async (uri: any) => {
           try {
             await AsyncStorage.setItem("packageImage", uri);
             router.push("/map");
-          } catch (error) {
+          } catch {
             Alert.alert("Error", "Failed to save image");
+            router.push("/map");
           }
         }}
       />
@@ -240,10 +281,9 @@ const ShippingTrackerApp = () => {
       {/* Saved Locations Modal */}
       <SavedLocationsModal
         visible={savedVisible}
-        onClose={() => {
-          setSavedVisible(false);
-        }}
-        SharedlocationDetails
+        onClose={() => setSavedVisible(false)}
+        SharedlocationDetails={SharedlocationDetails}
+        onClearSharedDetails={handleClearSharedDetails}
       />
     </SafeAreaView>
   );

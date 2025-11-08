@@ -5,6 +5,8 @@ import { useUserStore } from "@/store/useUserStore";
 import * as FileSystem from "expo-file-system";
 import { createUploadTask } from "expo-file-system/legacy";
 
+import type { SavedLocationInput } from "@/utils/my_types";
+
 export const handleLogout = async () => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -198,5 +200,77 @@ export async function addPackageImage(url) {
   } catch (error) {
     console.error("Error adding package image:", error.message);
     return { data: null, error };
+  }
+}
+
+export async function addSavedLocation({
+  name,
+  latitude,
+  longitude,
+}: SavedLocationInput) {
+  try {
+    // Ensure user is logged in
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error("User not logged in");
+
+    // Insert record (no need to manually include user_id)
+    const { data, error } = await supabase
+      .from("saved_locations")
+      .insert([{ name, latitude, longitude }])
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    console.log("✅ Saved location added:", data);
+    return { data, error: null };
+  } catch (error: any) {
+    console.error("Error saving location:", error.message);
+    return { data: null, error };
+  }
+}
+
+export async function getSavedLocations() {
+  try {
+    // Ensure user is logged in
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error("User not logged in");
+
+    // Fetch all saved locations for this user
+    const { data, error } = await supabase
+      .from("saved_locations")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    console.log("✅ Retrieved saved locations:", data);
+    return { data, error: null };
+  } catch (error: any) {
+    console.error("Error fetching saved locations:", error.message);
+    return { data: null, error };
+  }
+}
+
+export async function deleteSavedLocation(id: number | string) {
+  try {
+    // Ensure user is logged in
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error("User not logged in");
+
+    // Delete the location that belongs to this user
+    const { error } = await supabase
+      .from("saved_locations")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id); // Ensure user owns it
+
+    if (error) throw error;
+
+    console.log(`✅ Deleted location with ID: ${id}`);
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error("Error deleting location:", error.message);
+    return { success: false, error };
   }
 }

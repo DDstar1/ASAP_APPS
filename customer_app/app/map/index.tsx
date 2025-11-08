@@ -62,14 +62,15 @@ export default function MapScreen() {
 
   // Auto-zoom to pickup & destination
   useEffect(() => {
-    if (pickup && destination && mapRef.current) {
-      mapRef.current.fitToCoordinates(
-        [pickup.coordinates, destination.coordinates],
-        {
-          edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
-          animated: true,
-        }
-      );
+    const coords = [];
+    if (pickup?.coordinates) coords.push(pickup.coordinates);
+    if (destination?.coordinates) coords.push(destination.coordinates);
+
+    if (coords.length && mapRef.current) {
+      mapRef.current.fitToCoordinates(coords, {
+        edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+        animated: true,
+      });
     }
   }, [pickup, destination]);
 

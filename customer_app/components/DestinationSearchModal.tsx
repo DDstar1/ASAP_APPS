@@ -1,19 +1,73 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   Modal,
-  TouchableOpacity,
   View,
   Text,
+  TouchableOpacity,
   ActivityIndicator,
+  FlatList,
   Alert,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import GooglePlacesTextInput from "react-native-google-places-textinput";
 import * as Location from "expo-location";
+import GooglePlacesTextInput from "react-native-google-places-textinput";
 import Constants from "expo-constants";
+import { getSavedLocations } from "@/lib/supabase-functions";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
+
+// Move AnimatedSavedItem outside and memoize it
+const AnimatedSavedItem = React.memo(({ show, item, onPress }: any) => {
+  const maxHeight = useSharedValue(show ? 80 : 0);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      // Set initial value without animation
+      maxHeight.value = show ? 80 : 0;
+      isMounted.current = true;
+    } else {
+      // Animate on subsequent changes
+      maxHeight.value = withTiming(show ? 80 : 0, {
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+      });
+    }
+  }, [show]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    maxHeight: maxHeight.value,
+    opacity: maxHeight.value / 80,
+  }));
+
+  return (
+    <Animated.View
+      style={[animatedStyle, { overflow: "hidden" }]}
+      className="mb-2"
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        className="flex-row items-center bg-gray-700 p-3 rounded-xl"
+      >
+        <Ionicons name="location" size={18} color="#f97316" />
+        <View className="ml-2 flex-1">
+          <Text className="text-gray-100 font-medium">{item.name}</Text>
+          <Text className="text-gray-400 text-xs">
+            {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
 
 export default function DestinationSearchModal({
   visible,
@@ -26,16 +80,75 @@ export default function DestinationSearchModal({
   onSelect: (location: any) => void;
   field: "from" | "to";
 }) {
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [savedLocations, setSavedLocations] = useState<any[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+
+  const fetchSavedLocations = async () => {
+    try {
+      setLoadingSaved(true);
+      const { data, error } = await getSavedLocations();
+      if (error) throw error;
+      setSavedLocations(data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSaved(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) fetchSavedLocations();
+  }, [visible]);
+
+  const handleUseCurrentLocation = async () => {
+    try {
+      setLoadingLocation(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Location permission is required");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      const locData = {
+        name: "Current Location",
+        address: address?.name || address?.city,
+        coordinates: { latitude, longitude },
+      };
+
+      onSelect(locData);
+      onClose();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
+
+  const handleSelectSaved = (item: any) => {
+    onSelect({
+      name: item.name,
+      coordinates: {
+        latitude: parseFloat(item.latitude),
+        longitude: parseFloat(item.longitude),
+      },
+    });
+    onClose();
+  };
 
   const handlePlaceSelect = (place: any) => {
     const latitude = place?.details?.location?.latitude;
     const longitude = place?.details?.location?.longitude;
 
-    if (!latitude || !longitude) {
-      console.warn("⚠️ No valid coordinates for selected place:", place);
-      return;
-    }
+    if (!latitude || !longitude) return;
 
     const locationData = {
       name: place?.structuredFormat?.mainText?.text || place?.text?.text,
@@ -45,53 +158,117 @@ export default function DestinationSearchModal({
       coordinates: { latitude, longitude },
     };
 
-    console.log("📍 Selected location:", JSON.stringify(locationData, null, 2));
     onSelect(locationData);
     onClose();
   };
 
-  // 🌍 Use current device location
-  const handleUseCurrentLocation = async () => {
-    try {
-      setLoadingLocation(true);
-      const { status } = await Location.requestForegroundPermissionsAsync();
+  // Memoize listData to prevent recreating on every render
+  const listData = useMemo(
+    () => [
+      { type: "header" },
+      { type: "current_location" },
+      { type: "toggle_saved" },
+      ...(showSaved
+        ? savedLocations.length > 0
+          ? savedLocations.map((l) => ({ type: "saved", ...l }))
+          : [{ type: "no_saved" }]
+        : []),
+      { type: "google_places" },
+    ],
+    [showSaved, savedLocations]
+  );
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Location access is required to use this feature."
+  const renderItem = ({ item }: any) => {
+    switch (item.type) {
+      case "header":
+        return (
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-semibold text-white">
+              Select {field === "from" ? "Pickup" : "Destination"}
+            </Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color="#f97316" />
+            </TouchableOpacity>
+          </View>
         );
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-
-      // Reverse geocode to get an address
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
-      const locationData = {
-        name: "Current Location",
-        address:
-          address?.name ||
-          `${address?.street || ""} ${address?.city || ""}`.trim(),
-        coordinates: { latitude, longitude },
-      };
-
-      console.log("📍 Using current location:", locationData);
-      onSelect(locationData);
-      onClose();
-    } catch (error) {
-      console.error("❌ Error getting current location:", error);
-      Alert.alert("Error", "Unable to fetch your location.");
-    } finally {
-      setLoadingLocation(false);
+      case "current_location":
+        return (
+          <TouchableOpacity
+            onPress={handleUseCurrentLocation}
+            className="flex-row items-center bg-gray-800 p-3 rounded-xl mb-2"
+          >
+            {loadingLocation ? (
+              <ActivityIndicator color="#f97316" />
+            ) : (
+              <View className="flex-row items-center w-full justify-center">
+                <Ionicons name="locate" size={20} color="#f97316" />
+                <Text className="ml-2 text-orange-500 font-medium">
+                  Use Current Location
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      case "toggle_saved":
+        return (
+          <TouchableOpacity
+            onPress={() => setShowSaved((prev) => !prev)}
+            className="flex-row items-center justify-center bg-gray-800 p-3 rounded-xl mb-2"
+          >
+            <Ionicons name="bookmarks" size={20} color="#f97316" />
+            <Text className="ml-2 text-orange-500 font-medium">
+              {showSaved ? "Hide Saved Locations" : "Show Saved Locations"}
+            </Text>
+          </TouchableOpacity>
+        );
+      case "saved":
+        return (
+          <AnimatedSavedItem
+            show={showSaved}
+            item={item}
+            onPress={() => handleSelectSaved(item)}
+          />
+        );
+      case "no_saved":
+        return (
+          <View className="p-4 bg-gray-800 rounded-xl mb-2 items-center">
+            <Text className="text-gray-400 text-center">
+              No saved locations yet.
+            </Text>
+          </View>
+        );
+      case "google_places":
+        return (
+          <View className="mt-3">
+            <GooglePlacesTextInput
+              apiKey={GOOGLE_MAPS_API_KEY}
+              onPlaceSelect={handlePlaceSelect}
+              fetchDetails={true}
+              includedRegionCodes={["NG"]}
+              detailsFields={[
+                "formattedAddress",
+                "location",
+                "viewport",
+                "addressComponents",
+                "types",
+              ]}
+              placeHolderText={`Search ${
+                field === "from" ? "pickup" : "destination"
+              }`}
+              style={{
+                suggestionsContainer: { maxHeight: 400 },
+                placeholder: { color: "grey" },
+                suggestionItem: {
+                  borderBottomWidth: 1,
+                  borderBottomColor: "grey",
+                  paddingVertical: 10,
+                },
+              }}
+            />
+          </View>
+        );
+      default:
+        return null;
     }
   };
 
@@ -99,76 +276,31 @@ export default function DestinationSearchModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/40">
-        <SafeAreaView
-          style={{ height: 600 }}
-          className="w-full bg-gray-900 rounded-t-[25px] p-4"
-        >
-          <View className="self-center w-12 h-1.5 bg-gray-600 rounded-full mb-3" />
-
-          <View className="flex-row items-center mb-4">
-            <TouchableOpacity
-              onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full bg-gray-800"
-            >
-              <Ionicons name="close" size={22} color="#f97316" />
-            </TouchableOpacity>
-            <Text className="ml-3 text-lg font-semibold text-gray-100">
-              Select {field === "from" ? "Pickup" : "Destination"}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleUseCurrentLocation}
-            disabled={loadingLocation}
-            className="flex-row items-center justify-center mb-4 bg-gray-800 p-3 rounded-xl"
-          >
-            {loadingLocation ? (
+      {/* Outer Pressable for overlay */}
+      <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
+        {/* Inner Pressable to block propagation */}
+        <Pressable onPress={(e) => e.stopPropagation()}>
+          <SafeAreaView className="bg-gray-900 rounded-t-3xl p-4 h-[600px]">
+            {loadingSaved && savedLocations.length === 0 ? (
               <ActivityIndicator color="#f97316" />
             ) : (
-              <>
-                <Ionicons name="locate" size={20} color="#f97316" />
-                <Text className="ml-2 text-orange-500 font-medium">
-                  Use Current Location
-                </Text>
-              </>
+              <FlatList
+                data={listData}
+                keyExtractor={(item, index) =>
+                  item.type === "saved"
+                    ? `saved-${item.id || index}`
+                    : `${item.type}-${index}`
+                }
+                renderItem={renderItem}
+                showsVerticalScrollIndicator={false}
+              />
             )}
-          </TouchableOpacity>
-
-          <GooglePlacesTextInput
-            apiKey={GOOGLE_MAPS_API_KEY}
-            onPlaceSelect={handlePlaceSelect}
-            includedRegionCodes={["NG"]}
-            fetchDetails={true}
-            detailsFields={[
-              "formattedAddress",
-              "location",
-              "viewport",
-              "addressComponents",
-              "types",
-            ]}
-            placeHolderText={`Type ${
-              field === "from" ? "Pickup" : "Destination"
-            }`}
-            style={{
-              suggestionsContainer: {
-                maxHeight: 500,
-              },
-              placeholder: {
-                color: "grey",
-              },
-              suggestionItem: {
-                borderBottomWidth: 1,
-                borderBottomColor: "grey",
-                paddingVertical: 10,
-              },
-            }}
-          />
-        </SafeAreaView>
-      </View>
+          </SafeAreaView>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

@@ -91,6 +91,13 @@ export default function RootLayout() {
         />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="saved-locations"
+          options={{
+            headerShown: false,
+            presentation: "transparentModal", // 👈 shows as modal
+          }}
+        />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

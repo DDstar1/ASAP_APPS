@@ -15,7 +15,7 @@ export default function CameraModal({
 }: {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (uri: string) => void;
+  onConfirm: (uri: string | null) => void; // allow null for "skip"
 }) {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
@@ -23,19 +23,78 @@ export default function CameraModal({
   const cameraRef = useRef<any>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [step, setStep] = useState<"prompt" | "camera">("prompt");
 
   useEffect(() => {
-    if (visible && !permission?.granted) {
+    if (visible) {
+      setStep("prompt"); // reset to workflow prompt each time modal opens
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (step === "camera" && !permission?.granted) {
       requestPermission();
     }
-  }, [visible, permission]);
+  }, [step, permission]);
 
   const onCameraReady = () => {
     console.log("📹 Camera is ready");
     setIsReady(true);
   };
 
+  const handleWorkflowChoice = (choice: "yes" | "no") => {
+    if (choice === "yes") {
+      setStep("camera");
+    } else {
+      onConfirm(null);
+      onClose();
+    }
+  };
+
   if (!permission) return null;
+
+  if (step === "prompt") {
+    return (
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <SafeAreaView className="flex-1 bg-gray-900 items-center justify-center p-6">
+          <Ionicons name="camera-outline" size={70} color="#f97316" />
+          <Text className="text-white text-2xl font-semibold mt-4 text-center">
+            Take a Picture?
+          </Text>
+          <Text className="text-gray-400 text-center mt-2 mb-6">
+            Do you want to take a picture of the package now?
+          </Text>
+
+          <TouchableOpacity
+            className="bg-orange-500 px-6 py-3 rounded-full w-60 mb-3"
+            onPress={() => handleWorkflowChoice("yes")}
+          >
+            <Text className="text-white font-semibold text-center">
+              Yes, Take Picture
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="bg-gray-800 px-6 py-3 rounded-full w-60"
+            onPress={() => handleWorkflowChoice("no")}
+          >
+            <Text className="text-gray-300 font-semibold text-center">
+              No, Skip
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity className="mt-6" onPress={onClose}>
+            <Text className="text-gray-500 text-sm">Cancel</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+    );
+  }
 
   if (!permission.granted) {
     return (
@@ -47,7 +106,7 @@ export default function CameraModal({
       >
         <View className="flex-1 items-center justify-center bg-black">
           <View className="items-center p-6">
-            <Ionicons name="camera" size={64} color="white" className="mb-4" />
+            <Ionicons name="camera" size={64} color="white" />
             <Text className="text-white text-xl font-semibold mb-2 text-center">
               Camera Permission Required
             </Text>
@@ -127,11 +186,6 @@ export default function CameraModal({
         ["lastPhoto", newFile.uri],
         ["lastPhotoUrl", publicUrl],
       ]);
-      console.log("💾 Saved path to AsyncStorage");
-      console.log([
-        ["lastPhoto", newFile.uri],
-        ["lastPhotoUrl", publicUrl],
-      ]);
 
       // Pass safe URI to parent
       onConfirm(publicUrl);
@@ -182,7 +236,7 @@ export default function CameraModal({
           </View>
         )}
 
-        {/* ✅ Upload Progress Overlay */}
+        {/* Upload Progress Overlay */}
         {isUploading && uploadProgress !== null && (
           <View className="absolute inset-0 bg-black/70 items-center justify-center z-30">
             <Progress.Circle
@@ -219,7 +273,7 @@ export default function CameraModal({
             />
           </TouchableOpacity>
 
-          {/* ✅ Normal capture button (no loader inside) */}
+          {/* Capture button */}
           <TouchableOpacity
             onPress={takePicture}
             disabled={!isReady || isUploading}

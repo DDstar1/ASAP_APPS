@@ -9,6 +9,12 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        animation: "fade", // or 'shift'
+        transitionSpec: {
+          animation: "timing",
+          config: { duration: 250 },
+        },
+        sceneStyle: { backgroundColor: "#111827" },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
