@@ -18,7 +18,7 @@ import {
   addSavedLocation,
   deleteSavedLocation,
   getSavedLocations,
-} from "@/lib/supabase-functions";
+} from "@/lib/supabase-app-functions";
 
 export default function SavedLocationsModal({
   visible,

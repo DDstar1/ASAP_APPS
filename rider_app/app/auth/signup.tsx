@@ -7,13 +7,13 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { TextInput, IconButton } from "react-native-paper";
+import { TextInput } from "react-native-paper";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import { makeRedirectUri } from "expo-auth-session";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as Linking from "expo-linking";
-import { signUpUser } from "@/lib/supabase-app-functions";
+import { signUpUser } from "@/lib/supabase-functions";
 
 const createSessionFromUrl = async (url: string) => {
   const { params } = QueryParams.getQueryParams(url);
@@ -28,7 +28,7 @@ const createSessionFromUrl = async (url: string) => {
   }
 };
 
-export default function SignUpScreen() {
+export default function RiderSignUpScreen() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -76,8 +76,12 @@ export default function SignUpScreen() {
       className="bg-[#1c1c1e]"
     >
       <View className="px-6">
-        <Text className="text-white text-3xl font-bold mb-8 text-center">
-          Create an Account
+        {/* Rider-specific heading */}
+        <Text className="text-white text-3xl font-bold mb-2 text-center">
+          Rider Sign Up
+        </Text>
+        <Text className="text-white/70 text-center mb-8">
+          Create your rider account to start delivering
         </Text>
 
         {/* Username */}
@@ -156,7 +160,7 @@ export default function SignUpScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text className="text-white text-center text-base font-semibold">
-              Create Account
+              Create Rider Account
             </Text>
           )}
         </TouchableOpacity>

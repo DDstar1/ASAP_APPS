@@ -13,10 +13,10 @@ import * as Linking from "expo-linking";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
-import { signInUser } from "@/lib/supabase-app-functions";
+import { signInUser } from "@/lib/supabase-functions";
 
 const redirectTo = makeRedirectUri({
-  scheme: "com.asapCustomer",
+  scheme: "com.asapRider",
   path: "auth-callback",
 });
 
@@ -34,7 +34,7 @@ const createSessionFromUrl = async (url: string) => {
   }
 };
 
-export default function AuthScreen() {
+export default function RiderAuthScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,8 +73,12 @@ export default function AuthScreen() {
       className="bg-[#1c1c1e]"
     >
       <View className="px-6">
-        <Text className="text-white text-3xl font-bold mb-8 text-center">
-          Welcome Back
+        {/* Rider-specific heading */}
+        <Text className="text-white text-3xl font-bold mb-2 text-center">
+          Rider Login
+        </Text>
+        <Text className="text-white/70 text-center mb-8">
+          Access your rider dashboard and start delivering
         </Text>
 
         {/* ✅ Email Input */}
@@ -152,13 +156,14 @@ export default function AuthScreen() {
           )}
         </TouchableOpacity>
 
-        {/* ✅ Create Account Link */}
+        {/* ✅ Create Rider Account Link */}
         <TouchableOpacity onPress={() => router.push("/auth/signup")}>
           <Text className="text-green-400 text-right text-base font-semibold">
-            Create Account
+            Create Rider Account
           </Text>
         </TouchableOpacity>
 
+        {/* Terms */}
         <Text className="text-gray-400 text-xs text-center mt-6">
           By continuing, you agree to our Terms & Privacy Policy.
         </Text>

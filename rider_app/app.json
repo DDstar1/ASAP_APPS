@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "asap-rider",
+    "scheme": "asaprider",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -63,7 +63,9 @@
       "eas": {
         "projectId": "a5920a6b-2597-44b3-a63b-f3dda41504cb"
       },
-      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y"
+      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y",
+      "SUPABASE_URL": "https://edtsmqjnkakaaujmmhip.supabase.co",
+      "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkdHNtcWpua2FrYWF1am1taGlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQzNDk0MSwiZXhwIjoyMDc3MDEwOTQxfQ.vRZZE1pZ5koj3cxoRPtxgUPlO7I1ZrOP-Mk_2dMfKx8"
     },
     "owner": "ddhaven"
   }

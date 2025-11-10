@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUserStore } from "@/store/useUserStore";
-import { getCusUserById } from "@/lib/supabase-functions";
+import { getCusUserById } from "@/lib/supabase-app-functions";
 import { getFormattedToday } from "@/utils/home_utils";
 import { shipments } from "@/utils/dummyData";
 

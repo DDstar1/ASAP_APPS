@@ -5,7 +5,17 @@ import { useUserStore } from "@/store/useUserStore";
 import * as FileSystem from "expo-file-system";
 import { createUploadTask } from "expo-file-system/legacy";
 
-import type { SavedLocationInput } from "@/utils/my_types";
+import type {
+  Coordinates,
+  DeliveryOrder,
+  RiderDistanceInfo,
+  SavedLocationInput,
+} from "@/utils/my_types";
+import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
+import {
+  deleteOldPendingDeliveries,
+  hasDriverAcceptedDelivery,
+} from "./supabase-utils";
 
 export const handleLogout = async () => {
   try {
@@ -179,7 +189,7 @@ export async function uploadDeliveryImage(
   }
 }
 
-export async function addPackageImage(url) {
+export async function addPackageImage(url: string) {
   try {
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) throw new Error("User not logged in");
@@ -272,5 +282,135 @@ export async function deleteSavedLocation(id: number | string) {
   } catch (error: any) {
     console.error("Error deleting location:", error.message);
     return { success: false, error };
+  }
+}
+
+/**
+ * Returns the closest active rider based on driving distance & ETA using getDistanceAndETAByRoad
+ */
+export async function getActiveRiders(pickupCoords: Coordinates) {
+  // 1️⃣ Fetch active riders updated in last 50 minutes
+  const { data: riders, error: ridersError } = await supabase
+    .from("riders_current_status")
+    .select("id, latitude, longitude")
+    .eq("active_mode", "rider");
+
+  console.log("Active riders fetched:", riders);
+
+  if (ridersError) {
+    console.error("Supabase fetch error:", ridersError);
+    return [];
+  }
+  if (!riders || riders.length === 0) return [];
+
+  // 2️⃣ Fetch usernames for these rider IDs
+  const { data: users, error: usersError } = await supabase
+    .from("custom_users")
+    .select("id, username");
+
+  console.log("Active usernames fetched:", users);
+
+  if (usersError) {
+    console.error("Supabase fetch error (users):", usersError);
+    return [];
+  }
+
+  // 3️⃣ Compute distances & ETA for each rider
+  const ridersWithDistance: RiderDistanceInfo[] = [];
+
+  for (const rider of riders) {
+    const user = users?.find((u) => u.id === rider.id);
+    const username = user?.username || "Unknown";
+
+    const result = await getDistanceAndETAByRoad(pickupCoords, {
+      latitude: rider.latitude,
+      longitude: rider.longitude,
+    });
+
+    if (result) {
+      ridersWithDistance.push({
+        id: rider.id,
+        username,
+        latitude: rider.latitude,
+        longitude: rider.longitude,
+        distanceKm: result.distanceKm,
+        etaMin: result.durationMin,
+      });
+    }
+  }
+
+  console.log("Riders with distances:", ridersWithDistance);
+
+  // 4️⃣ Sort by distance
+  ridersWithDistance.sort((a, b) => (a.distanceKm! < b.distanceKm! ? -1 : 1));
+  return ridersWithDistance;
+}
+
+export async function upsertDeliveryOrder({
+  driver_id = null,
+  status,
+  order_code,
+  image_url = null,
+  pickup_lat,
+  pickup_long,
+  dropoff_lat,
+  dropoff_long,
+  driver_initial_lat = null,
+  driver_initial_long = null,
+  driver_package_current_lat = null,
+  driver_package_current_long = null,
+}: Partial<DeliveryOrder> & { order_code: string }) {
+  try {
+    // 1️⃣ Ensure client_id (get from logged in user if missing)
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData?.user) throw new Error("No user logged in");
+    let client_id = userData.user.id;
+
+    if (status == "pending") {
+      deleteOldPendingDeliveries(client_id, order_code);
+      const { accepted, driver_id } = await hasDriverAcceptedDelivery(
+        client_id,
+        order_code
+      );
+      if (accepted) {
+        return { status: "accepted", driver_id };
+      } else {
+        // 3️⃣ Perform the UPSERT
+        const { data, error } = await supabase
+          .from("delivery_orders")
+          .upsert(
+            [
+              {
+                client_id,
+                driver_id,
+                image_url,
+                pickup_lat,
+                pickup_long,
+                dropoff_lat,
+                dropoff_long,
+                driver_initial_lat,
+                driver_initial_long,
+                driver_package_current_lat,
+                driver_package_current_long,
+                status,
+                order_code,
+                modified_at: new Date().toISOString(),
+              },
+            ],
+            { onConflict: "order_code" } // adjust conflict rule if needed
+          )
+          .select()
+          .maybeSingle();
+
+        if (error) throw error;
+
+        console.log("✅ Delivery order upserted:", data);
+        return { status: "still pending", data };
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error upserting delivery order:", err);
+    return null;
   }
 }

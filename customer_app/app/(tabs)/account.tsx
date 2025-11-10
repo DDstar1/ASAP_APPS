@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { handleLogout } from "@/lib/supabase-functions";
+import { handleLogout } from "@/lib/supabase-app-functions";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 

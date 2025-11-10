@@ -5,7 +5,10 @@ import { Directory, File, Paths } from "expo-file-system";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { addPackageImage, uploadDeliveryImage } from "@/lib/supabase-functions";
+import {
+  addPackageImage,
+  uploadDeliveryImage,
+} from "@/lib/supabase-app-functions";
 import * as Progress from "react-native-progress";
 
 export default function CameraModal({

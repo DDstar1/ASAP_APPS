@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
-  Switch,
   StatusBar,
   Image,
+  TouchableOpacity,
   FlatList,
 } from "react-native";
+import { Switch } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,8 +15,9 @@ import { router } from "expo-router";
 import { IMAGES } from "@/assets/assetsData";
 import OrderSummary from "@/components/OrderSummary";
 import { deliveryOrders } from "@/utils/deliveryOrders";
+import { supabase } from "@/lib/supabase";
+import * as Location from "expo-location";
 
-// ✅ Reanimated imports
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,15 +27,23 @@ import Animated, {
   FadeInDown,
   FadeOutUp,
 } from "react-native-reanimated";
+import {
+  updateRiderActiveMode,
+  updateRiderLocation,
+} from "@/lib/supabase-functions";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showOrders, setShowOrders] = useState(false);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(
+    null
+  );
 
-  // Shared values for Reanimated
+  // Reanimated shared values
   const slide = useSharedValue(0);
   const opacity = useSharedValue(0);
 
+  // Handle dropdown animation
   useEffect(() => {
     if (showOrders) {
       slide.value = withSpring(1, { damping: 12, stiffness: 120 });
@@ -47,7 +56,7 @@ const RiderHomeScreen = () => {
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
 
-  // Derived animated styles
+  // Animated styles for dropdown
   const dropdownStyle = useAnimatedStyle(() => {
     const translateY = interpolate(slide.value, [0, 1], [-20, 0]);
     const scale = interpolate(slide.value, [0, 1], [0.95, 1]);
@@ -59,11 +68,56 @@ const RiderHomeScreen = () => {
     };
   });
 
+  // Start real-time location updates
+  const startRealtimeLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      alert("Location permission is required for online mode.");
+      setIsOnline(false);
+      return;
+    }
+
+    console.log("Starting location tracking...");
+
+    locationSubscription.current = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.Highest,
+        distanceInterval: 0, // update every 5 meters
+        timeInterval: 3000, // update at least every 3 seconds
+      },
+      async (location) => {
+        try {
+          const { latitude, longitude } = location.coords;
+          await updateRiderLocation(latitude, longitude);
+        } catch (err) {
+          console.error("Failed to update rider location:", err);
+        }
+      }
+    );
+  };
+
+  // Stop location updates
+  const stopRealtimeLocation = () => {
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+  };
+
+  // Watch the switch
+  useEffect(() => {
+    if (isOnline) startRealtimeLocation();
+    else stopRealtimeLocation();
+    updateRiderActiveMode(isOnline);
+
+    return () => stopRealtimeLocation(); // Cleanup on unmount
+  }, [isOnline]);
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
 
-      {/* ===== Header ===== */}
+      {/* Header */}
       <LinearGradient
         colors={["#10B981", "#059669"]}
         className="relative"
@@ -100,7 +154,7 @@ const RiderHomeScreen = () => {
         />
       </LinearGradient>
 
-      {/* ===== Body ===== */}
+      {/* Body */}
       <View className="bg-gray-50 px-5 pt-6 pb-24">
         {/* Online/Offline Switch */}
         <View className="bg-white rounded-3xl p-5 mb-4 shadow-sm">
@@ -128,14 +182,10 @@ const RiderHomeScreen = () => {
           </View>
         </View>
 
-        {/* ===== Animated Orders Card ===== */}
+        {/* Animated Orders */}
         <LinearGradient
           colors={["#FDE68A", "#F59E0B"]}
-          style={{
-            borderRadius: 20,
-            padding: 15,
-            overflow: "hidden",
-          }}
+          style={{ borderRadius: 20, padding: 15, overflow: "hidden" }}
         >
           <TouchableOpacity activeOpacity={0.85} onPress={toggleDropdown}>
             <View className="flex-row justify-between items-center">
@@ -147,7 +197,6 @@ const RiderHomeScreen = () => {
                   {deliveryOrders.length} delivery orders found!
                 </Text>
               </View>
-
               <Ionicons
                 name={showOrders ? "chevron-up" : "chevron-down"}
                 size={22}
@@ -156,7 +205,6 @@ const RiderHomeScreen = () => {
             </View>
           </TouchableOpacity>
 
-          {/* ✅ Animated Dropdown */}
           <Animated.View
             entering={FadeInDown.duration(500)}
             exiting={FadeOutUp.duration(200)}
@@ -171,9 +219,7 @@ const RiderHomeScreen = () => {
                   onPress={() =>
                     router.push({
                       pathname: "/order_detail",
-                      params: {
-                        orderId: item.id,
-                      },
+                      params: { orderId: item.id },
                     })
                   }
                 >

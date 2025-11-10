@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import GooglePlacesTextInput from "react-native-google-places-textinput";
 import Constants from "expo-constants";
-import { getSavedLocations } from "@/lib/supabase-functions";
+import { getSavedLocations } from "@/lib/supabase-app-functions";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -182,7 +182,7 @@ export default function DestinationSearchModal({
     switch (item.type) {
       case "header":
         return (
-          <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center justify-between mb-3 bg-gray-900 pb-2">
             <Text className="text-lg font-semibold text-white">
               Select {field === "from" ? "Pickup" : "Destination"}
             </Text>
@@ -296,6 +296,7 @@ export default function DestinationSearchModal({
                 }
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
+                stickyHeaderIndices={[0]}
               />
             )}
           </SafeAreaView>
