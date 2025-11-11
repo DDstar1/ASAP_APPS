@@ -71,3 +71,15 @@ export async function hasDriverAcceptedDelivery(
     return { accepted: false, driver_id: null };
   }
 }
+
+// 1️⃣ Helper function to check if order exists
+export async function checkOrderExists(order_code: string) {
+  const { data, error } = await supabase
+    .from("delivery_orders")
+    .select("order_code")
+    .eq("order_code", order_code)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data; // true if exists, false if not
+}

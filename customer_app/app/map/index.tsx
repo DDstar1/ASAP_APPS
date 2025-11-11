@@ -25,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { getActiveRiders } from "@/lib/supabase-app-functions";
 import { RiderDistanceInfo } from "@/utils/my_types";
+import { Coordinates } from "@/utils/my_types";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
@@ -53,6 +54,7 @@ export default function MapScreen() {
   const [currentRiderIndex, setCurrentRiderIndex] = useState(0);
   const [distance, setDistance] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
+  const [waypoints, setWaypoints] = useState<Coordinates[] | null>(null);
 
   const mapRef = useRef<MapView>(null);
 
@@ -234,10 +236,11 @@ export default function MapScreen() {
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={5}
             strokeColor="#F97316"
-            optimizeWaypoints
+            //optimizeWaypoints
             onReady={(result) => {
               setDistance(result.distance);
               setDuration(result.duration);
+              setWaypoints(result.coordinates);
               mapRef.current?.fitToCoordinates(result.coordinates, {
                 edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
                 animated: true,
@@ -336,14 +339,12 @@ export default function MapScreen() {
       <RiderAwaitingModal
         visible={showAwaitingModal}
         onClose={() => setShowAwaitingModal(false)}
-        price={price}
-        packageImage={packageImage || IMAGES.riderWithPizza}
-        pickup={pickup}
-        destination={destination}
-        activeRiders={activeRiders}
-        selectedRider={selectedRider}
-        distance={distance}
-        duration={duration}
+        pickup_lat={pickup?.coordinates?.latitude ?? 0}
+        pickup_long={pickup?.coordinates?.longitude ?? 0}
+        dropoff_lat={destination?.coordinates?.latitude ?? 0}
+        dropoff_long={destination?.coordinates?.longitude ?? 0}
+        image_url={packageImage?.uri || IMAGES.riderWithPizza}
+        waypoints={waypoints}
       />
     </View>
   );

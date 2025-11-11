@@ -13,6 +13,7 @@ import type {
 } from "@/utils/my_types";
 import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
 import {
+  checkOrderExists,
   deleteOldPendingDeliveries,
   hasDriverAcceptedDelivery,
 } from "./supabase-utils";
@@ -346,71 +347,91 @@ export async function getActiveRiders(pickupCoords: Coordinates) {
   return ridersWithDistance;
 }
 
-export async function upsertDeliveryOrder({
-  driver_id = null,
-  status,
-  order_code,
-  image_url = null,
-  pickup_lat,
-  pickup_long,
-  dropoff_lat,
-  dropoff_long,
-  driver_initial_lat = null,
-  driver_initial_long = null,
-  driver_package_current_lat = null,
-  driver_package_current_long = null,
-}: Partial<DeliveryOrder> & { order_code: string }) {
+export async function upsertDeliveryOrder(
+  props: Partial<DeliveryOrder> & { order_code: string }
+) {
   try {
-    // 1️⃣ Ensure client_id (get from logged in user if missing)
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError) throw userError;
     if (!userData?.user) throw new Error("No user logged in");
-    let client_id = userData.user.id;
 
-    if (status == "pending") {
-      deleteOldPendingDeliveries(client_id, order_code);
+    const client_id = userData.user.id;
+    const { order_code, status } = props;
+
+    if (status === "pending") {
+      await deleteOldPendingDeliveries(client_id, order_code);
+
       const { accepted, driver_id } = await hasDriverAcceptedDelivery(
         client_id,
         order_code
       );
-      if (accepted) {
-        return { status: "accepted", driver_id };
-      } else {
-        // 3️⃣ Perform the UPSERT
-        const { data, error } = await supabase
+      if (accepted) return { status: "accepted", driver_id };
+
+      const payload = {
+        ...props,
+        client_id,
+        modified_at: new Date().toISOString(),
+      };
+
+      const orderExists = await checkOrderExists(order_code);
+
+      if (orderExists) {
+        // Only update modified_at if order already exists
+        const { data: updatedData, error: updateError } = await supabase
           .from("delivery_orders")
-          .upsert(
-            [
-              {
-                client_id,
-                driver_id,
-                image_url,
-                pickup_lat,
-                pickup_long,
-                dropoff_lat,
-                dropoff_long,
-                driver_initial_lat,
-                driver_initial_long,
-                driver_package_current_lat,
-                driver_package_current_long,
-                status,
-                order_code,
-                modified_at: new Date().toISOString(),
-              },
-            ],
-            { onConflict: "order_code" } // adjust conflict rule if needed
-          )
+          .update({ modified_at: new Date().toISOString() })
+          .eq("order_code", order_code)
           .select()
           .maybeSingle();
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+        console.log("✅ Order exists, updated modified_at:");
+        return { status: "updated", data: updatedData };
+      } else {
+        // Insert new order
+        const { data: insertedData, error: insertError } = await supabase
+          .from("delivery_orders")
+          .insert([payload])
+          .select()
+          .maybeSingle();
 
-        console.log("✅ Delivery order upserted:", data);
-        return { status: "still pending", data };
+        if (insertError) throw insertError;
+        console.log("✅ Order inserted:", insertedData);
+        return { status: "inserted", data: insertedData };
       }
     }
   } catch (err) {
     console.error("❌ Error upserting delivery order:", err);
     return null;
+  }
+}
+export async function getDeliveryOrderByCode(order_code: string) {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_orders")
+      .select(
+        `
+        order_code,
+        driver_id,
+        pickup_lat,
+        pickup_long,
+        dropoff_lat,
+        dropoff_long,
+        driver_package_current_lat,
+        driver_package_current_long,
+        driver_initial_lat,
+        driver_initial_long,
+        image_url,
+        status
+      `
+      )
+      .eq("order_code", order_code)
+      .maybeSingle();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err: any) {
+    console.error("❌ Error fetching delivery order:", err.message);
+    return { data: null, error: err };
   }
 }

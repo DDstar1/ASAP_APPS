@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { upsertDeliveryOrder } from "@/lib/supabase-app-functions";
 import { router } from "expo-router";
+import { Coordinates } from "@/utils/my_types";
 
 type Props = {
   visible: boolean;
@@ -19,9 +20,10 @@ type Props = {
   dropoff_lat: number;
   dropoff_long: number;
   image_url?: string;
+  waypoints?: Coordinates[] | null;
 };
 
-export default function RiderSearchModal({
+export default function RiderAwaitingModal({
   visible,
   onClose,
   pickup_lat,
@@ -29,6 +31,7 @@ export default function RiderSearchModal({
   dropoff_lat,
   dropoff_long,
   image_url,
+  waypoints,
 }: Props) {
   const progress1 = useSharedValue(0);
   const progress2 = useSharedValue(0);
@@ -48,8 +51,8 @@ export default function RiderSearchModal({
           pickup_long,
           dropoff_lat,
           dropoff_long,
-
           status: "pending", // always pending for polling
+          waypoints,
         });
 
         console.log("orderCodeRef.current", orderCodeRef.current);
@@ -58,7 +61,10 @@ export default function RiderSearchModal({
         if (result?.status === "accepted") {
           console.log("🚀 Delivery accepted by driver:", result.driver_id);
           // Navigate to tracking page with the order_code as a param
-          router.replace(`/trackPackage?order_code=${orderCodeRef.current}`);
+          router.replace({
+            pathname: "/trackPackage/[order_code]",
+            params: { order_code: orderCodeRef.current },
+          });
           onClose();
         } else {
           console.log("⏳ Waiting for driver to accept...");

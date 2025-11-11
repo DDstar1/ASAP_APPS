@@ -47,6 +47,7 @@ type DeliveryOrder = {
   driver_initial_long?: number | null;
   driver_package_current_lat?: number | null;
   driver_package_current_long?: number | null;
+  waypoints?: Coordinates[] | null;
 };
 
 export type {
