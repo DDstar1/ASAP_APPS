@@ -1,15 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
-import { Directory, File, Paths } from "expo-file-system";
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   addPackageImage,
   uploadDeliveryImage,
 } from "@/lib/supabase-app-functions";
+import { Ionicons } from "@expo/vector-icons";
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
+import { Directory, File, Paths } from "expo-file-system";
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 import * as Progress from "react-native-progress";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CameraModal({
   visible,
@@ -74,7 +73,7 @@ export default function CameraModal({
           </Text>
 
           <TouchableOpacity
-            className="bg-orange-500 px-6 py-3 rounded-full w-60 mb-3"
+            className="bg-orange-500 px-6 py-3 rounded-full w-60 mb-5"
             onPress={() => handleWorkflowChoice("yes")}
           >
             <Text className="text-white font-semibold text-center">
@@ -83,7 +82,7 @@ export default function CameraModal({
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="bg-gray-800 px-6 py-3 rounded-full w-60"
+            className="bg-gray-800 px-6 py-3 rounded-full w-60 mb-5"
             onPress={() => handleWorkflowChoice("no")}
           >
             <Text className="text-gray-300 font-semibold text-center">
@@ -135,7 +134,7 @@ export default function CameraModal({
     if (!isReady) {
       Alert.alert(
         "Camera not ready",
-        "Please wait for the camera to initialize"
+        "Please wait for the camera to initialize",
       );
       return;
     }
@@ -180,15 +179,10 @@ export default function CameraModal({
           const percent = Math.round(progress * 100);
           setUploadProgress(progress);
           console.log(`📤 Upload progress: ${percent}%`);
-        }
+        },
       );
-      const AddImageToTable = addPackageImage(publicUrl);
 
-      // Save path in AsyncStorage
-      await AsyncStorage.multiSet([
-        ["lastPhoto", newFile.uri],
-        ["lastPhotoUrl", publicUrl],
-      ]);
+      const AddImageToTable = addPackageImage(publicUrl);
 
       // Pass safe URI to parent
       onConfirm(publicUrl);

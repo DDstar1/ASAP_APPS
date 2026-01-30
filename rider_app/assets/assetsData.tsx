@@ -13,6 +13,7 @@ export const IMAGES = {
   riderScooter: require("./images/rider_scooter.svg"),
   riderIllustraion: require("./images/rider_illustration.png"),
   indomie_package: require("./images/indomie_package.jpg"),
+  no_package_image: require("./images/no_package_image.jpg"),
 
   // 👉 add more images here if needed
 };
@@ -46,4 +47,7 @@ export const MY_ICONS = {
   arrowLeft: (color: string, size = 20) => (
     <MaterialIcons name="keyboard-arrow-left" size={size} color={color} />
   ),
+  map: (color: string, size = 28) => (
+    <MaterialIcons name="map" size={size} color={color} />
+  ), // ✅ Added map icon
 };

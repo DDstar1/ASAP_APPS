@@ -1,9 +1,12 @@
 import { IMAGES } from "@/assets/assetsData";
 import CameraModal from "@/components/CameraModal";
-import ShareScreenModal from "@/components/ShareScreenModal";
 import SavedLocationsModal from "@/components/SavedLocationsModal";
+import ShareScreenModal from "@/components/ShareScreenModal";
+import { getCusUserById } from "@/lib/supabase-app-functions";
+import { useUserStore } from "@/store/useUserStore";
+import { shipments } from "@/utils/dummyData";
+import { getFormattedToday } from "@/utils/home_utils";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -17,10 +20,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useUserStore } from "@/store/useUserStore";
-import { getCusUserById } from "@/lib/supabase-app-functions";
-import { getFormattedToday } from "@/utils/home_utils";
-import { shipments } from "@/utils/dummyData";
 
 const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -80,7 +79,7 @@ const ShippingTrackerApp = () => {
       console.log(
         "🗺 Opening SavedLocationsModal for:",
         SharedlocationDetails.lat,
-        SharedlocationDetails.lng
+        SharedlocationDetails.lng,
       );
       setSavedVisible(true);
     }
@@ -259,13 +258,17 @@ const ShippingTrackerApp = () => {
         visible={cameraVisible}
         onClose={() => {
           setCameraVisible(false);
-          router.push("/map"); // ✅ Even if they close camera, go to map
         }}
-        onConfirm={async (uri: any) => {
+        onConfirm={async (image_url) => {
           try {
-            await AsyncStorage.setItem("packageImage", uri);
-            router.push("/map");
-          } catch {
+            router.push({
+              pathname: "/map",
+              params: {
+                packageImage: image_url,
+              },
+            });
+          } catch (error) {
+            console.error("Failed to save package image:", error);
             Alert.alert("Error", "Failed to save image");
             router.push("/map");
           }

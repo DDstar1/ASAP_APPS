@@ -5,15 +5,32 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { useFonts } from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+
 import { Ionicons } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native";
+import { useFonts } from "expo-font";
 import * as Linking from "expo-linking";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { TouchableOpacity } from "react-native";
+
+import { useColorScheme } from "@/hooks/use-color-scheme";
+
+/* -------------------------------------------------
+ * Types
+ * ------------------------------------------------- */
+type PendingLink = {
+  lat?: string;
+  lng?: string;
+};
+
+/* -------------------------------------------------
+ * Helpers
+ * ------------------------------------------------- */
+const normalizeParam = (value?: string | string[]): string | undefined => {
+  return Array.isArray(value) ? value[0] : value;
+};
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -23,35 +40,32 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  // ✅ Handle deep links here
-  useEffect(() => {
-    const handleDeepLink = (event: Linking.EventType | { url: string }) => {
-      const url = event.url;
-      if (!url) return;
+  const [pendingLink, setPendingLink] = useState<PendingLink | null>(null);
 
-      const { hostname, queryParams } = Linking.parse(url);
-      console.log("📩 Incoming deep link:", url);
+  /* -------------------------------------------------
+   * 1️⃣ Parse deep links (NO navigation here)
+   * ------------------------------------------------- */
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      const { hostname, queryParams } = Linking.parse(event.url);
+
+      console.log("📩 Incoming deep link:", event.url);
 
       if (hostname === "view-location" && queryParams) {
-        const { lat, lng } = queryParams;
+        const lat = normalizeParam(queryParams.lat);
+        const lng = normalizeParam(queryParams.lng);
 
-        // Redirect to /home with params to open modal
-        router.push({
-          pathname: "/(tabs)/home",
-          params: {
-            modal: "sharedlocation",
-            edit: "true",
-            lat,
-            lng,
-          },
-        });
+        // Optional safety check
+        if (lat && lng) {
+          setPendingLink({ lat, lng });
+        }
       }
     };
 
-    // Listen for incoming links when app is open
+    // App already open
     const sub = Linking.addEventListener("url", handleDeepLink);
 
-    // Handle case when app was opened from a link (cold start)
+    // Cold start
     Linking.getInitialURL().then((url) => {
       if (url) handleDeepLink({ url });
     });
@@ -59,6 +73,28 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  /* -------------------------------------------------
+   * 2️⃣ Navigate ONLY after Stack is mounted
+   * ------------------------------------------------- */
+  useEffect(() => {
+    if (!loaded || !pendingLink) return;
+
+    router.push({
+      pathname: "/(tabs)/home",
+      params: {
+        modal: "sharedlocation",
+        edit: "true",
+        lat: pendingLink.lat,
+        lng: pendingLink.lng,
+      },
+    });
+
+    setPendingLink(null);
+  }, [loaded, pendingLink]);
+
+  /* -------------------------------------------------
+   * 3️⃣ Prevent rendering until fonts load
+   * ------------------------------------------------- */
   if (!loaded) return null;
 
   return (
@@ -68,7 +104,9 @@ export default function RootLayout() {
           name="onboarding/index"
           options={{ headerShown: false }}
         />
+
         <Stack.Screen name="map/index" options={{ headerShown: false }} />
+
         <Stack.Screen
           name="trackPackage/index"
           options={({ navigation }) => ({
@@ -89,18 +127,22 @@ export default function RootLayout() {
             ),
           })}
         />
+
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
         <Stack.Screen
           name="saved-locations"
           options={{
             headerShown: false,
-            presentation: "transparentModal", // 👈 shows as modal
+            presentation: "transparentModal",
           }}
         />
+
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
+
       <StatusBar style="auto" />
     </ThemeProvider>
   );

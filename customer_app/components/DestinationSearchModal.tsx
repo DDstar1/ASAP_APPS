@@ -1,26 +1,26 @@
+import { getSavedLocations } from "@/lib/supabase-app-functions";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import Constants from "expo-constants";
+import * as Location from "expo-location";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   Modal,
-  View,
+  Pressable,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
-  FlatList,
-  Alert,
-  Pressable,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import * as Location from "expo-location";
 import GooglePlacesTextInput from "react-native-google-places-textinput";
-import Constants from "expo-constants";
-import { getSavedLocations } from "@/lib/supabase-app-functions";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
   Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
@@ -135,7 +135,7 @@ export default function DestinationSearchModal({
 
   const handleSelectSaved = (item: any) => {
     onSelect({
-      name: item.name,
+      name: `${item.name} (saved)`,
       coordinates: {
         latitude: parseFloat(item.latitude),
         longitude: parseFloat(item.longitude),

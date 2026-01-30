@@ -1,4 +1,6 @@
-export const RIDERS = [
+import { IMAGES } from "@/assets/assetsData";
+
+const RIDERS = [
   { id: 1, name: "John Doe", rating: 4.8, deliveries: "1,250+", eta: "5 min" },
   {
     id: 2,
@@ -52,3 +54,109 @@ export const RIDERS = [
     eta: "7 min",
   },
 ];
+
+// Group orders by month
+const orderSections = [
+  {
+    title: "May 2025",
+    data: [
+      {
+        id: "TRK-1A9X-74KD",
+        date: "23-05-2025",
+        time: "9:28pm",
+        location: "Sapele Rd Benin",
+        category: "Food",
+        distance: "17km",
+        direction: "right",
+      },
+      {
+        id: "TRK-2B8K-53QL",
+        date: "23-05-2025",
+        time: "10:45am",
+        location: "Lekki Phase 1",
+        category: "Gadgets",
+        distance: "8km",
+        direction: "left",
+      },
+      {
+        id: "TRK-3C7M-62VR",
+        date: "23-05-2025",
+        time: "3:15pm",
+        location: "Abuja Garki",
+        category: "Fabric",
+        distance: "24km",
+        direction: "right",
+      },
+      {
+        id: "TRK-4D6P-81ZW",
+        date: "24-05-2025",
+        time: "7:00pm",
+        location: "Yaba Lagos",
+        category: "Documents",
+        distance: "5km",
+        direction: "left",
+      },
+    ],
+  },
+  {
+    title: "April 2025",
+    data: [
+      {
+        id: "TRK-5E3N-92PQ",
+        date: "15-04-2025",
+        time: "2:30pm",
+        location: "Victoria Island",
+        category: "Electronics",
+        distance: "12km",
+        direction: "right",
+      },
+      {
+        id: "TRK-3C7M-62VR",
+        date: "23-05-2025",
+        time: "3:15pm",
+        location: "Abuja Garki",
+        category: "Fabric",
+        distance: "24km",
+        direction: "right",
+      },
+      {
+        id: "TRK-4D6P-81ZW",
+        date: "24-05-2025",
+        time: "7:00pm",
+        location: "Yaba Lagos",
+        category: "Documents",
+        distance: "5km",
+        direction: "left",
+      },
+      {
+        id: "TRK-3C7M-62VR",
+        date: "23-05-2025",
+        time: "3:15pm",
+        location: "Abuja Garki",
+        category: "Fabric",
+        distance: "24km",
+        direction: "right",
+      },
+      {
+        id: "TRK-4D6P-81ZW",
+        date: "24-05-2025",
+        time: "7:00pm",
+        location: "Yaba Lagos",
+        category: "Documents",
+        distance: "5km",
+        direction: "left",
+      },
+    ],
+  },
+];
+
+const currentTrackings = [
+  {
+    id: "TRK-9F2X-7A6B",
+    location: "Sapele Rd Benin",
+    status: "In Transit",
+    statusColor: "#22c55e",
+    map: IMAGES.dummy_map,
+  },
+];
+export { currentTrackings, orderSections, RIDERS };

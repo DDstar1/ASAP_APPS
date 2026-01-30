@@ -1,39 +1,20 @@
 import { IMAGES } from "@/assets/assetsData";
+import DeliveryButton from "@/components/DeliveryButton";
 import DestinationSearchModal from "@/components/DestinationSearchModal";
 import RiderAwaitingModal from "@/components/RiderAwaitingModal";
-import DeliveryButton from "@/components/DeliveryButton";
-import {
-  calculateFare,
-  fitAll,
-  //generateRidersWithCoords,
-  //moveRiders,
-} from "@/utils/mapUtils";
+import { getActiveRiders } from "@/lib/supabase-app-functions";
+import { calculateFare, fitAll } from "@/utils/mapUtils";
+import { Coordinates, RiderDistanceInfo } from "@/utils/my_types";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
-} from "react-native";
+import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Constants from "expo-constants";
-import { getActiveRiders } from "@/lib/supabase-app-functions";
-import { RiderDistanceInfo } from "@/utils/my_types";
-import { Coordinates } from "@/utils/my_types";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
-
-function getDistance(coord1: any, coord2: any) {
-  const dx = coord1.latitude - coord2.latitude;
-  const dy = coord1.longitude - coord2.longitude;
-  return Math.sqrt(dx * dx + dy * dy);
-}
 
 // ----------------- MAIN COMPONENT -----------------
 export default function MapScreen() {
@@ -44,10 +25,9 @@ export default function MapScreen() {
   const [price, setPrice] = useState<number | null>(null);
   const [activeRiders, setRiders] = useState<RiderDistanceInfo[]>([]);
   const [showAwaitingModal, setShowAwaitingModal] = useState(false);
-  const [packageImage, setPackageImage] = useState<any>(null);
   const [closestRider, setClosestRider] = useState<any>(null);
   const [selectedRider, setSelectedRider] = useState<RiderDistanceInfo | null>(
-    null
+    null,
   );
   const [hasMultipleRiders, setHasMultipleRiders] = useState(false);
 
@@ -57,14 +37,7 @@ export default function MapScreen() {
   const [waypoints, setWaypoints] = useState<Coordinates[] | null>(null);
 
   const mapRef = useRef<MapView>(null);
-
-  // Load package image from AsyncStorage
-  useEffect(() => {
-    (async () => {
-      const uri = await AsyncStorage.getItem("packageImage");
-      if (uri) setPackageImage({ uri });
-    })();
-  }, []);
+  const { packageImage } = useLocalSearchParams();
 
   // Auto-zoom to pickup & destination
   useEffect(() => {
@@ -93,7 +66,7 @@ export default function MapScreen() {
     }
     Alert.alert(
       "Locations Confirmed",
-      "Now searching for nearby activeRiders..."
+      "Now searching for nearby activeRiders...",
     );
   };
 
@@ -136,7 +109,7 @@ export default function MapScreen() {
           {
             edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
             animated: true,
-          }
+          },
         );
       }
     } catch (err) {
@@ -333,6 +306,7 @@ export default function MapScreen() {
         onSelect={(location) => {
           if (activeField === "from") setPickup(location);
           if (activeField === "to") setDestination(location);
+          console.log(location);
         }}
       />
 
@@ -341,9 +315,13 @@ export default function MapScreen() {
         onClose={() => setShowAwaitingModal(false)}
         pickup_lat={pickup?.coordinates?.latitude ?? 0}
         pickup_long={pickup?.coordinates?.longitude ?? 0}
+        pickup_name={`${pickup?.name ?? ""}, ${pickup?.address ?? ""}`}
         dropoff_lat={destination?.coordinates?.latitude ?? 0}
         dropoff_long={destination?.coordinates?.longitude ?? 0}
-        image_url={packageImage?.uri || IMAGES.riderWithPizza}
+        dropoff_name={`${destination?.name ?? ""}, ${
+          destination?.address ?? ""
+        }`}
+        image_url={packageImage || IMAGES.riderWithPizza}
         waypoints={waypoints}
       />
     </View>

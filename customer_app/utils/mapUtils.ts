@@ -1,5 +1,3 @@
-import { AnimatedRegion } from "react-native-maps";
-import { RIDERS } from "./dummyData";
 import Constants from "expo-constants";
 import { Coordinates, FitAllParams } from "./my_types";
 
@@ -15,7 +13,7 @@ export const calculateFare = async () => {
 
 export const getDistanceAndETAByRoad = async (
   origin: Coordinates,
-  destination: Coordinates
+  destination: Coordinates,
 ) => {
   const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${GOOGLE_MAPS_API_KEY}&mode=driving`;
 
@@ -63,4 +61,17 @@ export const fitAll = ({
       animated: true,
     });
   }
+};
+
+export const reverseGeocode = async (lat: number, lng: number) => {
+  const res = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`,
+  );
+
+  const data = await res.json();
+  const result = data.results?.[0];
+
+  if (!result) return null;
+
+  return result.formatted_address;
 };

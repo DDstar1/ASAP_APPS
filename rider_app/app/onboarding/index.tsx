@@ -48,15 +48,10 @@ export default function Onboarding() {
   const router = useRouter();
   const navigation = useNavigation();
 
-  const { user, loading, fetchUserSession } = useUserStore();
+  const { user, loading } = useUserStore();
 
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
-  }, []);
-
-  // ✅ Fetch user session from Supabase
-  useEffect(() => {
-    fetchUserSession();
   }, []);
 
   useEffect(() => {

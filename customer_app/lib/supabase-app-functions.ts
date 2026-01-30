@@ -1,17 +1,16 @@
+import { useUserStore } from "@/store/useUserStore";
+import { makeRedirectUri } from "expo-auth-session";
+import { createUploadTask } from "expo-file-system/legacy";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
-import { makeRedirectUri } from "expo-auth-session";
-import { useUserStore } from "@/store/useUserStore";
-import * as FileSystem from "expo-file-system";
-import { createUploadTask } from "expo-file-system/legacy";
 
+import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
 import type {
   Coordinates,
   DeliveryOrder,
   RiderDistanceInfo,
   SavedLocationInput,
 } from "@/utils/my_types";
-import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
 import {
   checkOrderExists,
   deleteOldPendingDeliveries,
@@ -40,7 +39,7 @@ export const handleLogout = async () => {
 export async function signUpUser(
   email: string,
   password: string,
-  username: string
+  username: string,
 ) {
   const redirectTo = makeRedirectUri({
     scheme: "com.asapCustomer",
@@ -136,7 +135,7 @@ export async function getCusUserById(userId: string) {
 export async function uploadDeliveryImage(
   fileUri,
   folder = "package_images",
-  setUploadProgress
+  setUploadProgress,
 ) {
   try {
     // 1️⃣ Create signed upload URL from Supabase
@@ -167,7 +166,7 @@ export async function uploadDeliveryImage(
           ? totalBytesSent / totalBytesExpectedToSend
           : 0;
         setUploadProgress(Number(progress.toFixed(2)));
-      }
+      },
     );
 
     // 3️⃣ Await task result
@@ -348,7 +347,7 @@ export async function getActiveRiders(pickupCoords: Coordinates) {
 }
 
 export async function upsertDeliveryOrder(
-  props: Partial<DeliveryOrder> & { order_code: string }
+  props: Partial<DeliveryOrder> & { order_code: string },
 ) {
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -363,7 +362,7 @@ export async function upsertDeliveryOrder(
 
       const { accepted, driver_id } = await hasDriverAcceptedDelivery(
         client_id,
-        order_code
+        order_code,
       );
       if (accepted) return { status: "accepted", driver_id };
 
@@ -405,6 +404,7 @@ export async function upsertDeliveryOrder(
     return null;
   }
 }
+
 export async function getDeliveryOrderByCode(order_code: string) {
   try {
     const { data, error } = await supabase
@@ -423,7 +423,7 @@ export async function getDeliveryOrderByCode(order_code: string) {
         driver_initial_long,
         image_url,
         status
-      `
+      `,
       )
       .eq("order_code", order_code)
       .maybeSingle();

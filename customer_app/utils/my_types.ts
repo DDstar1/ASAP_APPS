@@ -40,8 +40,10 @@ type DeliveryOrder = {
 
   pickup_lat?: number | null;
   pickup_long?: number | null;
+  pickup_name?: string | null;
   dropoff_lat?: number | null;
   dropoff_long?: number | null;
+  dropoff_name?: string | null;
 
   driver_initial_lat?: number | null;
   driver_initial_long?: number | null;
@@ -51,9 +53,9 @@ type DeliveryOrder = {
 };
 
 export type {
-  SavedLocationInput,
-  RiderDistanceInfo,
   Coordinates,
-  FitAllParams,
   DeliveryOrder,
+  FitAllParams,
+  RiderDistanceInfo,
+  SavedLocationInput,
 };

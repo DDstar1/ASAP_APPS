@@ -1,43 +1,52 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  StatusBar,
-  Image,
-  TouchableOpacity,
-  FlatList,
-} from "react-native";
-import { Switch } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { IMAGES } from "@/assets/assetsData";
 import OrderSummary from "@/components/OrderSummary";
-import { deliveryOrders } from "@/utils/deliveryOrders";
-import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  FadeInDown,
-  FadeOutUp,
-} from "react-native-reanimated";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
+  FlatList,
+  Image,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Switch } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import {
+  acceptDeliveryOrder,
   updateRiderActiveMode,
   updateRiderLocation,
 } from "@/lib/supabase-functions";
+import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  LinearTransition,
+} from "react-native-reanimated";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showOrders, setShowOrders] = useState(false);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
-    null
+    null,
   );
+
+  const { availableOrders, loading, fetchAvailableOrders } =
+    useRiderOrdersStore();
+
+  useEffect(() => {
+    fetchAvailableOrders();
+  }, []);
 
   // Reanimated shared values
   const slide = useSharedValue(0);
@@ -92,7 +101,7 @@ const RiderHomeScreen = () => {
         } catch (err) {
           console.error("Failed to update rider location:", err);
         }
-      }
+      },
     );
   };
 
@@ -112,6 +121,44 @@ const RiderHomeScreen = () => {
 
     return () => stopRealtimeLocation(); // Cleanup on unmount
   }, [isOnline]);
+
+  // Handle order acceptance
+  const handleAcceptOrder = async (orderCode: string) => {
+    try {
+      // 1️⃣ Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Location permission is required to accept this order.",
+        );
+        return;
+      }
+
+      // 2️⃣ Get current location
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = location.coords;
+
+      // 3️⃣ Send acceptance to your API
+      const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
+
+      // 4️⃣ Handle response
+      if (result.success) {
+        Alert.alert("Order Accepted", "You have accepted this delivery!");
+        router.push({
+          pathname: "/order_detail",
+          params: { orderCode },
+        });
+      } else {
+        Alert.alert("Failed", result.error || "Could not accept order");
+      }
+    } catch (err) {
+      console.error("Error accepting order:", err);
+      Alert.alert("Error", "Failed to accept order. Try again.");
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -194,7 +241,7 @@ const RiderHomeScreen = () => {
                   <Ionicons name="cube-outline" size={26} color="#F59E0B" />
                 </View>
                 <Text className="text-base font-bold text-gray-900">
-                  {deliveryOrders.length} delivery orders found!
+                  {availableOrders.length} delivery orders found!
                 </Text>
               </View>
               <Ionicons
@@ -211,23 +258,31 @@ const RiderHomeScreen = () => {
             style={dropdownStyle}
           >
             <FlatList
-              data={deliveryOrders}
+              data={availableOrders}
               keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/order_detail",
-                      params: { orderId: item.id },
-                    })
-                  }
+              className="mt-3"
+              renderItem={({ item, index }) => (
+                <Animated.View
+                  // Use the new Layout animation
+                  layout={LinearTransition.springify()} // replaces Layout.springify()
+                  entering={FadeInDown.duration(400).springify()}
+                  exiting={FadeOutUp.duration(300).springify()}
                 >
-                  <OrderSummary
-                    order={item}
-                    onAccept={() => console.log("Accepted order:", item.id)}
-                  />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/order_detail",
+                        params: { orderId: item.order_code },
+                      })
+                    }
+                  >
+                    <OrderSummary
+                      order={item}
+                      onAccept={() => handleAcceptOrder(item.order_code)}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
               )}
               showsVerticalScrollIndicator
               nestedScrollEnabled

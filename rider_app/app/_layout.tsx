@@ -13,12 +13,39 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Ionicons } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
+import { useEffect } from "react";
+import { useUserStore } from "@/store/useUserStore";
+import {
+  startDeliveryEvents,
+  stopAllListeners,
+} from "@/lib/supabase-realtime-functions";
 
 export default function RootLayout() {
+  const { fetchUserSession, user } = useUserStore();
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+
+  // ✅ Fetch user session from Supabase
+  useEffect(() => {
+    fetchUserSession();
+  }, []);
+
+  // Handle Supabase Realtime Notifications
+  useEffect(() => {
+    console.log("RootLayout: User changed:", user);
+    if (!user) return;
+    console.log(`${user.id} logged in, setting up realtime listeners...`);
+
+    // Start messages realtime (anonymous users CAN receive messages)
+    startDeliveryEvents();
+
+    // Cleanup
+    return () => {
+      stopAllListeners();
+    };
+  }, [user?.userId, user?.isAnonymous]);
 
   if (!loaded) {
     // Async font loading only occurs in development.
@@ -60,9 +87,6 @@ export default function RootLayout() {
             title: "Order Details",
             headerStyle: {
               backgroundColor: "#111827", // Primary Background
-              shadowColor: "#000",
-              shadowOpacity: 0.2,
-              shadowRadius: 5,
             },
             headerTintColor: "#FFFFFF", // Primary Text
             headerTitleStyle: {

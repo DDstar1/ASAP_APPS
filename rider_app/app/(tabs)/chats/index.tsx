@@ -1,3 +1,5 @@
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   Dimensions,
@@ -7,10 +9,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 
-import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { MY_ICONS } from "@/assets/assetsData";
 
 const ChatsListPage = () => {
   const { width } = Dimensions.get("window");
@@ -134,7 +134,7 @@ const ChatsListPage = () => {
   const handleChatPress = async (chat: any) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
-      pathname: "chat_details/[chat_id]",
+      pathname: "chat_details/[order_id]",
       params: { id: chat.id, name: chat.clientName },
     });
   };

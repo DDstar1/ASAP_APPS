@@ -10,6 +10,7 @@ export const IMAGES = {
   dummy_map: require("./images/dummy_map.png"),
   icon: require("./images/icon.png"),
   splashIcon: require("./images/splash-icon.png"),
+  no_package_image: require("./images/no_package_image.jpg"),
   // 👉 add more images here if needed
 };
 

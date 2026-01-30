@@ -23,30 +23,8 @@ export const useUserStore = create<UserState>((set) => ({
 
   fetchUserSession: async () => {
     set({ loading: true });
-    try {
-      const { data, error } = await supabase.auth.getUser();
-
-      if (error) {
-        console.error("Supabase auth error:", error);
-
-        // If user doesn't exist, log out
-        if (
-          error.message.includes("User from sub claim in JWT does not exist")
-        ) {
-          await supabase.auth.signOut();
-          set({ user: null });
-        }
-
-        set({ loading: false });
-        return;
-      }
-
-      set({ user: data?.user ?? null, loading: false });
-    } catch (err) {
-      console.error("Unexpected error fetching user:", err);
-      await supabase.auth.signOut();
-      set({ user: null, loading: false });
-    }
+    const { data } = await supabase.auth.getSession();
+    set({ user: data.session?.user ?? null, loading: false });
   },
 
   logout: async () => {
