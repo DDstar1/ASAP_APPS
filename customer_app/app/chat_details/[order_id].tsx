@@ -1,4 +1,7 @@
-import { getMessages, sendMessageToSupabase } from "@/lib/supabase-functions";
+import {
+  getMessages,
+  sendMessageToSupabase,
+} from "@/lib/supabase-app-functions";
 import { useUserStore } from "@/store/useUserStore";
 import { timeAgo } from "@/utils/my_utils";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,14 +24,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Helper function to format timestamp
 
 export default function ChatDetailScreen() {
-  const { id: clientId, order_id, name } = useLocalSearchParams();
+  const { id: riderId, order_id, name } = useLocalSearchParams();
   const { fetchUserSession, user } = useUserStore();
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  console.log("ChatDetailScreen params:", { clientId, order_id, name });
+  console.log("ChatDetailScreen params:", { riderId, order_id, name });
   console.log("Current user:", user);
 
   // Get current user session
@@ -42,7 +45,7 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     const loadMessages = async () => {
       setLoading(true);
-      const msgs = await getMessages(String(clientId));
+      const msgs = await getMessages(String(riderId));
       setMessages(msgs);
       setLoading(false);
       setTimeout(
@@ -63,7 +66,7 @@ export default function ChatDetailScreen() {
       id: Date.now().toString(),
       message: message,
       sender_id: user?.id,
-      receiver_id: clientId as string, // Set appropriately based on your logic
+      receiver_id: riderId as string, // Set appropriately based on your logic
       delivery_order_id: Number(order_id),
       created_at: new Date().toISOString(),
     };
@@ -78,7 +81,7 @@ export default function ChatDetailScreen() {
       await sendMessageToSupabase({
         message: newMsg.message,
         sender_id: user?.id!,
-        receiver_id: clientId as string,
+        receiver_id: riderId as string,
         delivery_order_id: newMsg.delivery_order_id,
       });
     } catch (error) {

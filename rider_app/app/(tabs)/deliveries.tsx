@@ -16,31 +16,13 @@ import {
   getRiderCurrentDeliveries,
 } from "@/lib/supabase-functions";
 import { orderSections } from "@/utils/dummyData";
-import { openGoogleMaps } from "@/utils/my_utils";
+import { openGoogleMaps, openOrderChat } from "@/utils/my_utils";
 import { router } from "expo-router";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
   const [currentDeliveries, setCurrentDeliveries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const openOrderChat = async (orderId: number) => {
-    try {
-      const clientInfo = await getOrderClientInfo(orderId);
-
-      if (!clientInfo) return;
-
-      router.push({
-        pathname: "chat_details/[order_id]",
-        params: {
-          order_id: orderId, // must match the route param
-          name: clientInfo.name,
-        },
-      });
-    } catch (error) {
-      console.error("Failed to open order chat:", error);
-    }
-  };
 
   useEffect(() => {
     const fetchDeliveries = async () => {

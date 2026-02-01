@@ -1,4 +1,4 @@
-import { getOrderClientInfo } from "@/lib/supabase-functions";
+import { getOrderRiderInfo } from "@/lib/supabase-app-functions";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { Alert, Linking } from "react-native";
@@ -111,16 +111,18 @@ const openGoogleMaps = async (dropoffLat: number, dropoffLng: number) => {
 
 const openOrderChat = async (orderId: number) => {
   try {
-    const clientInfo = await getOrderClientInfo(orderId);
+    const riderInfo = await getOrderRiderInfo(orderId);
 
-    if (!clientInfo) return;
+    console.log("Rider Info for order", orderId, ":", riderInfo);
+
+    if (!riderInfo) return;
 
     router.push({
       pathname: "/chat_details/[order_id]",
       params: {
         order_id: orderId, // must match the route param
-        name: clientInfo.name,
-        id: clientInfo.id,
+        name: riderInfo.name,
+        id: riderInfo.id,
       },
     });
   } catch (error) {

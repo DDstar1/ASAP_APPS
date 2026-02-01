@@ -39,13 +39,19 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="activity"
+        name="deliveries"
         options={{
-          title: "Activity",
+          title: "Deliveries",
           tabBarIcon: ({ color }) => MY_ICONS.activity(color),
         }}
       />
-
+      <Tabs.Screen
+        name="chats"
+        options={{
+          title: "Chats",
+          tabBarIcon: ({ color }) => MY_ICONS.message(color),
+        }}
+      />
       <Tabs.Screen
         name="account"
         options={{

@@ -3,6 +3,31 @@ import { RiderOrder } from "@/utils/my_types";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
+import { formatMessageTime } from "@/utils/my_utils";
+
+// Standalone function to get current user ID
+export async function getCurrentUserId() {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("❌ No logged-in user found", userError);
+      return {
+        success: false,
+        error: userError || "No user session",
+        userId: null,
+      };
+    }
+
+    return { success: true, userId: user.id, email: user.email };
+  } catch (err) {
+    console.error("🚨 Unexpected error while getting user:", err);
+    return { success: false, error: err, userId: null };
+  }
+}
 
 export const handleLogout = async () => {
   try {
@@ -416,15 +441,14 @@ export const getOrderClientInfo = async (orderId: number) => {
     .from("delivery_orders")
     .select(
       `
-    client_id,
-    client:custom_users (
-      username,
-      phone
-    )
-  `,
+      client_id,
+      client:custom_users!client_id (
+        username,
+        phone
+      )
+    `,
     )
     .eq("id", orderId)
-    .limit(1)
     .single();
 
   console.log("log of getOrderClientInfo", data);
@@ -437,16 +461,27 @@ export const getOrderClientInfo = async (orderId: number) => {
   return {
     name: (data?.client as any)?.username ?? "Unknown",
     phone: (data?.client as any)?.phone ?? null,
+    id: data?.client_id ?? null,
   };
 };
 
-export const getMessages = async (orderId: number) => {
-  console.log("Fetching messages for order ID:", orderId);
+export const getMessages = async (otherUserId: string) => {
+  console.log("Fetching messages for user ID:", otherUserId);
   try {
+    // Get the currently logged-in user
+    const { success, userId, error: userError } = await getCurrentUserId();
+
+    if (!success || !userId) {
+      console.error("❌ No logged-in user found", userError);
+      return [];
+    }
+
     const { data, error } = await supabase
       .from("messages")
       .select("*") // select all columns
-      .eq("delivery_order_id", orderId)
+      .or(
+        `and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`,
+      )
       .order("created_at", { ascending: true }); // oldest → newest
 
     if (error) {
@@ -460,5 +495,144 @@ export const getMessages = async (orderId: number) => {
   } catch (err) {
     console.error("Unexpected error fetching messages:", err);
     return [];
+  }
+};
+export const sendMessageToSupabase = async (messageData: {
+  message: string;
+  sender_id: string;
+  receiver_id: string;
+  delivery_order_id: number;
+}) => {
+  console.log("Sending message:", messageData);
+
+  try {
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([
+        {
+          message: messageData.message,
+          sender_id: messageData.sender_id,
+          receiver_id: messageData.receiver_id,
+          delivery_order_id: messageData.delivery_order_id,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
+
+    console.log("Message sent successfully:", data);
+    return data;
+  } catch (err) {
+    console.error("Unexpected error sending message:", err);
+    throw err;
+  }
+};
+
+export const getMessagesList = async () => {
+  try {
+    // Get the currently logged-in user
+    const { success, userId, error: userError } = await getCurrentUserId();
+
+    if (!success || !userId) {
+      console.error("❌ No logged-in user found", userError);
+      throw new Error("User not authenticated");
+    }
+
+    console.log("Fetching messages for user:", userId);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select(
+        `
+        *,
+        delivery_order:delivery_orders!delivery_order_id (
+          id,
+          order_code,
+          status
+        ),
+        sender:custom_users!sender_id (
+          id,
+          username,
+          phone
+        ),
+        receiver:custom_users!receiver_id (
+          id,
+          username,
+          phone
+        )
+      `,
+      )
+      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching messages:", error);
+      throw error;
+    }
+
+    // Group messages by conversation (other user only, not by delivery order)
+    const conversationsMap = new Map();
+
+    data.forEach((message: any) => {
+      const otherUser =
+        message.sender_id === userId ? message.receiver : message.sender;
+      const conversationKey = otherUser.id; // Group by other user only
+
+      if (!conversationsMap.has(conversationKey)) {
+        // Map delivery status to display status and color
+        const getStatusDisplay = (status: string) => {
+          const statusMap: Record<string, { text: string; color: string }> = {
+            pending: { text: "Pending", color: "#9CA3AF" },
+            accepted: { text: "Accepted", color: "#3B82F6" },
+            picked_up: { text: "Picked Up", color: "#FB923C" },
+            in_transit: { text: "In Transit", color: "#FB923C" },
+            delivered: { text: "Delivered", color: "#34D399" },
+            cancelled: { text: "Cancelled", color: "#EF4444" },
+          };
+          return statusMap[status] || { text: "Unknown", color: "#9CA3AF" };
+        };
+
+        const deliveryStatus = getStatusDisplay(
+          message.delivery_order?.status || "pending",
+        );
+
+        conversationsMap.set(conversationKey, {
+          key: conversationKey,
+          id: otherUser.id,
+          clientName: otherUser.username,
+          lastMessage: message.message,
+          time: formatMessageTime(message.created_at),
+          unreadCount: 0, // You can calculate this based on read status if you add that field
+          deliveryOrderId: message.delivery_order_id, // Most recent delivery order
+          orderId: message.delivery_order?.order_code || "",
+          status: deliveryStatus.text,
+          statusColor: deliveryStatus.color,
+          avatar: null, // No avatar_url in custom_users table
+          lastMessageTime: message.created_at,
+          otherUserId: otherUser.id,
+        });
+      }
+    });
+
+    // Convert Map to array
+    const conversations = Array.from(conversationsMap.values());
+
+    // Sort by most recent message
+    conversations.sort(
+      (a, b) =>
+        new Date(b.lastMessageTime).getTime() -
+        new Date(a.lastMessageTime).getTime(),
+    );
+
+    console.log("Messages fetched successfully:", conversations);
+    return { success: true, data: conversations };
+  } catch (err) {
+    console.error("Unexpected error fetching messages:", err);
+    return { success: false, error: err, data: [] };
   }
 };

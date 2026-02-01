@@ -26,6 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "config": {
         "googleMaps": { "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y" }
       },

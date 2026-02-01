@@ -5,7 +5,7 @@ import Constant from "expo-constants";
 import mitt from "mitt";
 
 console.log(Constant);
-const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = Constant.expoConfig.extra;
+const { SUPABASE_URL, SUPABASE_SERVICE_KEY }: any = Constant.expoConfig.extra;
 
 export type SupabaseEventMap = {
   delivery_insert: RiderOrder;
