@@ -157,7 +157,7 @@ export default function RiderAuthScreen() {
         </TouchableOpacity>
 
         {/* ✅ Create Rider Account Link */}
-        <TouchableOpacity onPress={() => router.push("/auth/signup")}>
+        <TouchableOpacity onPress={() => router.navigate("/auth/signup")}>
           <Text className="text-green-400 text-right text-base font-semibold">
             Create Rider Account
           </Text>
