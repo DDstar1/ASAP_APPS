@@ -429,28 +429,13 @@ export async function upsertDeliveryOrder(
   }
 }
 
-export async function getDeliveryOrderByCode(order_code: string) {
+export async function getDeliveryOrderById(order_id: number) {
   try {
     const { data, error } = await supabase
       .from("delivery_orders")
-      .select(
-        `
-        order_code,
-        driver_id,
-        pickup_lat,
-        pickup_long,
-        dropoff_lat,
-        dropoff_long,
-        driver_package_current_lat,
-        driver_package_current_long,
-        driver_initial_lat,
-        driver_initial_long,
-        image_url,
-        status
-      `,
-      )
-      .eq("order_code", order_code)
-      .maybeSingle();
+      .select("*")
+      .eq("id", order_id)
+      .maybeSingle<DeliveryOrder>();
 
     if (error) throw error;
     return { data, error: null };

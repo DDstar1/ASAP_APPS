@@ -79,7 +79,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loaded || !pendingLink) return;
 
-    router.push({
+    router.navigate({
       pathname: "/(tabs)/home",
       params: {
         modal: "sharedlocation",
@@ -110,6 +110,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="trackPackage/index"
           options={({ navigation }) => ({
+            title: "Track ...",
             headerShown: true,
             headerLeft: () => (
               <TouchableOpacity

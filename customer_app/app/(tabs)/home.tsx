@@ -261,7 +261,7 @@ const ShippingTrackerApp = () => {
         }}
         onConfirm={async (image_url) => {
           try {
-            router.push({
+            router.navigate({
               pathname: "/map",
               params: {
                 packageImage: image_url,
@@ -270,7 +270,7 @@ const ShippingTrackerApp = () => {
           } catch (error) {
             console.error("Failed to save package image:", error);
             Alert.alert("Error", "Failed to save image");
-            router.push("/map");
+            router.navigate("/map");
           }
         }}
       />

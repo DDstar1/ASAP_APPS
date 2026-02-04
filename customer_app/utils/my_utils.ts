@@ -73,9 +73,9 @@ function cleanAddress(address: string) {
   return cleaned;
 }
 
-const openGoogleMaps = async (dropoffLat: number, dropoffLng: number) => {
+const openOrderTrackPage = async (orderId: number) => {
   console.log("Opening Google Maps for directions...");
-  console.log(`Dropoff Coordinates: ${dropoffLat}, ${dropoffLng}`);
+
   try {
     // 1️⃣ Request location permission
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -86,15 +86,6 @@ const openGoogleMaps = async (dropoffLat: number, dropoffLng: number) => {
       );
       return;
     }
-
-    // 2️⃣ Get current location
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    const { latitude, longitude } = location.coords;
-
-    // 3️⃣ Construct Google Maps URL
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${latitude},${longitude}&destination=${dropoffLat},${dropoffLng}&travelmode=driving`;
 
     // 4️⃣ Open Google Maps
     const supported = await Linking.canOpenURL(url);
@@ -117,7 +108,7 @@ const openOrderChat = async (orderId: number) => {
 
     if (!riderInfo) return;
 
-    router.push({
+    router.navigate({
       pathname: "/chat_details/[order_id]",
       params: {
         order_id: orderId, // must match the route param
@@ -143,7 +134,7 @@ const generateOrderCode = () => {
 
 export {
   cleanAddress,
-  openGoogleMaps,
+  openOrderTrackPage,
   openOrderChat,
   timeAgo,
   formatMessageTime,

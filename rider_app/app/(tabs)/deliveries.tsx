@@ -32,7 +32,7 @@ const OrdersPage = () => {
         const response = await getRiderCurrentDeliveries();
         if (response.success) {
           setCurrentDeliveries(response.data);
-          console.log("✅ Fetched deliveries:", response.data);
+          //console.log("✅ Fetched deliveries:", response.data);
         } else {
           console.error("❌ Failed to fetch deliveries:", response.error);
         }
@@ -64,7 +64,7 @@ const OrdersPage = () => {
     </View>
   );
 
-  const renderOrderCard = ({ item }: { item: any }) => (
+  const renderCompletedOrderCard = ({ item }: { item: any }) => (
     <View className="bg-orange-500 rounded-2xl p-4 mb-4">
       {/* 3 columns x 2 rows grid */}
       <View className="flex-col gap-4">
@@ -125,8 +125,20 @@ const OrdersPage = () => {
     </View>
   );
 
-  // Inside your renderDeliveryCard
-  const renderDeliveryCard = (item: any, index: number) => (
+  // Inside your renderIncompleteDeliveryCard
+const renderIncompleteDeliveryCard = (item: any, index: number) => {
+  const rawStatus = item.status;
+  const normalizedStatus = rawStatus?.trim().toLowerCase();
+
+  console.log("📦 Delivery card render", {
+    orderId: item.id,
+    rawStatus: `"${rawStatus}"`,
+    rawLength: rawStatus?.length,
+    normalizedStatus,
+    shouldShowMessageButton: normalizedStatus !== "pending",
+  });
+
+  return (
     <View
       key={index}
       style={{ width: width * 0.9, height: "100%" }}
@@ -143,22 +155,22 @@ const OrdersPage = () => {
         </TouchableOpacity>
 
         {/* Message button */}
-        <TouchableOpacity
-          onPress={() => openOrderChat(item.id)}
-          className="p-2 bg-gray-200 rounded-full"
-        >
-          {MY_ICONS.message("black", 25)}
-        </TouchableOpacity>
+        {normalizedStatus !== "pending" && (
+          <TouchableOpacity
+            onPress={() => openOrderChat(item.id)}
+            className="p-2 bg-gray-200 rounded-full"
+          >
+            {MY_ICONS.message("black", 25)}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Left Side */}
       <View className="flex-1 mr-20 z-10">
-        {/* Order / ID */}
         <Text className="text-white text-lg font-bold mb-2">
           #{item.order_code}
         </Text>
 
-        {/* Pickup Point */}
         <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
         <View className="flex-row items-center mb-2">
           {MY_ICONS.location("#9CA3AF", 14)}
@@ -167,7 +179,6 @@ const OrdersPage = () => {
           </Text>
         </View>
 
-        {/* Dropoff Point */}
         <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
         <View className="flex-row items-center mb-2">
           {MY_ICONS.location("#9CA3AF", 14)}
@@ -176,17 +187,16 @@ const OrdersPage = () => {
           </Text>
         </View>
 
-        {/* Status */}
         <Text className="text-gray-400 text-xs mb-1">Status</Text>
         <View className="flex-row items-center">
           {MY_ICONS.circle(item.statusColor ?? "#22C55E", 7)}
           <Text className="text-white text-sm ml-2">
-            {item.status.replace("_", " ")}
+            {rawStatus?.replace("_", " ")}
           </Text>
         </View>
       </View>
 
-      {/* Map / Image with mask gradient */}
+      {/* Map / Image */}
       <MaskedView
         style={{
           position: "absolute",
@@ -198,7 +208,7 @@ const OrdersPage = () => {
         }}
         maskElement={
           <LinearGradient
-            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]} // 0% to 40% opacity
+            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={{ flex: 1 }}
@@ -207,16 +217,14 @@ const OrdersPage = () => {
       >
         <Image
           source={IMAGES.indomie_package}
-          style={{
-            top: 0,
-            width: "100%",
-            height: "100%",
-          }}
+          style={{ width: "100%", height: "100%" }}
           resizeMode="cover"
         />
       </MaskedView>
     </View>
   );
+};
+
 
   const renderSectionHeader = ({ section }: { section: any }) => (
     <View className="bg-gray-900 py-2">
@@ -252,7 +260,7 @@ const OrdersPage = () => {
           maxHeight: currentDeliveries.length > 0 ? 230 : 100,
         }}
         keyExtractor={(item, index) => `${item.order_code}-${index}`}
-        renderItem={({ item, index }) => renderDeliveryCard(item, index)}
+        renderItem={({ item, index }) => renderIncompleteDeliveryCard(item, index)}
         ListEmptyComponent={() => (
           <View
             style={{ width: width * 0.9, padding: 35 }}
@@ -269,7 +277,7 @@ const OrdersPage = () => {
       <SectionList
         sections={orderSections}
         keyExtractor={(item, index) => item.id + index}
-        renderItem={renderOrderCard}
+        renderItem={renderCompletedOrderCard}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={true}
         className="flex-1 px-6"

@@ -147,7 +147,7 @@ const RiderHomeScreen = () => {
       // 4️⃣ Handle response
       if (result.success) {
         Alert.alert("Order Accepted", "You have accepted this delivery!");
-        router.push({
+        router.navigate({
           pathname: "/order_detail",
           params: { orderCode },
         });
@@ -271,7 +271,7 @@ const RiderHomeScreen = () => {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() =>
-                      router.push({
+                      router.navigate({
                         pathname: "/order_detail",
                         params: { orderId: item.order_code },
                       })

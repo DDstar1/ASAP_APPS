@@ -3,20 +3,16 @@ import {
   Dimensions,
   FlatList,
   Image,
-  ScrollView,
   SectionList,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MaskedView from "@react-native-masked-view/masked-view";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { openGoogleMaps, openOrderChat } from "@/utils/my_utils";
-import { LinearGradient } from "expo-linear-gradient";
-import { currentTrackings, orderSections } from "@/utils/dummyData";
+import { orderSections } from "@/utils/dummyData";
 import { getClientCurrentDeliveries } from "@/lib/supabase-app-functions";
+import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
@@ -30,7 +26,6 @@ const OrdersPage = () => {
         const response = await getClientCurrentDeliveries();
         if (response.success) {
           setCurrentDeliveries(response.data);
-          console.log("✅ Fetched deliveries:", response.data);
         } else {
           console.error("❌ Failed to fetch deliveries:", response.error);
         }
@@ -62,102 +57,7 @@ const OrdersPage = () => {
     </View>
   );
 
-  // Inside your renderDeliveryCard
-  const renderDeliveryCard = (item: any, index: number) => (
-    <View
-      key={index}
-      style={{ width: width * 0.9, height: "100%" }}
-      className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3 mr-4"
-    >
-      {/* Top-right action buttons */}
-      <View className="absolute top-3 z-20 right-3 flex-col gap-3">
-        {/* Map button */}
-        <TouchableOpacity
-          onPress={() => openGoogleMaps(item.dropoff_lat, item.dropoff_long)}
-          className="p-2 bg-gray-200 rounded-full"
-        >
-          {MY_ICONS.map("black", 25)}
-        </TouchableOpacity>
-
-        {/* Message button */}
-        {item.status == "pending" && (
-          <TouchableOpacity
-            onPress={() => openOrderChat(item.id)}
-            className="p-2 bg-gray-200 rounded-full"
-          >
-            {MY_ICONS.message("black", 25)}
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Left Side */}
-      <View className="flex-1 mr-20 z-10">
-        {/* Order / ID */}
-        <Text className="text-white text-lg font-bold mb-2">
-          #{item.order_code}
-        </Text>
-
-        {/* Pickup Point */}
-        <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
-        <View className="flex-row items-center mb-2">
-          {MY_ICONS.location("#9CA3AF", 14)}
-          <Text numberOfLines={2} className="text-white text-sm ml-2">
-            {item.pickup_name || "Unknown"}
-          </Text>
-        </View>
-
-        {/* Dropoff Point */}
-        <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
-        <View className="flex-row items-center mb-2">
-          {MY_ICONS.location("#9CA3AF", 14)}
-          <Text numberOfLines={2} className="text-white text-sm ml-2">
-            {item.dropoff_name || "Unknown"}
-          </Text>
-        </View>
-
-        {/* Status */}
-        <Text className="text-gray-400 text-xs mb-1">Status</Text>
-        <View className="flex-row items-center">
-          {MY_ICONS.circle(item.statusColor ?? "#22C55E", 7)}
-          <Text className="text-white text-sm ml-2">
-            {item.status.replace("_", " ")}
-          </Text>
-        </View>
-      </View>
-
-      {/* Map / Image with mask gradient */}
-      <MaskedView
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "50%",
-          height: "110%",
-        }}
-        maskElement={
-          <LinearGradient
-            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]} // 0% to 40% opacity
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={{ flex: 1 }}
-          />
-        }
-      >
-        <Image
-          source={IMAGES.indomie_package}
-          style={{
-            top: 0,
-            width: "100%",
-            height: "100%",
-          }}
-          resizeMode="cover"
-        />
-      </MaskedView>
-    </View>
-  );
-
-  const renderOrderCard = ({ item }: { item: any }) => (
+  const renderCompletedOrderCard = ({ item }: { item: any }) => (
     <View className="bg-orange-500 rounded-2xl p-4 mb-4">
       {/* 3 columns x 2 rows grid */}
       <View className="flex-col gap-4">
@@ -247,21 +147,24 @@ const OrdersPage = () => {
           maxHeight: currentDeliveries.length > 0 ? 230 : 100,
         }}
         keyExtractor={(item, index) => `${item.order_code}-${index}`}
-        renderItem={({ item, index }) => renderDeliveryCard(item, index)}
+        renderItem={({ item }) => (
+          <IncompleteDeliveryCard item={item} width={width} />
+        )}
         ListEmptyComponent={() => (
           <View
             style={{ width: width * 0.9, padding: 35 }}
-            className="bg-gray-700  rounded-2xl flex justify-center items-center  "
+            className="bg-gray-700 rounded-2xl flex justify-center items-center"
           >
             <Text className="text-white text-base">No current deliveries</Text>
           </View>
         )}
       />
+
       {/* Orders History List with Sticky Headers */}
       <SectionList
         sections={orderSections}
         keyExtractor={(item, index) => item.id + index}
-        renderItem={renderOrderCard}
+        renderItem={renderCompletedOrderCard}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={true}
         className="flex-1 px-6"

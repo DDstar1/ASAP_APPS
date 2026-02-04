@@ -59,9 +59,9 @@ export default function RiderSignUpScreen() {
       await signUpUser(email, password, username);
       Alert.alert(
         "Verify Your Email",
-        "A verification link has been sent to your inbox."
+        "A verification link has been sent to your inbox.",
       );
-      router.push("/(tabs)/home");
+      router.navigate("/(tabs)/home");
     } catch (err: any) {
       Alert.alert("Signup Failed", err.message || "An error occurred");
     } finally {
@@ -166,7 +166,7 @@ export default function RiderSignUpScreen() {
         </TouchableOpacity>
 
         {/* Login Redirect */}
-        <TouchableOpacity onPress={() => router.push("/auth/login")}>
+        <TouchableOpacity onPress={() => router.navigate("/auth/login")}>
           <Text className="text-green-400 text-center text-base font-semibold">
             Already have an account? Sign In
           </Text>

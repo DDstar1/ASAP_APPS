@@ -165,7 +165,7 @@ export default function RiderSearchModal({
                 <TouchableOpacity
                   className="bg-orange-500 w-full py-4 rounded-2xl"
                   onPress={() =>
-                    router.push({
+                    router.navigate({
                       pathname: "/trackPackage",
                       params: {
                         riderId: assignedRider.id,

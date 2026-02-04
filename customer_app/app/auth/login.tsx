@@ -153,7 +153,7 @@ export default function AuthScreen() {
         </TouchableOpacity>
 
         {/* ✅ Create Account Link */}
-        <TouchableOpacity onPress={() => router.push("/auth/signup")}>
+        <TouchableOpacity onPress={() => router.navigate("/auth/signup")}>
           <Text className="text-green-400 text-right text-base font-semibold">
             Create Account
           </Text>
