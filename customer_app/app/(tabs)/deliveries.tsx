@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
+  FlatList,
   Image,
   ScrollView,
   SectionList,
@@ -9,130 +10,39 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import MaskedView from "@react-native-masked-view/masked-view";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { openGoogleMaps, openOrderChat } from "@/utils/my_utils";
+import { LinearGradient } from "expo-linear-gradient";
+import { currentTrackings, orderSections } from "@/utils/dummyData";
+import { getClientCurrentDeliveries } from "@/lib/supabase-app-functions";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
+  const [currentDeliveries, setCurrentDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Group orders by month
-  const orderSections = [
-    {
-      title: "May 2025",
-      data: [
-        {
-          id: "TRK-1A9X-74KD",
-          date: "23-05-2025",
-          time: "9:28pm",
-          location: "Sapele Rd Benin",
-          category: "Food",
-          distance: "17km",
-          direction: "right",
-        },
-        {
-          id: "TRK-2B8K-53QL",
-          date: "23-05-2025",
-          time: "10:45am",
-          location: "Lekki Phase 1",
-          category: "Gadgets",
-          distance: "8km",
-          direction: "left",
-        },
-        {
-          id: "TRK-3C7M-62VR",
-          date: "23-05-2025",
-          time: "3:15pm",
-          location: "Abuja Garki",
-          category: "Fabric",
-          distance: "24km",
-          direction: "right",
-        },
-        {
-          id: "TRK-4D6P-81ZW",
-          date: "24-05-2025",
-          time: "7:00pm",
-          location: "Yaba Lagos",
-          category: "Documents",
-          distance: "5km",
-          direction: "left",
-        },
-      ],
-    },
-    {
-      title: "April 2025",
-      data: [
-        {
-          id: "TRK-5E3N-92PQ",
-          date: "15-04-2025",
-          time: "2:30pm",
-          location: "Victoria Island",
-          category: "Electronics",
-          distance: "12km",
-          direction: "right",
-        },
-        {
-          id: "TRK-3C7M-62VR",
-          date: "23-05-2025",
-          time: "3:15pm",
-          location: "Abuja Garki",
-          category: "Fabric",
-          distance: "24km",
-          direction: "right",
-        },
-        {
-          id: "TRK-4D6P-81ZW",
-          date: "24-05-2025",
-          time: "7:00pm",
-          location: "Yaba Lagos",
-          category: "Documents",
-          distance: "5km",
-          direction: "left",
-        },
-        {
-          id: "TRK-3C7M-62VR",
-          date: "23-05-2025",
-          time: "3:15pm",
-          location: "Abuja Garki",
-          category: "Fabric",
-          distance: "24km",
-          direction: "right",
-        },
-        {
-          id: "TRK-4D6P-81ZW",
-          date: "24-05-2025",
-          time: "7:00pm",
-          location: "Yaba Lagos",
-          category: "Documents",
-          distance: "5km",
-          direction: "left",
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    const fetchDeliveries = async () => {
+      setLoading(true);
+      try {
+        const response = await getClientCurrentDeliveries();
+        if (response.success) {
+          setCurrentDeliveries(response.data);
+          console.log("✅ Fetched deliveries:", response.data);
+        } else {
+          console.error("❌ Failed to fetch deliveries:", response.error);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching deliveries:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const currentTrackings = [
-    {
-      id: "TRK-9F2X-7A6B",
-      location: "Sapele Rd Benin",
-      status: "In Transit",
-      statusColor: "#22c55e",
-      map: IMAGES.dummy_map,
-    },
-    {
-      id: "TRK-8D7L-5Q3C",
-      location: "Lekki Phase 1",
-      status: "Pending Pickup",
-      statusColor: "#facc15",
-      map: IMAGES.dummy_map,
-    },
-    {
-      id: "TRK-1H9J-4T7Z",
-      location: "Abuja Garki",
-      status: "Delivered",
-      statusColor: "#3b82f6",
-      map: IMAGES.dummy_map,
-    },
-  ];
+    fetchDeliveries();
+  }, []);
 
   const DirectionArrows = ({ direction }: { direction: string }) => (
     <View className="flex-row items-center">
@@ -152,32 +62,156 @@ const OrdersPage = () => {
     </View>
   );
 
-  const renderOrderCard = ({ item }: { item: any }) => (
-    <View className="bg-orange-500 rounded-2xl p-4 mb-4">
-      <View className="flex-row items-start justify-between mb-2">
-        <View className="flex-1">
-          <Text className="text-white text-lg font-bold">{item.id}</Text>
-          <Text className="text-orange-200 text-sm">{item.date}</Text>
-        </View>
-        <TouchableOpacity className="bg-white rounded-full px-4 py-2">
-          <Text className="text-gray-900 text-sm font-medium">Rebook</Text>
+  // Inside your renderDeliveryCard
+  const renderDeliveryCard = (item: any, index: number) => (
+    <View
+      key={index}
+      style={{ width: width * 0.9, height: "100%" }}
+      className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3 mr-4"
+    >
+      {/* Top-right action buttons */}
+      <View className="absolute top-3 z-20 right-3 flex-col gap-3">
+        {/* Map button */}
+        <TouchableOpacity
+          onPress={() => openGoogleMaps(item.dropoff_lat, item.dropoff_long)}
+          className="p-2 bg-gray-200 rounded-full"
+        >
+          {MY_ICONS.map("black", 25)}
         </TouchableOpacity>
+
+        {/* Message button */}
+        {item.status == "pending" && (
+          <TouchableOpacity
+            onPress={() => openOrderChat(item.id)}
+            className="p-2 bg-gray-200 rounded-full"
+          >
+            {MY_ICONS.message("black", 25)}
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1">
-          <Text className="text-white text-base">{item.location}</Text>
+      {/* Left Side */}
+      <View className="flex-1 mr-20 z-10">
+        {/* Order / ID */}
+        <Text className="text-white text-lg font-bold mb-2">
+          #{item.order_code}
+        </Text>
+
+        {/* Pickup Point */}
+        <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
+        <View className="flex-row items-center mb-2">
+          {MY_ICONS.location("#9CA3AF", 14)}
+          <Text numberOfLines={2} className="text-white text-sm ml-2">
+            {item.pickup_name || "Unknown"}
+          </Text>
         </View>
 
-        <View className="flex-row items-center space-x-4">
-          <DirectionArrows direction={item.direction} />
+        {/* Dropoff Point */}
+        <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
+        <View className="flex-row items-center mb-2">
+          {MY_ICONS.location("#9CA3AF", 14)}
+          <Text numberOfLines={2} className="text-white text-sm ml-2">
+            {item.dropoff_name || "Unknown"}
+          </Text>
+        </View>
 
-          <View className="items-end">
+        {/* Status */}
+        <Text className="text-gray-400 text-xs mb-1">Status</Text>
+        <View className="flex-row items-center">
+          {MY_ICONS.circle(item.statusColor ?? "#22C55E", 7)}
+          <Text className="text-white text-sm ml-2">
+            {item.status.replace("_", " ")}
+          </Text>
+        </View>
+      </View>
+
+      {/* Map / Image with mask gradient */}
+      <MaskedView
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "50%",
+          height: "110%",
+        }}
+        maskElement={
+          <LinearGradient
+            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]} // 0% to 40% opacity
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ flex: 1 }}
+          />
+        }
+      >
+        <Image
+          source={IMAGES.indomie_package}
+          style={{
+            top: 0,
+            width: "100%",
+            height: "100%",
+          }}
+          resizeMode="cover"
+        />
+      </MaskedView>
+    </View>
+  );
+
+  const renderOrderCard = ({ item }: { item: any }) => (
+    <View className="bg-orange-500 rounded-2xl p-4 mb-4">
+      {/* 3 columns x 2 rows grid */}
+      <View className="flex-col gap-4">
+        {/* First Row - 3 cells */}
+        <View className="flex-row justify-between items-start">
+          {/* Cell 1 - 33.33% width */}
+          <View style={{ width: "40%" }} className="pr-2">
+            <Text className="text-white text-lg font-bold">{item.id}</Text>
+            <View className="flex-row items-center gap-2 flex-wrap">
+              <Text className="text-white text-sm font-medium">
+                {item.category}
+              </Text>
+              <Text className="text-orange-200 text-sm">{item.distance}</Text>
+            </View>
+          </View>
+
+          {/* Cell 2 - 40% width */}
+          <View
+            style={{ width: "25%" }}
+            className="flex-col gap-1 items-center justify-start px-2"
+          >
+            <Text className="text-orange-200 text-sm">{item.date}</Text>
             <Text className="text-orange-200 text-sm">{item.time}</Text>
-            <Text className="text-white text-sm font-medium">
-              {item.category}
+          </View>
+
+          {/* Cell 3 - 33.33% width */}
+          <View style={{ width: "35%" }} className="items-end pl-2">
+            <Image
+              source={item.materialImage || IMAGES.indomie_package}
+              className="w-14 h-14 rounded-lg bg-white/20"
+              resizeMode="cover"
+            />
+          </View>
+        </View>
+
+        {/* Second Row - 3 cells */}
+        <View className="flex-row justify-between items-center">
+          {/* Cell 4 - 33.33% width */}
+          <View style={{ width: "38%" }} className="pr-2">
+            <Text className="text-white text-base" numberOfLines={2}>
+              {item.location}
             </Text>
-            <Text className="text-orange-200 text-sm">{item.distance}</Text>
+          </View>
+
+          {/* Cell 5 - 33.33% width */}
+          <View style={{ width: "25%" }} className="items-center">
+            <DirectionArrows direction={item.direction} />
+          </View>
+
+          {/* Cell 6 - 33.33% width */}
+          <View style={{ width: "38%" }} className="items-end pl-2">
+            <Text className="text-white text-base" numberOfLines={2}>
+              {item.location}
+            </Text>
           </View>
         </View>
       </View>
@@ -199,49 +233,30 @@ const OrdersPage = () => {
       </View>
 
       {/* Current Tracking Cards (Horizontal Scroll) */}
-      <ScrollView
+      <FlatList
+        data={currentDeliveries}
         horizontal
         showsHorizontalScrollIndicator={false}
-        className="px-4 mb-6"
-        contentContainerStyle={{ alignItems: "center" }}
-        style={{ maxHeight: 180 }}
-      >
-        {currentTrackings.map((item, index) => (
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          marginBottom: 10,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        style={{
+          maxHeight: currentDeliveries.length > 0 ? 230 : 100,
+        }}
+        keyExtractor={(item, index) => `${item.order_code}-${index}`}
+        renderItem={({ item, index }) => renderDeliveryCard(item, index)}
+        ListEmptyComponent={() => (
           <View
-            key={index}
-            style={{ width: width * 0.85 }}
-            className="bg-[#3C3C43] rounded-2xl flex flex-row overflow-hidden h-full relative mr-4 p-3"
+            style={{ width: width * 0.9, padding: 35 }}
+            className="bg-gray-700  rounded-2xl flex justify-center items-center  "
           >
-            {/* Left Side */}
-            <View className="flex-1 pr-2">
-              <Text className="text-white text-sm font-medium mb-1">
-                Current Tracking
-              </Text>
-              <Text className="text-white text-lg font-bold mb-2">
-                #{item.id}
-              </Text>
-
-              <Text className="text-gray-400 text-xs mb-1">
-                Current Location
-              </Text>
-              <View className="flex-row items-center mb-2">
-                {MY_ICONS.location("#9CA3AF", 14)}
-                <Text className="text-white text-sm ml-2">{item.location}</Text>
-              </View>
-
-              <Text className="text-gray-400 text-xs mb-1">Status</Text>
-              <View className="flex-row items-center">
-                {MY_ICONS.circle(item.statusColor, 7)}
-                <Text className="text-white text-sm ml-2">{item.status}</Text>
-              </View>
-            </View>
-
-            {/* Map Image */}
-            <Image source={item.map} className="w-2/5 h-32 rounded-lg" />
+            <Text className="text-white text-base">No current deliveries</Text>
           </View>
-        ))}
-      </ScrollView>
-
+        )}
+      />
       {/* Orders History List with Sticky Headers */}
       <SectionList
         sections={orderSections}

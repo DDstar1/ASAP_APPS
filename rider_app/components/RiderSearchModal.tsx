@@ -1,6 +1,6 @@
 // components/RiderSearchModal.tsx
 import { IMAGES } from "@/assets/assetsData";
-import { assignNearestRider } from "@/utils/mapUtils"; // your helper
+import { assignNearestRider } from "@/utils/utils_for_map"; // your helper
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {

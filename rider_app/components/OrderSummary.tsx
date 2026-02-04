@@ -1,4 +1,4 @@
-import { cleanAddress, timeAgo } from "@/utils/my_utils";
+import { cleanAddress, timeAgo } from "@/utils/utils_for_me";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";

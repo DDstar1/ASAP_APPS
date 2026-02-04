@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
 import { getMessagesList } from "@/lib/supabase-functions";
-import { openOrderChat } from "@/utils/my_utils";
+import { openOrderChat } from "@/utils/utils_for_me";
 
 const ChatsListPage = () => {
   const { width } = Dimensions.get("window");

@@ -19,6 +19,7 @@ import {
   startDeliveryEvents,
   stopAllListeners,
 } from "@/lib/supabase-realtime-functions";
+import "@/utils/utils_orderLocationTracking";
 
 export default function RootLayout() {
   const { fetchUserSession, user } = useUserStore();

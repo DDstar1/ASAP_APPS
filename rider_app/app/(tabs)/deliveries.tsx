@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import MaskedView from "@react-native-masked-view/masked-view";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
 import {
@@ -16,8 +18,7 @@ import {
   getRiderCurrentDeliveries,
 } from "@/lib/supabase-functions";
 import { orderSections } from "@/utils/dummyData";
-import { openGoogleMaps, openOrderChat } from "@/utils/my_utils";
-import { router } from "expo-router";
+import { openGoogleMaps, openOrderChat } from "@/utils/utils_for_me";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
@@ -64,12 +65,15 @@ const OrdersPage = () => {
   );
 
   const renderOrderCard = ({ item }: { item: any }) => (
-    <>
-      <View className="flex-col gap-4 justify-between bg-orange-500 rounded-2xl p-4 mb-4">
-        <View className="flex-row justify-between w-full mb-2">
-          <View>
+    <View className="bg-orange-500 rounded-2xl p-4 mb-4">
+      {/* 3 columns x 2 rows grid */}
+      <View className="flex-col gap-4">
+        {/* First Row - 3 cells */}
+        <View className="flex-row justify-between items-start">
+          {/* Cell 1 - 33.33% width */}
+          <View style={{ width: "40%" }} className="pr-2">
             <Text className="text-white text-lg font-bold">{item.id}</Text>
-            <View className="flex-row items-center gap-3">
+            <View className="flex-row items-center gap-2 flex-wrap">
               <Text className="text-white text-sm font-medium">
                 {item.category}
               </Text>
@@ -77,28 +81,51 @@ const OrdersPage = () => {
             </View>
           </View>
 
-          <View className="flex-col gap-1 items-start justify-between mb-2">
+          {/* Cell 2 - 40% width */}
+          <View
+            style={{ width: "25%" }}
+            className="flex-col gap-1 items-center justify-start px-2"
+          >
             <Text className="text-orange-200 text-sm">{item.date}</Text>
             <Text className="text-orange-200 text-sm">{item.time}</Text>
           </View>
 
-          {/* Material Image */}
-          <Image
-            source={item.materialImage || IMAGES.indomie_package}
-            className="w-14 h-14 rounded-lg bg-white/20"
-            resizeMode="cover"
-          />
+          {/* Cell 3 - 33.33% width */}
+          <View style={{ width: "35%" }} className="items-end pl-2">
+            <Image
+              source={item.materialImage || IMAGES.indomie_package}
+              className="w-14 h-14 rounded-lg bg-white/20"
+              resizeMode="cover"
+            />
+          </View>
         </View>
 
-        <View className="flex-row justify-between w-full mb-2">
-          <Text className="text-white text-base">{item.location}</Text>
-          <DirectionArrows direction={item.direction} />
-          <Text className="text-white text-base">{item.location}</Text>
+        {/* Second Row - 3 cells */}
+        <View className="flex-row justify-between items-center">
+          {/* Cell 4 - 33.33% width */}
+          <View style={{ width: "38%" }} className="pr-2">
+            <Text className="text-white text-base" numberOfLines={2}>
+              {item.location}
+            </Text>
+          </View>
+
+          {/* Cell 5 - 33.33% width */}
+          <View style={{ width: "25%" }} className="items-center">
+            <DirectionArrows direction={item.direction} />
+          </View>
+
+          {/* Cell 6 - 33.33% width */}
+          <View style={{ width: "38%" }} className="items-end pl-2">
+            <Text className="text-white text-base" numberOfLines={2}>
+              {item.location}
+            </Text>
+          </View>
         </View>
       </View>
-    </>
+    </View>
   );
 
+  // Inside your renderDeliveryCard
   const renderDeliveryCard = (item: any, index: number) => (
     <View
       key={index}
@@ -106,7 +133,7 @@ const OrdersPage = () => {
       className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3 mr-4"
     >
       {/* Top-right action buttons */}
-      <View className="absolute top-0 right-0 flex gap-3 z-10">
+      <View className="absolute top-3 z-20 right-3 flex-col gap-3">
         {/* Map button */}
         <TouchableOpacity
           onPress={() => openGoogleMaps(item.dropoff_lat, item.dropoff_long)}
@@ -123,8 +150,9 @@ const OrdersPage = () => {
           {MY_ICONS.message("black", 25)}
         </TouchableOpacity>
       </View>
+
       {/* Left Side */}
-      <View className="flex-1 mr-2">
+      <View className="flex-1 mr-20 z-10">
         {/* Order / ID */}
         <Text className="text-white text-lg font-bold mb-2">
           #{item.order_code}
@@ -158,13 +186,35 @@ const OrdersPage = () => {
         </View>
       </View>
 
-      {/* Map / Image */}
-      <Image
-        style={{ width: 120, height: "100%" }}
-        source={item.map || IMAGES.indomie_package}
-        className="w-32 h-32 rounded-lg overflow-hidden bg-white"
-        resizeMode="contain"
-      />
+      {/* Map / Image with mask gradient */}
+      <MaskedView
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "50%",
+          height: "110%",
+        }}
+        maskElement={
+          <LinearGradient
+            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]} // 0% to 40% opacity
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ flex: 1 }}
+          />
+        }
+      >
+        <Image
+          source={IMAGES.indomie_package}
+          style={{
+            top: 0,
+            width: "100%",
+            height: "100%",
+          }}
+          resizeMode="cover"
+        />
+      </MaskedView>
     </View>
   );
 
@@ -181,7 +231,7 @@ const OrdersPage = () => {
         <Text className="text-white text-2xl font-semibold">
           All Deliveries
         </Text>
-        {MY_ICONS.message("white", 24)}
+        {MY_ICONS.delivery("white", 24)}
       </View>
 
       {/* Current Tracking Cards (Horizontal Scroll) */}

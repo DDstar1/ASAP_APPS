@@ -92,7 +92,7 @@ const RiderHomeScreen = () => {
       {
         accuracy: Location.Accuracy.Highest,
         distanceInterval: 0, // update every 5 meters
-        timeInterval: 3000, // update at least every 3 seconds
+        timeInterval: 5000, // update at least every 5 seconds
       },
       async (location) => {
         try {

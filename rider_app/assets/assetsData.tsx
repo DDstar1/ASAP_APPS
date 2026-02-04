@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export const IMAGES = {
@@ -36,7 +37,7 @@ export const MY_ICONS = {
     <MaterialIcons name="location-on" size={size} color={color} />
   ),
   message: (color: string, size = 28) => (
-    <MaterialIcons name="chat-bubble-outline" size={size} color={color} />
+    <Ionicons name={"chatbubble"} size={size} color={color} />
   ),
   circle: (color: string, size = 28) => (
     <MaterialIcons name="circle" size={size} color={color} />
@@ -50,4 +51,7 @@ export const MY_ICONS = {
   map: (color: string, size = 28) => (
     <MaterialIcons name="map" size={size} color={color} />
   ), // ✅ Added map icon
+  delivery: (color: string, size = 28) => (
+    <Ionicons name={"cube"} size={size} color={color} />
+  ),
 };

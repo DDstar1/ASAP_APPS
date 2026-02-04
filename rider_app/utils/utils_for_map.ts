@@ -4,7 +4,7 @@ import { RIDERS } from "./dummyData";
 // Calculate bearing between two coordinates
 export const getBearing = (
   start: { latitude: number; longitude: number },
-  end: { latitude: number; longitude: number }
+  end: { latitude: number; longitude: number },
 ) => {
   const lat1 = (start.latitude * Math.PI) / 180;
   const lon1 = (start.longitude * Math.PI) / 180;
@@ -83,7 +83,7 @@ export const calculateFare = async () => {
 
 type Location = { latitude: number; longitude: number };
 
-function getDistanceKm(loc1: Location, loc2: Location) {
+export function getDistanceKm(loc1: Location, loc2: Location) {
   const R = 6371; // km radius of Earth
   const dLat = ((loc2.latitude - loc1.latitude) * Math.PI) / 180;
   const dLon = ((loc2.longitude - loc1.longitude) * Math.PI) / 180;

@@ -660,3 +660,89 @@ export const getOrderRiderInfo = async (orderId: number) => {
     id: data?.driver_id ?? null,
   };
 };
+
+export const getPendingOrdersWithRider = async () => {
+  const { data, error } = await supabase
+    .from("delivery_orders")
+    .select(
+      `
+      id,
+      order_code,
+      pickup_name,
+      dropoff_name,
+      status,
+      driver_id,
+      driver_package_current_lat,
+      driver_package_current_long,
+      image_url,
+      rider:custom_users!delivery_orders_driver_id_fkey (
+        username,
+        phone
+      )
+    `,
+    )
+    .not("status", "eq", "delivered")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching pending orders:", error);
+    return [];
+  }
+
+  return data.map((order) => ({
+    id: order.order_code,
+    location: order.dropoff_name || order.pickup_name,
+    status: order.status,
+    statusColor:
+      order.status === "in_transit"
+        ? "#22c55e"
+        : order.status === "pending"
+          ? "#facc15"
+          : "#d1d5db",
+    map: order.image_url || null,
+    rider: {
+      id: order.driver_id ?? null,
+      name: (order.rider as any)?.username ?? "Unknown",
+      phone: (order.rider as any)?.phone ?? null,
+    },
+    lat: order.driver_package_current_lat,
+    long: order.driver_package_current_long,
+  }));
+};
+
+export async function getClientCurrentDeliveries() {
+  try {
+    const { data: authData, error: userError } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    if (userError || !user) {
+      console.error("❌ No logged-in user found", userError);
+      return {
+        success: false,
+        data: [],
+        error: userError || "No user session",
+      };
+    }
+
+    const clientId = user.id;
+
+    const { data, error } = await supabase
+      .from("delivery_orders")
+      .select("*")
+      .eq("client_id", clientId)
+      .in("status", ["pending", "accepted", "in_transit"]); // active deliveries
+
+    if (error) {
+      console.error("❌ Error fetching client deliveries:", error.message);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error(
+      "❌ Unexpected error fetching client deliveries:",
+      err.message,
+    );
+    return { success: false, data: [], error: err };
+  }
+}

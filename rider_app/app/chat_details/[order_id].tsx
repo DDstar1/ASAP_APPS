@@ -1,6 +1,6 @@
 import { getMessages, sendMessageToSupabase } from "@/lib/supabase-functions";
 import { useUserStore } from "@/store/useUserStore";
-import { timeAgo } from "@/utils/my_utils";
+import { timeAgo } from "@/utils/utils_for_me";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Stack, useLocalSearchParams } from "expo-router";

@@ -10,6 +10,7 @@ export const IMAGES = {
   dummy_map: require("./images/dummy_map.png"),
   icon: require("./images/icon.png"),
   splashIcon: require("./images/splash-icon.png"),
+  indomie_package: require("./images/indomie_package.jpg"),
   no_package_image: require("./images/no_package_image.jpg"),
   // 👉 add more images here if needed
 };
@@ -43,4 +44,7 @@ export const MY_ICONS = {
   arrowLeft: (color: string, size = 20) => (
     <MaterialIcons name="keyboard-arrow-left" size={size} color={color} />
   ),
+  map: (color: string, size = 28) => (
+    <MaterialIcons name="map" size={size} color={color} />
+  ), // ✅ Added map icon
 };

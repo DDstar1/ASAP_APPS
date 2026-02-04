@@ -130,10 +130,22 @@ const openOrderChat = async (orderId: number) => {
   }
 };
 
+const generateOrderCode = () => {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const randomSegment = (length: number) =>
+    Array.from(
+      { length },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join("");
+
+  return `ASAP-${randomSegment(4)}-${randomSegment(4)}`;
+};
+
 export {
   cleanAddress,
   openGoogleMaps,
   openOrderChat,
   timeAgo,
   formatMessageTime,
+  generateOrderCode,
 };

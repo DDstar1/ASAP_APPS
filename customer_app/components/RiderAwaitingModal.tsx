@@ -1,6 +1,7 @@
 import { upsertDeliveryOrder } from "@/lib/supabase-app-functions";
 import { reverseGeocode } from "@/utils/mapUtils";
 import { Coordinates } from "@/utils/my_types";
+import { generateOrderCode } from "@/utils/my_utils";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -99,7 +100,7 @@ export default function RiderAwaitingModal({
       console.log(checkDropoff);
 
       // Now start interval after names are ready
-      orderCodeRef.current = `asap-${Date.now()}`;
+      orderCodeRef.current = generateOrderCode();
       const interval = setInterval(async () => {
         const result = await upsertDeliveryOrder({
           order_code: orderCodeRef.current,

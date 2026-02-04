@@ -3,7 +3,7 @@ import { RiderOrder } from "@/utils/my_types";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
-import { formatMessageTime } from "@/utils/my_utils";
+import { formatMessageTime } from "@/utils/utils_for_me";
 
 // Standalone function to get current user ID
 export async function getCurrentUserId() {
