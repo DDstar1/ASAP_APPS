@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { openGoogleMaps } from "@/utils/utils_for_me";
 
 import {
   acceptDeliveryOrder,
@@ -144,12 +145,20 @@ const RiderHomeScreen = () => {
       // 3️⃣ Send acceptance to your API
       const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
 
+      console.log("Accept Order Result:", result);
+
       // 4️⃣ Handle response
-      if (result.success) {
+      if (result.success && result.data.length > 0) {
+        const order = result.data[0]; // <- pick the first order
+
         Alert.alert("Order Accepted", "You have accepted this delivery!");
-        router.navigate({
-          pathname: "/order_detail",
-          params: { orderCode },
+
+        openGoogleMaps({
+          order_status: order.status,
+          pickupLat: order.pickup_lat,
+          pickupLng: order.pickup_long,
+          dropoffLat: order.dropoff_lat,
+          dropoffLng: order.dropoff_long,
         });
       } else {
         Alert.alert("Failed", result.error || "Could not accept order");

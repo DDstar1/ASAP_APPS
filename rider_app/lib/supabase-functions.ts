@@ -304,7 +304,7 @@ export async function acceptDeliveryOrder(
       .from("delivery_orders")
       .update({
         driver_id: driverId,
-        status: "accepted",
+        status: "arriving_pickup",
         driver_initial_lat: driverLat,
         driver_initial_long: driverLong,
         modified_at: new Date().toISOString(),
@@ -419,7 +419,7 @@ export async function getRiderCurrentDeliveries() {
       .from("delivery_orders")
       .select("*")
       .eq("driver_id", driverId)
-      .in("status", ["pending", "accepted", "in_transit"]); // active deliveries
+      .in("status", ["pending", "arriving_pickup", "in_transit"]); // active deliveries
 
     if (error) {
       console.error("❌ Error fetching rider deliveries:", error.message);

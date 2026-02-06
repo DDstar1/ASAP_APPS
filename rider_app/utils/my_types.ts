@@ -23,6 +23,14 @@ type RiderOrder = {
   waypoints: any[] | null;
 };
 
+type OpenGoogleMapsParams = {
+  order_status: "pending" | "arriving_pickup" | "in_transit" | "delivered";
+  pickupLat?: number;
+  pickupLng?: number;
+  dropoffLat: number;
+  dropoffLng: number;
+};
+
 interface RiderOrdersState {
   availableOrders: RiderOrder[];
   loading: boolean;
@@ -31,4 +39,9 @@ interface RiderOrdersState {
   fetchAvailableOrders: () => Promise<void>;
 }
 
-export type { RiderOrder, RiderOrdersState, SavedLocationInput };
+export type {
+  RiderOrder,
+  RiderOrdersState,
+  SavedLocationInput,
+  OpenGoogleMapsParams,
+};

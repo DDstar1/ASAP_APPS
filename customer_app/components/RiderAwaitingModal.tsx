@@ -115,7 +115,7 @@ export default function RiderAwaitingModal({
           waypoints,
         });
 
-        if (result?.status === "accepted") {
+        if (result?.status === "arriving_pickup") {
           router.replace({
             pathname: "/trackPackage/[order_code]",
             params: { order_code: orderCodeRef.current },

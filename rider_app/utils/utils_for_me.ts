@@ -2,6 +2,7 @@ import { getOrderClientInfo } from "@/lib/supabase-functions";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { Alert, Linking } from "react-native";
+import { OpenGoogleMapsParams } from "./my_types";
 
 function timeAgo(timestamp: string | Date) {
   const now = new Date();
@@ -73,11 +74,31 @@ function cleanAddress(address: string) {
   return cleaned;
 }
 
-const openGoogleMaps = async (dropoffLat: number, dropoffLng: number) => {
+const openGoogleMaps = async ({
+  order_status,
+  pickupLat,
+  pickupLng,
+  dropoffLat,
+  dropoffLng,
+}: OpenGoogleMapsParams) => {
   console.log("Opening Google Maps for directions...");
-  console.log(`Dropoff Coordinates: ${dropoffLat}, ${dropoffLng}`);
+  console.log({
+    order_status,
+    pickupLat,
+    pickupLng,
+    dropoffLat,
+    dropoffLng,
+  });
+
+  // Validate dropoff coordinates
+  if (typeof dropoffLat !== "number" || typeof dropoffLng !== "number") {
+    console.error("Invalid dropoff coordinates", { dropoffLat, dropoffLng });
+    Alert.alert("Error", "Invalid destination coordinates");
+    return;
+  }
+
   try {
-    // 1️⃣ Request location permission
+    // Request location permission
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -87,16 +108,30 @@ const openGoogleMaps = async (dropoffLat: number, dropoffLng: number) => {
       return;
     }
 
-    // 2️⃣ Get current location
+    // Get current location
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
     const { latitude, longitude } = location.coords;
 
-    // 3️⃣ Construct Google Maps URL
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${latitude},${longitude}&destination=${dropoffLat},${dropoffLng}&travelmode=driving`;
+    // Build Google Maps URL
+    let url = `https://www.google.com/maps/dir/?api=1`;
+    url += `&origin=${latitude},${longitude}`;
+    url += `&destination=${dropoffLat},${dropoffLng}`;
+    url += `&travelmode=driving`;
 
-    // 4️⃣ Open Google Maps
+    // Add pickup as waypoint ONLY if order is pending or arriving_pickup
+    if (
+      (order_status === "pending" || order_status === "arriving_pickup") &&
+      typeof pickupLat === "number" &&
+      typeof pickupLng === "number"
+    ) {
+      url += `&waypoints=${pickupLat},${pickupLng}`;
+    }
+
+    console.log("Maps URL:", url);
+
+    // Open Google Maps
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
