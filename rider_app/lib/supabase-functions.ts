@@ -342,6 +342,7 @@ export async function acceptDeliveryOrder(
 }
 
 export async function getDeliveryOrderByCode(orderCode: string) {
+  console.log("Fetching delivery order for code:", orderCode);
   try {
     if (!orderCode) {
       return {

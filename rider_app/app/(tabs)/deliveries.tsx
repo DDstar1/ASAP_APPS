@@ -1,50 +1,70 @@
-import React, { useEffect, useState } from "react";
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  SectionList,
-  Text,
-  View,
-} from "react-native";
+// app/(tabs)/deliveries.tsx
+import React, { useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { Dimensions, FlatList, SectionList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import {
-  getOrderClientInfo,
-  getRiderCurrentDeliveries,
-} from "@/lib/supabase-functions";
+import { MY_ICONS } from "@/assets/assetsData";
 import { orderSections } from "@/utils/dummyData";
 import CompletedOrderCards from "@/components/CompletedOrderCards";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
+import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
+
+const HIGHLIGHT_WINDOW = 120_00; // 10 seconds
 
 const OrdersPage = () => {
-  const [currentDeliveries, setCurrentDeliveries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const { width } = Dimensions.get("window");
 
-  useEffect(() => {
-    const fetchDeliveries = async () => {
-      setLoading(true);
-      try {
-        const response = await getRiderCurrentDeliveries();
-        if (response.success) {
-          setCurrentDeliveries(response.data);
-          //console.log("✅ Fetched deliveries:", response.data);
-        } else {
-          console.error("❌ Failed to fetch deliveries:", response.error);
-        }
-      } catch (err) {
-        console.error("❌ Error fetching deliveries:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { newlyAcceptedId, time_added } = useLocalSearchParams();
 
-    fetchDeliveries();
+  const { currentDeliveries, loading, fetchCurrentDeliveries } =
+    useCurrentDeliveryStore();
+
+  useEffect(() => {
+    fetchCurrentDeliveries();
   }, []);
+
+  // ✅ Parse time safely
+  const acceptedTime =
+    typeof time_added === "string" ? Number(time_added) : null;
+
+  // ✅ Single source of truth for highlight
+  const isHighlightActive = (itemId: Number) => {
+    const now = Date.now();
+
+    console.log("🟡 Highlight check start", {
+      itemId,
+      newlyAcceptedId,
+      acceptedTime,
+      now,
+    });
+
+    if (!acceptedTime) {
+      console.log("❌ No acceptedTime → highlight disabled");
+      return false;
+    }
+
+    if (Number(itemId) !== Number(newlyAcceptedId)) {
+      console.log("❌ ID mismatch", {
+        itemId,
+        newlyAcceptedId,
+      });
+      return false;
+    }
+
+    const elapsed = now - acceptedTime;
+    const isActive = elapsed <= HIGHLIGHT_WINDOW;
+
+    console.log(isActive ? "✅ Highlight ACTIVE" : "⏱️ Highlight EXPIRED", {
+      elapsedMs: elapsed,
+      windowMs: HIGHLIGHT_WINDOW,
+      remainingMs: Math.max(HIGHLIGHT_WINDOW - elapsed, 0),
+    });
+
+    return isActive;
+  };
 
   const renderSectionHeader = ({ section }: { section: any }) => (
     <View className="bg-gray-900 py-2">
@@ -62,10 +82,11 @@ const OrdersPage = () => {
         {MY_ICONS.delivery("white", 24)}
       </View>
 
-      {/* Current Tracking Cards (Horizontal Scroll) */}
+      {/* Current Deliveries */}
       <Text className="text-white text-center text-2xl font-medium mb-1">
         Current Delivery
       </Text>
+
       {loading ? (
         <FlatList
           horizontal
@@ -97,7 +118,12 @@ const OrdersPage = () => {
           }}
           keyExtractor={(item, index) => `${item.order_code}-${index}`}
           renderItem={({ item, index }) => (
-            <IncompleteDeliveryCard item={item} index={index} width={width} />
+            <IncompleteDeliveryCard
+              item={item}
+              index={index}
+              width={width}
+              isHighlighted={isHighlightActive(item.id)} // ✅ clean + correct
+            />
           )}
           ListEmptyComponent={() => (
             <View
@@ -112,10 +138,11 @@ const OrdersPage = () => {
         />
       )}
 
-      {/* Orders History List with Sticky Headers */}
+      {/* Completed Deliveries */}
       <Text className="text-white text-center text-2xl font-medium mb-1">
         Completed Deliveries
       </Text>
+
       {loading ? (
         <View className="px-6">
           {[1, 2, 3, 4, 5, 6].map((_, index) => (

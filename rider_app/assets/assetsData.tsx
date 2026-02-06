@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 export const IMAGES = {
   riderBikePizza: require("./images/rider_bike_pizza.jpg"),
@@ -53,5 +54,8 @@ export const MY_ICONS = {
   ), // ✅ Added map icon
   delivery: (color: string, size = 28) => (
     <Ionicons name={"cube"} size={size} color={color} />
+  ),
+  map_marker: (color: string, size = 28) => (
+    <FontAwesome name="map-marker" size={size} color={color} />
   ),
 };

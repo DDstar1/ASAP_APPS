@@ -15,6 +15,7 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MY_ICONS } from "@/assets/assetsData";
 
 const { width, height } = Dimensions.get("window");
 const ASPECT_RATIO = width / height;
@@ -57,7 +58,7 @@ export default function DeliveryTrackingScreen() {
 
       const res = await getDeliveryOrderByCode(String(orderCode));
 
-      console.log(res);
+      console.log("Fetched order details:", res);
 
       if (res.success) {
         setOrder(res.data);
@@ -171,7 +172,8 @@ export default function DeliveryTrackingScreen() {
         }}
       >
         <View className="flex-row justify-between items-center">
-          <View>
+          {/* Left Section - Order Details */}
+          <View className="flex-1">
             <Text className="text-white text-lg font-bold mb-2">
               Order #{order.order_code}
             </Text>
@@ -185,18 +187,40 @@ export default function DeliveryTrackingScreen() {
             </Text>
 
             <TouchableOpacity
-              className="py-2 px-4 rounded-lg"
+              className="py-2 px-4 rounded-lg self-start"
               style={{ backgroundColor: "#F97316" }}
             >
               <Text className="text-white font-bold">Back to Orders</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Right Section - Package Image */}
           <Image
             source={{ uri: order?.image_url || IMAGES.no_package_image }}
             className="w-32 h-32 rounded-2xl"
             resizeMode="contain"
           />
+
+          {/* Center Section - Legend */}
+          <View className="flex-col  gap-2 mr-4">
+            {/* Pickup Location */}
+            <View className="flex-row items-center gap-2">
+              {MY_ICONS.map_marker("#34D399", 28)}
+              <Text className="text-gray-300 text-xs">Pickup</Text>
+            </View>
+            {/* Your Location */}
+            <View className="flex-row items-center gap-2">
+              {MY_ICONS.map_marker("#2563EB", 28)}
+              <Text className="text-gray-300 text-xs">You</Text>
+            </View>
+
+            {/* Dropoff Location */}
+            <View className="flex-row items-center gap-2">
+              {MY_ICONS.map_marker("#FB923C", 28)}
+
+              <Text className="text-gray-300 text-xs">Dropoff</Text>
+            </View>
+          </View>
         </View>
       </View>
     </SafeAreaView>

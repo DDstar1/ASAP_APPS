@@ -174,8 +174,8 @@ export default function CameraModal({
       // Upload to Supabase with progress tracking
       const publicUrl = await uploadDeliveryImage(
         newFile.uri,
-        "package_images",
-        (progress) => {
+        "package_images", // ✅ Use the correct bucket name
+        (progress: any) => {
           const percent = Math.round(progress * 100);
           setUploadProgress(progress);
           console.log(`📤 Upload progress: ${percent}%`);

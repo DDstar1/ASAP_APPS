@@ -34,6 +34,7 @@ import Animated, {
   withTiming,
   LinearTransition,
 } from "react-native-reanimated";
+import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -44,6 +45,7 @@ const RiderHomeScreen = () => {
 
   const { availableOrders, loading, fetchAvailableOrders } =
     useRiderOrdersStore();
+  const { addCurrentDelivery } = useCurrentDeliveryStore.getState();
 
   useEffect(() => {
     fetchAvailableOrders();
@@ -142,24 +144,44 @@ const RiderHomeScreen = () => {
       });
       const { latitude, longitude } = location.coords;
 
-      // 3️⃣ Send acceptance to your API
+      // 3️⃣ Accept order
       const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
 
       console.log("Accept Order Result:", result);
 
-      // 4️⃣ Handle response
       if (result.success && result.data.length > 0) {
-        const order = result.data[0]; // <- pick the first order
+        const order = result.data[0];
 
-        Alert.alert("Order Accepted", "You have accepted this delivery!");
+        // 4️⃣ Add delivery to store immediately
 
-        openGoogleMaps({
-          order_status: order.status,
-          pickupLat: order.pickup_lat,
-          pickupLng: order.pickup_long,
-          dropoffLat: order.dropoff_lat,
-          dropoffLng: order.dropoff_long,
+        addCurrentDelivery({
+          id: order.id,
+          order_code: order.order_code,
+          status: order.status, // arriving_pickup
+          pickup_lat: order.pickup_lat,
+          pickup_long: order.pickup_long,
+          pickup_name: order.pickup_name,
+          dropoff_lat: order.dropoff_lat,
+          dropoff_long: order.dropoff_long,
+          dropoff_name: order.dropoff_name,
+          image_url: order.image_url,
         });
+
+        // 5️⃣ Notify + navigate
+        Alert.alert("Order Accepted", "You have accepted this delivery!", [
+          {
+            text: "OK",
+            onPress: () => {
+              router.push({
+                pathname: "/(tabs)/deliveries",
+                params: {
+                  newlyAcceptedId: order.id,
+                  time_added: Date.now(),
+                },
+              });
+            },
+          },
+        ]);
       } else {
         Alert.alert("Failed", result.error || "Could not accept order");
       }
@@ -168,7 +190,6 @@ const RiderHomeScreen = () => {
       Alert.alert("Error", "Failed to accept order. Try again.");
     }
   };
-
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
@@ -282,7 +303,7 @@ const RiderHomeScreen = () => {
                     onPress={() =>
                       router.navigate({
                         pathname: "/order_detail",
-                        params: { orderId: item.order_code },
+                        params: { orderCode: item.order_code },
                       })
                     }
                   >

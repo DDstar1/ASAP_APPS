@@ -29,6 +29,7 @@ type OpenGoogleMapsParams = {
   pickupLng?: number;
   dropoffLat: number;
   dropoffLng: number;
+  navigateTo: "pickup" | "dropoff";
 };
 
 interface RiderOrdersState {

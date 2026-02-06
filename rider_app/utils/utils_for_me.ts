@@ -80,6 +80,7 @@ const openGoogleMaps = async ({
   pickupLng,
   dropoffLat,
   dropoffLng,
+  navigateTo,
 }: OpenGoogleMapsParams) => {
   console.log("Opening Google Maps for directions...");
   console.log({
@@ -88,14 +89,8 @@ const openGoogleMaps = async ({
     pickupLng,
     dropoffLat,
     dropoffLng,
+    navigateTo,
   });
-
-  // Validate dropoff coordinates
-  if (typeof dropoffLat !== "number" || typeof dropoffLng !== "number") {
-    console.error("Invalid dropoff coordinates", { dropoffLat, dropoffLng });
-    Alert.alert("Error", "Invalid destination coordinates");
-    return;
-  }
 
   try {
     // Request location permission
@@ -114,22 +109,46 @@ const openGoogleMaps = async ({
     });
     const { latitude, longitude } = location.coords;
 
-    // Build Google Maps URL
-    let url = `https://www.google.com/maps/dir/?api=1`;
-    url += `&origin=${latitude},${longitude}`;
-    url += `&destination=${dropoffLat},${dropoffLng}`;
-    url += `&travelmode=driving`;
+    // Determine destination based on navigateTo parameter
+    let destinationLat: number;
+    let destinationLng: number;
+    let destinationType: string;
 
-    // Add pickup as waypoint ONLY if order is pending or arriving_pickup
-    if (
-      (order_status === "pending" || order_status === "arriving_pickup") &&
-      typeof pickupLat === "number" &&
-      typeof pickupLng === "number"
-    ) {
-      url += `&waypoints=${pickupLat},${pickupLng}`;
+    if (navigateTo === "pickup") {
+      // Validate pickup coordinates
+      if (typeof pickupLat !== "number" || typeof pickupLng !== "number") {
+        console.error("Invalid pickup coordinates", { pickupLat, pickupLng });
+        Alert.alert("Error", "Invalid pickup location coordinates");
+        return;
+      }
+      destinationLat = pickupLat;
+      destinationLng = pickupLng;
+      destinationType = "pickup";
+    } else if (navigateTo === "dropoff") {
+      // Validate dropoff coordinates
+      if (typeof dropoffLat !== "number" || typeof dropoffLng !== "number") {
+        console.error("Invalid dropoff coordinates", {
+          dropoffLat,
+          dropoffLng,
+        });
+        Alert.alert("Error", "Invalid dropoff location coordinates");
+        return;
+      }
+      destinationLat = dropoffLat;
+      destinationLng = dropoffLng;
+      destinationType = "dropoff";
+    } else {
+      Alert.alert("Error", "Please specify navigation destination");
+      return;
     }
 
-    console.log("Maps URL:", url);
+    // Build Google Maps URL - Simple two-point navigation
+    let url = `https://www.google.com/maps/dir/?api=1`;
+    url += `&origin=${latitude},${longitude}`;
+    url += `&destination=${destinationLat},${destinationLng}`;
+    url += `&travelmode=driving`;
+
+    console.log(`Maps URL (to ${destinationType}):`, url);
 
     // Open Google Maps
     const supported = await Linking.canOpenURL(url);

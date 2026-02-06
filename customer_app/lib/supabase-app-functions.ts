@@ -157,22 +157,26 @@ export async function getCusUserById(userId: string) {
 }
 
 export async function uploadDeliveryImage(
-  fileUri,
-  folder = "package_images",
-  setUploadProgress,
+  fileUri: string,
+  bucketName = "package_images", // ✅ Renamed for clarity
+  setUploadProgress: (progress: number | null) => void,
 ) {
   try {
     // 1️⃣ Create signed upload URL from Supabase
     const fileName = `${Date.now()}.jpg`;
-    const filePath = `${fileName}`;
+    const filePath = fileName; // ✅ Simplified
 
     const { data, error } = await supabase.storage
-      .from(folder)
+      .from(bucketName)
       .createSignedUploadUrl(filePath);
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Signed URL creation failed:", error);
+      throw error;
+    }
 
     const signedUrl = data.signedUrl;
+    console.log("📝 Signed URL created:", signedUrl);
 
     // 2️⃣ Create upload task with progress tracking
     const uploadTask = createUploadTask(
@@ -180,7 +184,6 @@ export async function uploadDeliveryImage(
       fileUri,
       {
         httpMethod: "PUT",
-
         headers: {
           "Content-Type": "image/jpeg",
         },
@@ -196,19 +199,22 @@ export async function uploadDeliveryImage(
     // 3️⃣ Await task result
     const result = await uploadTask.uploadAsync();
 
-    if (result.status !== 200)
-      throw new Error("Upload failed with status " + result.status);
+    if (result.status !== 200) {
+      throw new Error(`Upload failed with status ${result.status}`);
+    }
 
-    console.log("✅ Uploaded via signed URL:", result);
+    console.log("✅ Upload successful:", result);
 
     // 4️⃣ Get public URL
     const { data: publicData } = supabase.storage
-      .from("images")
+      .from(bucketName)
       .getPublicUrl(filePath);
+
+    console.log("🌐 Public URL:", publicData.publicUrl);
 
     return publicData.publicUrl;
   } catch (err) {
-    console.error("❌ Upload failed:", err.message);
+    console.error("❌ Upload failed:", err);
     throw err;
   }
 }
