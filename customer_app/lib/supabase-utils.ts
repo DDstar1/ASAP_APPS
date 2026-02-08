@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 export async function deleteOldPendingDeliveries(
   client_id: string,
-  current_order_code: string
+  current_order_code: string,
 ) {
   try {
     const { error } = await supabase
@@ -33,7 +33,7 @@ export async function deleteOldPendingDeliveries(
  */
 export async function hasDriverAcceptedDelivery(
   client_id: string,
-  order_code: string
+  order_code: string,
 ): Promise<{ accepted: boolean; driver_id: string | null }> {
   try {
     const { data, error } = await supabase

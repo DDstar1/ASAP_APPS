@@ -64,8 +64,19 @@ const checkAndSync = async () => {
 // Define background task globally
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error || !data) return;
+
+  if (data) {
+  }
   const { locations } = data as any;
   if (!locations?.length) return;
+
+  const location = locations[0];
+
+  console.log("📍 Location update (every ~5s):", {
+    lat: location.coords.latitude,
+    lng: location.coords.longitude,
+    time: new Date(location.timestamp).toISOString(),
+  });
 
   await saveToPhone(locations[0]);
   await checkAndSync();
@@ -74,6 +85,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 // Start tracking (call this from your entry point)
 export const startTracking = async (orderId: number) => {
   const { status: fg } = await Location.requestForegroundPermissionsAsync();
+  console.log("Started tracking, foreground permission:", fg);
   if (fg !== "granted") return;
 
   await Location.requestBackgroundPermissionsAsync();

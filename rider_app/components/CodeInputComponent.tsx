@@ -1,0 +1,140 @@
+import React, { useState } from "react";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+
+interface CodeInputComponentProps {
+  currentDelivery: {
+    id: string;
+    order_code: string;
+    status: string;
+    pickup_name: string;
+    dropoff_name: string;
+  };
+  onSubmitCode: (code: string, type: "pickup" | "dropoff") => Promise<void>;
+}
+
+const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
+  currentDelivery,
+  onSubmitCode,
+}) => {
+  const [code, setCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Determine which code is needed based on status
+  const needsPickupCode = currentDelivery.status === "arriving_pickup";
+  const needsDropoffCode = currentDelivery.status === "in_transit";
+
+  const codeType = needsPickupCode ? "pickup" : "dropoff";
+  const locationName = needsPickupCode
+    ? currentDelivery.pickup_name
+    : currentDelivery.dropoff_name;
+
+  const handleSubmit = async () => {
+    if (code.trim().length < 4) {
+      Alert.alert("Invalid Code", "Please enter a valid code");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmitCode(code.trim(), codeType);
+      setCode(""); // Clear input on success
+    } catch (error) {
+      console.error("Error submitting code:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!needsPickupCode && !needsDropoffCode) {
+    return null; // Don't show if no code is needed
+  }
+
+  return (
+    <LinearGradient
+      colors={["#3B82F6", "#2563EB"]}
+      style={{ borderRadius: 20, padding: 20, overflow: "hidden" }}
+    >
+      <View className="mb-4">
+        <View className="flex-row items-center mb-2">
+          <View className="w-12 h-12 bg-blue-100 rounded-2xl justify-center items-center mr-3">
+            <Ionicons
+              name={
+                needsPickupCode ? "cube-outline" : "checkmark-circle-outline"
+              }
+              size={26}
+              color="#2563EB"
+            />
+          </View>
+          <View className="flex-1">
+            <Text className="text-white text-lg font-bold">
+              {needsPickupCode ? "Pickup" : "Dropoff"} Code Required
+            </Text>
+            <Text className="text-blue-100 text-sm">
+              Order: {currentDelivery.order_code}
+            </Text>
+          </View>
+        </View>
+
+        <View className="bg-white/10 rounded-xl p-3 mb-4">
+          <Text className="text-white/70 text-xs mb-1">LOCATION</Text>
+          <Text className="text-white text-base font-semibold">
+            {locationName}
+          </Text>
+        </View>
+
+        <Text className="text-white/90 text-sm mb-3">
+          Enter the {codeType} code provided by the customer to proceed:
+        </Text>
+
+        <View className="bg-white rounded-xl overflow-hidden mb-3">
+          <TextInput
+            value={code}
+            onChangeText={setCode}
+            placeholder={`Enter ${codeType} code`}
+            placeholderTextColor="#9CA3AF"
+            className="px-4 py-4 text-gray-900 text-base font-semibold"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={10}
+            editable={!isSubmitting}
+          />
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleSubmit}
+          disabled={isSubmitting || code.trim().length < 4}
+          className={`rounded-xl py-4 ${
+            isSubmitting || code.trim().length < 4
+              ? "bg-gray-400"
+              : "bg-green-500"
+          }`}
+        >
+          <Text className="text-white text-center text-base font-bold">
+            {isSubmitting
+              ? "Verifying..."
+              : `Confirm ${needsPickupCode ? "Pickup" : "Dropoff"}`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View className="bg-white/10 rounded-xl p-3">
+        <View className="flex-row items-center">
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color="#BFDBFE"
+          />
+          <Text className="text-blue-100 text-xs ml-2 flex-1">
+            The customer will provide you with this code when you arrive at the
+            location
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+};
+
+export default CodeInputComponent;

@@ -246,22 +246,7 @@ export async function fetchAvailableOrders(): Promise<{
   try {
     const { data, error } = await supabase
       .from<RiderOrder>("delivery_orders")
-      .select(
-        `
-        id,
-        created_at,
-        pickup_lat,
-        pickup_long,
-        pickup_name,
-        dropoff_lat,
-        dropoff_long,
-        dropoff_name,
-        status,
-        order_code,
-        image_url,
-        waypoints
-      `,
-      )
+      .select("*")
       .is("driver_id", null)
       .eq("status", "pending")
       .order("created_at", { ascending: true });
@@ -353,29 +338,7 @@ export async function getDeliveryOrderByCode(orderCode: string) {
 
     const { data, error } = await supabase
       .from("delivery_orders")
-      .select(
-        `
-        id,
-        created_at,
-        client_id,
-        image_url,
-        pickup_lat,
-        pickup_long,
-        pickup_name,
-        dropoff_lat,
-        dropoff_long,
-        dropoff_name,
-        driver_initial_lat,
-        driver_initial_long,
-        driver_package_current_lat,
-        driver_package_current_long,
-        status,
-        order_code,
-        driver_id,
-        modified_at,
-        waypoints
-      `,
-      )
+      .select("*")
       .eq("order_code", orderCode)
       .single(); // order_code is UNIQUE
 
@@ -635,5 +598,65 @@ export const getMessagesList = async () => {
   } catch (err) {
     console.error("Unexpected error fetching messages:", err);
     return { success: false, error: err, data: [] };
+  }
+};
+
+// Add this to your @/lib/supabase-functions file
+
+/**
+ * Unified function to verify pickup or dropoff codes
+ * @param deliveryId - The delivery/order ID
+ * @param code - The code to verify
+ * @param type - Either "pickup" or "dropoff"
+ * @returns Promise with success status and optional error message
+ */
+export const verifyDeliveryCode = async (
+  deliveryId: string,
+  code: string,
+  type: "pickup" | "dropoff",
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // Determine which column to check based on type
+    const codeColumn = type === "pickup" ? "pickup_code" : "dropoff_code";
+
+    // Query the delivery and verify the code
+    const { data, error } = await supabase
+      .from("deliveries") // or whatever your table name is
+      .select(codeColumn)
+      .eq("id", deliveryId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching delivery:", error);
+      return { success: false, error: "Failed to verify code" };
+    }
+
+    // Check if the code matches
+    if (data[codeColumn] === code) {
+      // Update the delivery status
+      const newStatus = type === "pickup" ? "in_transit" : "completed";
+
+      const { error: updateError } = await supabase
+        .from("deliveries")
+        .update({
+          status: newStatus,
+          ...(type === "pickup"
+            ? { pickup_time: new Date().toISOString() }
+            : { dropoff_time: new Date().toISOString() }),
+        })
+        .eq("id", deliveryId);
+
+      if (updateError) {
+        console.error("Error updating delivery status:", updateError);
+        return { success: false, error: "Failed to update delivery status" };
+      }
+
+      return { success: true };
+    } else {
+      return { success: false, error: "Invalid code" };
+    }
+  } catch (err) {
+    console.error("Unexpected error in verifyDeliveryCode:", err);
+    return { success: false, error: "An unexpected error occurred" };
   }
 };

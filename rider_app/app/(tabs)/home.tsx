@@ -1,40 +1,23 @@
 import { IMAGES } from "@/assets/assetsData";
-import OrderSummary from "@/components/OrderSummary";
-import { Ionicons } from "@expo/vector-icons";
+import CodeInputComponent from "@/components/CodeInputComponent";
+import AvailableOrdersDropdown from "@/components/Availableordersdropdown";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Image,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Image, StatusBar, Text, View } from "react-native";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { openGoogleMaps } from "@/utils/utils_for_me";
 
 import {
   acceptDeliveryOrder,
   updateRiderActiveMode,
   updateRiderLocation,
+  verifyDeliveryCode,
 } from "@/lib/supabase-functions";
 import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
-import Animated, {
-  FadeInDown,
-  FadeOutUp,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  LinearTransition,
-} from "react-native-reanimated";
 import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
+import { startTracking } from "@/utils/utils_orderLocationTracking";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -43,42 +26,27 @@ const RiderHomeScreen = () => {
     null,
   );
 
+  // ✅ Use the store hooks properly
   const { availableOrders, loading, fetchAvailableOrders } =
     useRiderOrdersStore();
-  const { addCurrentDelivery } = useCurrentDeliveryStore.getState();
+  const {
+    currentDeliveries,
+    addCurrentDelivery,
+    updateDeliveryStatus,
+    fetchCurrentDeliveries,
+  } = useCurrentDeliveryStore();
 
+  // ✅ Fetch data on mount
   useEffect(() => {
     fetchAvailableOrders();
+    fetchCurrentDeliveries();
   }, []);
 
-  // Reanimated shared values
-  const slide = useSharedValue(0);
-  const opacity = useSharedValue(0);
-
-  // Handle dropdown animation
-  useEffect(() => {
-    if (showOrders) {
-      slide.value = withSpring(1, { damping: 12, stiffness: 120 });
-      opacity.value = withTiming(1, { duration: 300 });
-    } else {
-      slide.value = withTiming(0, { duration: 250 });
-      opacity.value = withTiming(0, { duration: 150 });
-    }
-  }, [showOrders]);
+  // Check if rider has ongoing deliveries
+  const hasOngoingDeliveries = currentDeliveries.length > 0;
+  const activeDelivery = currentDeliveries[0]; // Get the first active delivery
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
-
-  // Animated styles for dropdown
-  const dropdownStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(slide.value, [0, 1], [-20, 0]);
-    const scale = interpolate(slide.value, [0, 1], [0.95, 1]);
-    const maxHeight = interpolate(slide.value, [0, 1], [0, 400]);
-    return {
-      opacity: opacity.value,
-      transform: [{ translateY }, { scale }],
-      maxHeight,
-    };
-  });
 
   // Start real-time location updates
   const startRealtimeLocation = async () => {
@@ -153,7 +121,6 @@ const RiderHomeScreen = () => {
         const order = result.data[0];
 
         // 4️⃣ Add delivery to store immediately
-
         addCurrentDelivery({
           id: order.id,
           order_code: order.order_code,
@@ -165,7 +132,11 @@ const RiderHomeScreen = () => {
           dropoff_long: order.dropoff_long,
           dropoff_name: order.dropoff_name,
           image_url: order.image_url,
+          pickup_code_verified: false,
+          dropoff_code_verified: false,
         });
+
+        startTracking(order.id); // Start background location tracking for this delivery
 
         // 5️⃣ Notify + navigate
         Alert.alert("Order Accepted", "You have accepted this delivery!", [
@@ -190,6 +161,52 @@ const RiderHomeScreen = () => {
       Alert.alert("Error", "Failed to accept order. Try again.");
     }
   };
+
+  // Handle code submission
+  const handleSubmitCode = async (code: string, type: "pickup" | "dropoff") => {
+    if (!activeDelivery) return;
+
+    try {
+      // ✅ Single unified function call
+      const result = await verifyDeliveryCode(activeDelivery.id, code, type);
+
+      if (result.success) {
+        // Update delivery status in store with verification flag
+        const newStatus = type === "pickup" ? "in_transit" : "completed";
+        const verificationUpdate =
+          type === "pickup"
+            ? { pickup_code_verified: true }
+            : { dropoff_code_verified: true };
+
+        //updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
+
+        Alert.alert(
+          "Code Authenticated ✓",
+          `${type === "pickup" ? "Pickup" : "Dropoff"} code verified successfully!`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (type === "dropoff") {
+                  // Navigate to deliveries tab to show completion
+                  router.push("/(tabs)/deliveries");
+                }
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Invalid Code",
+          result.error || "The code you entered is incorrect.",
+        );
+      }
+    } catch (error) {
+      console.error("Error verifying code:", error);
+      Alert.alert("Error", "Failed to verify code. Please try again.");
+    }
+  };
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
@@ -201,14 +218,6 @@ const RiderHomeScreen = () => {
         style={{ borderBottomRightRadius: 200, overflow: "hidden" }}
       >
         <SafeAreaView edges={["top"]} className="px-5 pb-10 pt-3">
-          <View className="flex-row justify-between items-center mb-6">
-            <Ionicons name="menu" size={28} color="white" />
-            <Image
-              source={IMAGES.profile_img}
-              className="w-10 h-10 rounded-full border-2 border-white"
-            />
-          </View>
-
           <View className="z-10">
             <View className="bg-orange-600/40 px-3 py-1 rounded-full self-start">
               <Text className="text-white text-sm font-semibold">Level 1</Text>
@@ -259,67 +268,22 @@ const RiderHomeScreen = () => {
           </View>
         </View>
 
-        {/* Animated Orders */}
-        <LinearGradient
-          colors={["#FDE68A", "#F59E0B"]}
-          style={{ borderRadius: 20, padding: 15, overflow: "hidden" }}
-        >
-          <TouchableOpacity activeOpacity={0.85} onPress={toggleDropdown}>
-            <View className="flex-row justify-between items-center">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-yellow-100 rounded-2xl justify-center items-center mr-4">
-                  <Ionicons name="cube-outline" size={26} color="#F59E0B" />
-                </View>
-                <Text className="text-base font-bold text-gray-900">
-                  {availableOrders.length} delivery orders found!
-                </Text>
-              </View>
-              <Ionicons
-                name={showOrders ? "chevron-up" : "chevron-down"}
-                size={22}
-                color="#374151"
-              />
-            </View>
-          </TouchableOpacity>
-
-          <Animated.View
-            entering={FadeInDown.duration(500)}
-            exiting={FadeOutUp.duration(200)}
-            style={dropdownStyle}
-          >
-            <FlatList
-              data={availableOrders}
-              keyExtractor={(item) => item.id.toString()}
-              className="mt-3"
-              renderItem={({ item, index }) => (
-                <Animated.View
-                  // Use the new Layout animation
-                  layout={LinearTransition.springify()} // replaces Layout.springify()
-                  entering={FadeInDown.duration(400).springify()}
-                  exiting={FadeOutUp.duration(300).springify()}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() =>
-                      router.navigate({
-                        pathname: "/order_detail",
-                        params: { orderCode: item.order_code },
-                      })
-                    }
-                  >
-                    <OrderSummary
-                      order={item}
-                      onAccept={() => handleAcceptOrder(item.order_code)}
-                    />
-                  </TouchableOpacity>
-                </Animated.View>
-              )}
-              showsVerticalScrollIndicator
-              nestedScrollEnabled
-              style={{ maxHeight: 350, flexGrow: 0 }}
-            />
-          </Animated.View>
-        </LinearGradient>
+        {/* Conditional Rendering: Code Input OR Available Orders */}
+        {hasOngoingDeliveries ? (
+          // Show Code Input Component when rider has ongoing deliveries
+          <CodeInputComponent
+            currentDelivery={activeDelivery}
+            onSubmitCode={handleSubmitCode}
+          />
+        ) : (
+          // Show Available Orders when rider has no ongoing deliveries
+          <AvailableOrdersDropdown
+            availableOrders={availableOrders}
+            showOrders={showOrders}
+            onToggle={toggleDropdown}
+            onAcceptOrder={handleAcceptOrder}
+          />
+        )}
       </View>
     </View>
   );
