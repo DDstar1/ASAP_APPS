@@ -721,7 +721,7 @@ export async function getClientCurrentDeliveries() {
       .from("delivery_orders")
       .select("*")
       .eq("client_id", clientId)
-      .in("status", ["pending", "accepted", "in_transit"]); // active deliveries
+      .in("status", ["pending", "arriving_pickup", "in_transit"]); // active deliveries
 
     if (error) {
       console.error("❌ Error fetching client deliveries:", error.message);
