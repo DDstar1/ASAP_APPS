@@ -394,7 +394,7 @@ export async function upsertDeliveryOrder(
         client_id,
         order_code,
       );
-      if (accepted) return { status: "accepted", driver_id };
+      if (accepted) return { status: "arriving_pickup", driver_id };
 
       const payload = {
         ...props,
