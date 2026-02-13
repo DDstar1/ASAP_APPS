@@ -35,6 +35,8 @@ type DeliveryOrder = {
   driver_id: string | null; // UUID
   status: "pending" | "in_transit" | "completed" | "cancelled"; // depending on your delivery_status enum
   order_code: string;
+  dropoff_code: string;
+  pickup_code: string;
   image_url?: string | null;
   modified_at: string;
 
@@ -49,7 +51,7 @@ type DeliveryOrder = {
   driver_initial_long?: number | null;
   driver_package_current_lat?: number | null;
   driver_package_current_long?: number | null;
-  waypoints?: Coordinates[] | null;
+  drivers_waypoints?: Coordinates[] | null;
 };
 
 export type {

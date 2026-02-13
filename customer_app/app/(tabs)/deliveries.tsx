@@ -144,7 +144,7 @@ const OrdersPage = () => {
           justifyContent: "center",
         }}
         style={{
-          maxHeight: currentDeliveries.length > 0 ? 230 : 100,
+          maxHeight: currentDeliveries.length > 0 ? 250 : 100,
         }}
         keyExtractor={(item, index) => `${item.order_code}-${index}`}
         renderItem={({ item }) => (

@@ -92,7 +92,7 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
 
       {/* Left Side */}
       <View className="flex-1 mr-20 z-10">
-        <Text className="text-white text-lg font-bold mb-2">
+        <Text selectable className="text-white text-lg font-bold mb-2">
           #{item.order_code}
         </Text>
 
@@ -112,43 +112,71 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           </Text>
         </View>
 
-        <Text
-          className={`text-gray-400 text-xs mb-1 ${normalizedStatus === "pending" ? "ml-[63px]" : ""}`}
-        >
-          Status
-        </Text>
-        <View className="flex-row items-center relative">
-          {/* Pulsating background effect */}
-          <Animated.View
-            style={[
-              pulseStyle,
-              {
-                opacity: 0.1,
-                position: "absolute",
-                zIndex: -20,
-                left: 0,
-              },
-            ]}
-          >
-            {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
-          </Animated.View>
-
-          {/* Static foreground circle */}
-          <View style={{ zIndex: 10 }}>
-            {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
-          </View>
-
-          <View className="ml-2 flex-1">
+        <View className="flex-row items-center ">
+          {/* Status Section */}
+          <View className="flex-1 ">
             <Text
-              className={`text-white text-sm ${normalizedStatus === "pending" ? "ml-[50px]" : ""}`}
+              className={`text-gray-400 text-xs mb-1 ${
+                normalizedStatus === "pending" ? "ml-[63px]" : ""
+              }`}
             >
-              {rawStatus?.replace("_", " ")}
+              Status
             </Text>
-            {normalizedStatus === "pending" && (
-              <Text className="ml-[50px] text-gray-400 text-xs">
-                Awaiting a rider...
-              </Text>
-            )}
+
+            <View className="flex-row items-center relative">
+              {/* Pulsating background effect */}
+              <Animated.View
+                style={[
+                  pulseStyle,
+                  {
+                    opacity: 0.1,
+                    position: "absolute",
+                    zIndex: -20,
+                    left: 0,
+                  },
+                ]}
+              >
+                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
+              </Animated.View>
+
+              {/* Static foreground circle */}
+              <View style={{ zIndex: 10 }}>
+                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
+              </View>
+
+              <View className="ml-2 flex-1">
+                <Text
+                  className={`text-white text-sm ${
+                    normalizedStatus === "pending" ? "ml-[50px]" : ""
+                  }`}
+                >
+                  {rawStatus?.replace("_", " ")}
+                </Text>
+
+                {normalizedStatus === "pending" && (
+                  <Text className="ml-[50px] text-gray-400 text-xs">
+                    Awaiting a rider...
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+          {/* Code Section */}
+          <View className="">
+            <Text className="text-gray-400 text-xs ">Pickup Code</Text>
+            <Text
+              selectable
+              className="text-white text-xs font-semibold tracking-wider mb-1"
+            >
+              {item.pickup_code}
+            </Text>
+            <Text className="text-gray-400 text-xs ">Dropoff Code</Text>
+            <Text
+              selectable
+              className="text-white text-xs font-semibold tracking-wider"
+            >
+              {item.dropoff_code}
+            </Text>
           </View>
         </View>
       </View>

@@ -132,6 +132,19 @@ const generateOrderCode = () => {
   return `ASAP-${randomSegment(4)}-${randomSegment(4)}`;
 };
 
+const generateConfirmationCodes = (type: "pickup" | "delivery") => {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const prefix = type === "pickup" ? "PC" : "DC";
+
+  const segment = (length: number) =>
+    Array.from(
+      { length },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join("");
+
+  return `${prefix}-${segment(4)}-${segment(4)}`;
+};
+
 export {
   cleanAddress,
   openOrderTrackPage,
@@ -139,4 +152,5 @@ export {
   timeAgo,
   formatMessageTime,
   generateOrderCode,
+  generateConfirmationCodes,
 };

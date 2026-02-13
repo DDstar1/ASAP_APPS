@@ -1,7 +1,7 @@
 import { upsertDeliveryOrder } from "@/lib/supabase-app-functions";
 import { reverseGeocode } from "@/utils/mapUtils";
 import { Coordinates } from "@/utils/my_types";
-import { generateOrderCode } from "@/utils/my_utils";
+import { generateConfirmationCodes, generateOrderCode } from "@/utils/my_utils";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -25,7 +25,7 @@ type Props = {
   dropoff_long: number;
   dropoff_name: string;
   image_url?: string;
-  waypoints?: Coordinates[] | null;
+  drivers_waypoints?: Coordinates[] | null;
 };
 
 export default function RiderAwaitingModal({
@@ -38,7 +38,7 @@ export default function RiderAwaitingModal({
   dropoff_long,
   dropoff_name,
   image_url,
-  waypoints,
+  drivers_waypoints,
 }: Props) {
   // -------------------------
   // STATE
@@ -55,6 +55,8 @@ export default function RiderAwaitingModal({
   const progress3 = useSharedValue(0);
 
   const orderCodeRef = useRef(`asap-${Date.now()}`);
+  const dropoffCodeRef = useRef("");
+  const pickupCodeRef = useRef("");
 
   // -------------------------
   // Sync state if props change
@@ -101,9 +103,14 @@ export default function RiderAwaitingModal({
 
       // Now start interval after names are ready
       orderCodeRef.current = generateOrderCode();
+      dropoffCodeRef.current = generateConfirmationCodes("delivery");
+      pickupCodeRef.current = generateConfirmationCodes("pickup");
+
       const interval = setInterval(async () => {
         const result = await upsertDeliveryOrder({
           order_code: orderCodeRef.current,
+          dropoff_code: dropoffCodeRef.current,
+          pickup_code: pickupCodeRef.current,
           image_url,
           pickup_lat,
           pickup_long,
@@ -112,12 +119,12 @@ export default function RiderAwaitingModal({
           dropoff_long,
           dropoff_name: finalDropoffName,
           status: "pending",
-          waypoints,
+          drivers_waypoints,
         });
 
         if (result?.status === "arriving_pickup") {
           router.replace({
-            pathname: "/trackPackage/[order_code]",
+            pathname: "/trackPackage",
             params: { order_code: orderCodeRef.current },
           });
           onClose();
