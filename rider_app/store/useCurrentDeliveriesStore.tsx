@@ -14,6 +14,7 @@ interface CurrentDelivery {
   dropoff_name: string;
   image_url?: string;
   statusColor?: string;
+  delivery_accepted_time: number;
 }
 
 interface CurrentDeliveryStore {
@@ -56,19 +57,26 @@ export const useCurrentDeliveryStore = create<CurrentDeliveryStore>((set) => ({
     }
   },
 
-  addCurrentDelivery: (delivery) => {
+  addCurrentDelivery: (delivery) =>
     set((state) => {
-      const exists = state.currentDeliveries.some((d) => d.id === delivery.id);
+      const normalized = {
+        ...delivery,
+        delivery_accepted_time:
+          typeof delivery.delivery_accepted_time === "string"
+            ? new Date(delivery.delivery_accepted_time).getTime()
+            : (delivery.delivery_accepted_time ?? Date.now()),
+      };
 
       return {
-        currentDeliveries: exists
+        currentDeliveries: state.currentDeliveries.some(
+          (d) => d.id === normalized.id,
+        )
           ? state.currentDeliveries.map((d) =>
-              d.id === delivery.id ? { ...d, ...delivery } : d,
+              d.id === normalized.id ? { ...d, ...normalized } : d,
             )
-          : [delivery, ...state.currentDeliveries],
+          : [normalized, ...state.currentDeliveries],
       };
-    });
-  },
+    }),
 
   updateDeliveryStatus: (orderId, newStatus) => {
     set((state) => ({

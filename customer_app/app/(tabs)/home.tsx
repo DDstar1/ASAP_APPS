@@ -1,6 +1,7 @@
 import { IMAGES } from "@/assets/assetsData";
 import CameraModal from "@/components/CameraModal";
 import SavedLocationsModal from "@/components/SavedLocationsModal";
+import SelectItemTypeScreen from "@/components/SelectItemTypeScreen";
 import ShareScreenModal from "@/components/ShareScreenModal";
 import { getCusUserById } from "@/lib/supabase-app-functions";
 import { useUserStore } from "@/store/useUserStore";
@@ -25,6 +26,7 @@ const ShippingTrackerApp = () => {
   const [cameraVisible, setCameraVisible] = useState(false);
   const [shareVisible, setShareVisible] = useState(false);
   const [savedVisible, setSavedVisible] = useState(false);
+  const [ItemTypeVisible, setItemTypeVisible] = useState(false);
 
   const [customUser, setCustomUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -188,7 +190,7 @@ const ShippingTrackerApp = () => {
               key={index}
               className="items-center"
               onPress={() => {
-                if (action.label === "Send Package") setCameraVisible(true);
+                if (action.label === "Send Package") setItemTypeVisible(true);
                 else if (action.label === "Share Location")
                   setShareVisible(true);
                 else if (action.label === "Saved Locations")
@@ -253,7 +255,7 @@ const ShippingTrackerApp = () => {
         </View>
       </ScrollView>
 
-      {/* Camera Modal */}
+      {/* Camera Modal 
       <CameraModal
         visible={cameraVisible}
         onClose={() => {
@@ -270,6 +272,30 @@ const ShippingTrackerApp = () => {
           } catch (error) {
             console.error("Failed to save package image:", error);
             Alert.alert("Error", "Failed to save image");
+            router.navigate("/map");
+          }
+        }}
+      />*/}
+
+      {/* Select Item Modal */}
+      <SelectItemTypeScreen
+        visible={ItemTypeVisible}
+        onClose={() => setItemTypeVisible(false)}
+        onConfirm={async (packageType, description) => {
+          console.log("📦 Selected type:", packageType);
+          console.log("📝 Description:", description);
+
+          try {
+            router.navigate({
+              pathname: "/map",
+              params: {
+                packageType,
+                packageDescription: description,
+              },
+            });
+          } catch (error) {
+            console.error("Failed to save package type:", error);
+            Alert.alert("Error", "Failed to save package type");
             router.navigate("/map");
           }
         }}

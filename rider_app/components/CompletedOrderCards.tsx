@@ -34,7 +34,7 @@ export default function CompletedOrderCard({ item }: Props) {
         <View className="flex-row justify-between items-start">
           {/* Cell 1 */}
           <View style={{ width: "40%" }} className="pr-2">
-            <Text className="text-white text-lg font-bold">{item.id}</Text>
+            <Text className="text-white text-2xl font-bold">{item.id}</Text>
 
             <View className="flex-row items-center gap-2 flex-wrap">
               <Text className="text-white text-sm font-medium">

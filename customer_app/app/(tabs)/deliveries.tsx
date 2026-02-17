@@ -64,8 +64,8 @@ const OrdersPage = () => {
         {/* First Row - 3 cells */}
         <View className="flex-row justify-between items-start">
           {/* Cell 1 - 33.33% width */}
-          <View style={{ width: "40%" }} className="pr-2">
-            <Text className="text-white text-lg font-bold">{item.id}</Text>
+          <View style={{ width: "45%" }} className="pr-2">
+            <Text className="text-white text-xl font-bold mb-2">{item.id}</Text>
             <View className="flex-row items-center gap-2 flex-wrap">
               <Text className="text-white text-sm font-medium">
                 {item.category}
@@ -83,14 +83,14 @@ const OrdersPage = () => {
             <Text className="text-orange-200 text-sm">{item.time}</Text>
           </View>
 
-          {/* Cell 3 - 33.33% width */}
+          {/* Cell 3 - 33.33% width 
           <View style={{ width: "35%" }} className="items-end pl-2">
             <Image
               source={item.materialImage || IMAGES.indomie_package}
               className="w-14 h-14 rounded-lg bg-white/20"
               resizeMode="cover"
             />
-          </View>
+          </View>*/}
         </View>
 
         {/* Second Row - 3 cells */}

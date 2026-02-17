@@ -1,6 +1,6 @@
 import { IMAGES } from "@/assets/assetsData";
 import CodeInputComponent from "@/components/CodeInputComponent";
-import AvailableOrdersDropdown from "@/components/Availableordersdropdown";
+import AvailableOrdersDropdown from "@/components/AvailableOrdersDropdown";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
@@ -17,7 +17,10 @@ import {
 } from "@/lib/supabase-functions";
 import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
 import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
-import { startTracking } from "@/utils/utils_orderLocationTracking";
+import {
+  startTracking,
+  stopTracking,
+} from "@/utils/utils_orderLocationTracking";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -120,21 +123,8 @@ const RiderHomeScreen = () => {
       if (result.success && result.data.length > 0) {
         const order = result.data[0];
 
-        // 4️⃣ Add delivery to store immediately
-        addCurrentDelivery({
-          id: order.id,
-          order_code: order.order_code,
-          status: order.status, // arriving_pickup
-          pickup_lat: order.pickup_lat,
-          pickup_long: order.pickup_long,
-          pickup_name: order.pickup_name,
-          dropoff_lat: order.dropoff_lat,
-          dropoff_long: order.dropoff_long,
-          dropoff_name: order.dropoff_name,
-          image_url: order.image_url,
-          pickup_code_verified: false,
-          dropoff_code_verified: false,
-        });
+        // 4️⃣ Add delivery directly to store
+        addCurrentDelivery(result.data);
 
         startTracking(order.id); // Start background location tracking for this delivery
 
@@ -178,7 +168,7 @@ const RiderHomeScreen = () => {
             ? { pickup_code_verified: true }
             : { dropoff_code_verified: true };
 
-        //updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
+        updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
 
         Alert.alert(
           "Code Authenticated ✓",
@@ -187,9 +177,10 @@ const RiderHomeScreen = () => {
             {
               text: "OK",
               onPress: () => {
+                router.replace("/(tabs)/home");
                 if (type === "dropoff") {
+                  stopTracking();
                   // Navigate to deliveries tab to show completion
-                  router.push("/(tabs)/deliveries");
                 }
               },
             },

@@ -49,6 +49,7 @@ export default function TabLayout() {
         name="chats"
         options={{
           title: "Chats",
+          href: null, // 👈 hides from tab bar
           tabBarIcon: ({ color }) => MY_ICONS.message(color),
         }}
       />
