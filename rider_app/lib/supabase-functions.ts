@@ -5,30 +5,6 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
 
-// Standalone function to get current user ID
-export async function getCurrentUserId() {
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error("❌ No logged-in user found", userError);
-      return {
-        success: false,
-        error: userError || "No user session",
-        userId: null,
-      };
-    }
-
-    return { success: true, userId: user.id, email: user.email };
-  } catch (err) {
-    console.error("🚨 Unexpected error while getting user:", err);
-    return { success: false, error: err, userId: null };
-  }
-}
-
 export const handleLogout = async () => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -128,70 +104,31 @@ export async function signInUser(email: string, password: string) {
   return user;
 }
 
-export async function getCusUserById(userId: string) {
-  try {
-    if (!userId) throw new Error("User ID is required");
-
-    const { data, error } = await supabase
-      .from("custom_users")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    console.log(data);
-
-    if (error) throw error;
-    return data;
-  } catch (err) {
-    console.error("❌ Error fetching user:", err.message);
-    return null;
+async function requireUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    throw new Error("User not authenticated");
   }
+  return data.user;
 }
 
 export async function updateRiderLocation(latitude: number, longitude: number) {
   try {
-    // Get the currently logged-in user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const user = await requireUser();
 
-    if (userError || !user) {
-      console.error("❌ No logged-in user found", userError);
-      return { success: false, error: userError || "No user session" };
-    }
-
-    const riderId = user.id;
-    const riderEmail = user.email;
-
-    // Upsert location
-    const { data, error } = await supabase
-      .from("riders_current_status")
-      .upsert({
-        id: riderId,
-        email: riderEmail,
-        active_mode: "rider",
-        latitude,
-        longitude,
-      });
-
-    if (error) {
-      console.error("❌ Failed to update location:", error.message);
-      return { success: false, error };
-    }
-
-    console.log("📍 Location update sent:", {
-      riderId,
+    const { error } = await supabase.from("riders_current_status").upsert({
+      id: user.id,
+      email: user.email,
+      active_mode: "rider",
       latitude,
       longitude,
-      time: new Date().toLocaleTimeString(),
-      response: data,
     });
 
-    return { success: true, data };
-  } catch (err) {
-    console.error("🚨 Unexpected error while updating location:", err);
-    return { success: false, error: err };
+    if (error) return { success: false, error };
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }
 
@@ -270,59 +207,28 @@ export async function acceptDeliveryOrder(
   driverLong: number,
 ) {
   try {
-    // 1️⃣ Get currently logged-in driver
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const user = await requireUser();
 
-    if (userError || !user) {
-      console.error("❌ No logged-in driver found", userError);
-      return { success: false, error: userError || "No user session" };
-    }
-
-    const driverId = user.id;
-    const driverEmail = user.email;
-
-    // 2️⃣ Update the delivery_orders table
     const { data, error } = await supabase
       .from("delivery_orders")
       .update({
-        driver_id: driverId,
+        driver_id: user.id,
         status: "arriving_pickup",
         driver_initial_lat: driverLat,
         driver_initial_long: driverLong,
         modified_at: new Date().toISOString(),
+        delivery_accepted_time: new Date().toISOString(),
       })
       .eq("order_code", orderCode)
       .eq("status", "pending")
-      .select(); // Only allow accepting pending orders
+      .select()
+      .single();
 
-    if (error) {
-      console.error("❌ Failed to accept order:", error.message);
-      return { success: false, error };
-    }
-
-    console.log("log of acceptDeliveryOrder", data);
-
-    if (!data || data.length === 0) {
-      console.warn("⚠️ Order not pending or does not exist");
-      return { success: false, error: "Order not pending or does not exist" };
-    }
-
-    console.log("✅ Order accepted:", {
-      orderCode,
-      driverId,
-      driverLat,
-      driverLong,
-      time: new Date().toLocaleTimeString(),
-      response: data,
-    });
+    if (error || !data) return { success: false, error: error?.message };
 
     return { success: true, data };
-  } catch (err) {
-    console.error("🚨 Unexpected error while accepting order:", err);
-    return { success: false, error: err };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }
 
@@ -430,37 +336,29 @@ export const getOrderClientInfo = async (orderId: number) => {
 };
 
 export const getMessages = async (otherUserId: string) => {
-  console.log("Fetching messages for user ID:", otherUserId);
   try {
-    // Get the currently logged-in user
-    const { success, userId, error: userError } = await getCurrentUserId();
+    // 🔹 Ensure a logged-in user
+    const user = await requireUser();
+    const userId = user.id;
 
-    if (!success || !userId) {
-      console.error("❌ No logged-in user found", userError);
-      return [];
-    }
-
+    // 🔹 Fetch messages between the two users
     const { data, error } = await supabase
       .from("messages")
-      .select("*") // select all columns
+      .select("*")
       .or(
         `and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`,
       )
-      .order("created_at", { ascending: true }); // oldest → newest
+      .order("created_at", { ascending: true }); // oldest first
 
-    if (error) {
-      console.error("Error fetching messages:", error);
-      return [];
-    }
-
-    console.log("Fetched messages:", data);
+    if (error) throw error;
 
     return data || [];
-  } catch (err) {
-    console.error("Unexpected error fetching messages:", err);
+  } catch (err: any) {
+    console.error("Unexpected error fetching messages:", err.message || err);
     return [];
   }
 };
+
 export const sendMessageToSupabase = async (messageData: {
   message: string;
   sender_id: string;
@@ -499,16 +397,11 @@ export const sendMessageToSupabase = async (messageData: {
 
 export const getMessagesList = async () => {
   try {
-    // Get the currently logged-in user
-    const { success, userId, error: userError } = await getCurrentUserId();
+    // 🔹 Get logged-in user
+    const user = await requireUser();
+    const userId = user.id;
 
-    if (!success || !userId) {
-      console.error("❌ No logged-in user found", userError);
-      throw new Error("User not authenticated");
-    }
-
-    console.log("Fetching messages for user:", userId);
-
+    // 🔹 Fetch messages involving this user
     const { data, error } = await supabase
       .from("messages")
       .select(
@@ -534,70 +427,57 @@ export const getMessagesList = async () => {
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching messages:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    // Group messages by conversation (other user only, not by delivery order)
-    const conversationsMap = new Map();
+    // 🔹 Status map
+    const statusMap: Record<string, { text: string; color: string }> = {
+      pending: { text: "Pending", color: "#9CA3AF" },
+      accepted: { text: "Accepted", color: "#3B82F6" },
+      picked_up: { text: "Picked Up", color: "#FB923C" },
+      in_transit: { text: "In Transit", color: "#FB923C" },
+      delivered: { text: "Delivered", color: "#34D399" },
+      cancelled: { text: "Cancelled", color: "#EF4444" },
+    };
 
-    data.forEach((message: any) => {
-      const otherUser =
-        message.sender_id === userId ? message.receiver : message.sender;
-      const conversationKey = otherUser.id; // Group by other user only
+    // 🔹 Group by other user
+    const conversationsMap = new Map<string, any>();
 
-      if (!conversationsMap.has(conversationKey)) {
-        // Map delivery status to display status and color
-        const getStatusDisplay = (status: string) => {
-          const statusMap: Record<string, { text: string; color: string }> = {
-            pending: { text: "Pending", color: "#9CA3AF" },
-            accepted: { text: "Accepted", color: "#3B82F6" },
-            picked_up: { text: "Picked Up", color: "#FB923C" },
-            in_transit: { text: "In Transit", color: "#FB923C" },
-            delivered: { text: "Delivered", color: "#34D399" },
-            cancelled: { text: "Cancelled", color: "#EF4444" },
-          };
-          return statusMap[status] || { text: "Unknown", color: "#9CA3AF" };
-        };
+    data.forEach((msg: any) => {
+      const otherUser = msg.sender_id === userId ? msg.receiver : msg.sender;
+      if (conversationsMap.has(otherUser.id)) return;
 
-        const deliveryStatus = getStatusDisplay(
-          message.delivery_order?.status || "pending",
-        );
+      const deliveryStatus = statusMap[
+        msg.delivery_order?.status || "pending"
+      ] || { text: "Unknown", color: "#9CA3AF" };
 
-        conversationsMap.set(conversationKey, {
-          key: conversationKey,
-          id: otherUser.id,
-          clientName: otherUser.username,
-          lastMessage: message.message,
-          time: formatMessageTime(message.created_at),
-          unreadCount: 0, // You can calculate this based on read status if you add that field
-          deliveryOrderId: message.delivery_order_id, // Most recent delivery order
-          orderId: message.delivery_order?.order_code || "",
-          status: deliveryStatus.text,
-          statusColor: deliveryStatus.color,
-          avatar: null, // No avatar_url in custom_users table
-          lastMessageTime: message.created_at,
-          otherUserId: otherUser.id,
-        });
-      }
+      conversationsMap.set(otherUser.id, {
+        key: otherUser.id,
+        id: otherUser.id,
+        clientName: otherUser.username,
+        lastMessage: msg.message,
+        time: formatMessageTime(msg.created_at),
+        unreadCount: 0,
+        deliveryOrderId: msg.delivery_order_id,
+        orderId: msg.delivery_order?.order_code || "",
+        status: deliveryStatus.text,
+        statusColor: deliveryStatus.color,
+        avatar: null,
+        lastMessageTime: msg.created_at,
+        otherUserId: otherUser.id,
+      });
     });
 
-    // Convert Map to array
-    const conversations = Array.from(conversationsMap.values());
-
-    // Sort by most recent message
-    conversations.sort(
+    // 🔹 Convert to array and sort
+    const conversations = Array.from(conversationsMap.values()).sort(
       (a, b) =>
         new Date(b.lastMessageTime).getTime() -
         new Date(a.lastMessageTime).getTime(),
     );
 
-    console.log("Messages fetched successfully:", conversations);
     return { success: true, data: conversations };
-  } catch (err) {
+  } catch (err: any) {
     console.error("Unexpected error fetching messages:", err);
-    return { success: false, error: err, data: [] };
+    return { success: false, error: err.message, data: [] };
   }
 };
 
@@ -621,10 +501,12 @@ export const verifyDeliveryCode = async (
 
     // Query the delivery and verify the code
     const { data, error } = await supabase
-      .from("deliveries") // or whatever your table name is
+      .from("delivery_orders") // or whatever your table name is
       .select(codeColumn)
       .eq("id", deliveryId)
       .single();
+
+    console.log(data);
 
     if (error) {
       console.error("Error fetching delivery:", error);
@@ -634,15 +516,21 @@ export const verifyDeliveryCode = async (
     // Check if the code matches
     if (data[codeColumn] === code) {
       // Update the delivery status
-      const newStatus = type === "pickup" ? "in_transit" : "completed";
+      const newStatus = type === "pickup" ? "in_transit" : "delivered";
 
       const { error: updateError } = await supabase
-        .from("deliveries")
+        .from("delivery_orders")
         .update({
           status: newStatus,
           ...(type === "pickup"
-            ? { pickup_time: new Date().toISOString() }
-            : { dropoff_time: new Date().toISOString() }),
+            ? {
+                pickup_time: new Date().toISOString(),
+                is_pickup_code_authenticated: true,
+              }
+            : {
+                dropoff_time: new Date().toISOString(),
+                is_dropoff_code_authenticated: true,
+              }),
         })
         .eq("id", deliveryId);
 

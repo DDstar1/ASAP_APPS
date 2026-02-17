@@ -47,4 +47,7 @@ export const MY_ICONS = {
   map: (color: string, size = 28) => (
     <MaterialIcons name="map" size={size} color={color} />
   ), // ✅ Added map icon
+  marker: (color: string, size = 28) => (
+    <MaterialIcons name="place" size={size} color={color} />
+  ), // ✅ Added marker icon
 };

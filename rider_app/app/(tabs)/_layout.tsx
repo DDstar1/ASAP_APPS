@@ -56,6 +56,8 @@ export default function TabLayout() {
         name="chats"
         options={{
           title: "Chat",
+          href: null, // 👈 hides from tab bar
+
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "chatbubble" : "chatbubble-outline"}

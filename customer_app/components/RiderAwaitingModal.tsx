@@ -26,6 +26,8 @@ type Props = {
   dropoff_name: string;
   image_url?: string;
   drivers_waypoints?: Coordinates[] | null;
+  package_type: string;
+  package_description: string;
 };
 
 export default function RiderAwaitingModal({
@@ -39,6 +41,8 @@ export default function RiderAwaitingModal({
   dropoff_name,
   image_url,
   drivers_waypoints,
+  package_type,
+  package_description,
 }: Props) {
   // -------------------------
   // STATE
@@ -120,6 +124,8 @@ export default function RiderAwaitingModal({
           dropoff_name: finalDropoffName,
           status: "pending",
           drivers_waypoints,
+          package_type,
+          package_description,
         });
 
         if (result?.status === "arriving_pickup") {

@@ -13,6 +13,7 @@ import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MY_ICONS } from "@/assets/assetsData";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
@@ -37,7 +38,8 @@ export default function MapScreen() {
   const [waypoints, setWaypoints] = useState<Coordinates[] | null>(null);
 
   const mapRef = useRef<MapView>(null);
-  const { packageImage } = useLocalSearchParams();
+  const { packageImage, packageType, packageDescription } =
+    useLocalSearchParams();
 
   // Auto-zoom to pickup & destination
   useEffect(() => {
@@ -250,9 +252,10 @@ export default function MapScreen() {
           {/* Location fields */}
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
-              className="flex-1 bg-white rounded-xl px-4 py-3"
+              className="flex-1 flex-row items-center bg-white rounded-xl px-2 gap-2 py-3"
               onPress={() => setActiveField("from")}
             >
+              {MY_ICONS.marker("green", 20)}
               <Text className="text-gray-700 font-medium">
                 {pickup ? pickup.name : "Set Pickup"}
               </Text>
@@ -261,9 +264,10 @@ export default function MapScreen() {
             <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
 
             <TouchableOpacity
-              className="flex-1 bg-white rounded-xl px-4 py-3"
+              className="flex-1 flex-row items-center gap-2 bg-white rounded-xl px-2 py-3"
               onPress={() => setActiveField("to")}
             >
+              {MY_ICONS.marker("red", 20)}
               <Text className="text-gray-700 font-medium">
                 {destination ? destination.name : "Set Destination"}
               </Text>
@@ -322,6 +326,8 @@ export default function MapScreen() {
           destination?.address ?? ""
         }`}
         image_url={packageImage || IMAGES.riderWithPizza}
+        package_type={packageType || "Unknown Item"}
+        package_description={packageDescription || ""}
         waypoints={waypoints}
       />
     </View>
