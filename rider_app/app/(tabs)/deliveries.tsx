@@ -1,70 +1,60 @@
 // app/(tabs)/deliveries.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { Dimensions, FlatList, SectionList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
-import { orderSections } from "@/utils/dummyData";
 import CompletedOrderCards from "@/components/CompletedOrderCards";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
-import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
+import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 
-const HIGHLIGHT_WINDOW = 120_00; // 10 seconds
+const HIGHLIGHT_WINDOW = 120_000; // 2 minutes
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
-
   const { newlyAcceptedId, time_added } = useLocalSearchParams();
 
-  const { currentDeliveries, loading, fetchCurrentDeliveries } =
-    useCurrentDeliveryStore();
+  const { AcceptedDeliveries, loading, fetchAcceptedDeliveries } =
+    useAcceptedDeliveryStore();
 
   useEffect(() => {
-    fetchCurrentDeliveries();
+    fetchAcceptedDeliveries();
   }, []);
 
-  // ✅ Parse time safely
+  // ✅ Parse accepted time safely
   const acceptedTime =
     typeof time_added === "string" ? Number(time_added) : null;
 
-  // ✅ Single source of truth for highlight
-  const isHighlightActive = (itemId: Number) => {
+  // ✅ Highlight logic
+  const isHighlightActive = (itemId: number) => {
     const now = Date.now();
 
-    console.log("🟡 Highlight check start", {
-      itemId,
-      newlyAcceptedId,
-      acceptedTime,
-      now,
-    });
-
-    if (!acceptedTime) {
-      console.log("❌ No acceptedTime → highlight disabled");
-      return false;
-    }
-
-    if (Number(itemId) !== Number(newlyAcceptedId)) {
-      console.log("❌ ID mismatch", {
-        itemId,
-        newlyAcceptedId,
-      });
-      return false;
-    }
+    if (!acceptedTime) return false;
+    if (Number(itemId) !== Number(newlyAcceptedId)) return false;
 
     const elapsed = now - acceptedTime;
-    const isActive = elapsed <= HIGHLIGHT_WINDOW;
-
-    console.log(isActive ? "✅ Highlight ACTIVE" : "⏱️ Highlight EXPIRED", {
-      elapsedMs: elapsed,
-      windowMs: HIGHLIGHT_WINDOW,
-      remainingMs: Math.max(HIGHLIGHT_WINDOW - elapsed, 0),
-    });
-
-    return isActive;
+    return elapsed <= HIGHLIGHT_WINDOW;
   };
+
+  // ✅ Separate deliveries properly
+  const activeDeliveries = useMemo(
+    () =>
+      AcceptedDeliveries.filter(
+        (item) =>
+          item.status === "pending" ||
+          item.status === "arriving_pickup" ||
+          item.status === "in_transit",
+      ),
+    [AcceptedDeliveries],
+  );
+
+  const completedDeliveries = useMemo(
+    () => AcceptedDeliveries.filter((item) => item.status === "delivered"),
+    [AcceptedDeliveries],
+  );
 
   const renderSectionHeader = ({ section }: { section: any }) => (
     <View className="bg-gray-900 py-2">
@@ -82,7 +72,7 @@ const OrdersPage = () => {
         {MY_ICONS.delivery("white", 24)}
       </View>
 
-      {/* Current Deliveries */}
+      {/* ================= ACTIVE DELIVERIES ================= */}
       <Text className="text-white text-center text-2xl font-medium mb-1">
         Current Delivery
       </Text>
@@ -97,24 +87,17 @@ const OrdersPage = () => {
             paddingHorizontal: 16,
             alignItems: "center",
           }}
-          style={{
-            maxHeight: currentDeliveries.length > 0 ? 230 : 100,
-          }}
           renderItem={() => <IncompleteDeliverySkeleton width={width} />}
         />
       ) : (
         <FlatList
-          data={currentDeliveries}
+          data={activeDeliveries}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
             paddingHorizontal: 16,
             marginBottom: 10,
             alignItems: "center",
-            justifyContent: "center",
-          }}
-          style={{
-            maxHeight: currentDeliveries.length > 0 ? 230 : 100,
           }}
           keyExtractor={(item, index) => `${item.order_code}-${index}`}
           renderItem={({ item, index }) => (
@@ -122,7 +105,7 @@ const OrdersPage = () => {
               item={item}
               index={index}
               width={width}
-              isHighlighted={isHighlightActive(item.id)} // ✅ clean + correct
+              isHighlighted={isHighlightActive(item.id)}
             />
           )}
           ListEmptyComponent={() => (
@@ -138,27 +121,37 @@ const OrdersPage = () => {
         />
       )}
 
-      {/* Completed Deliveries */}
+      {/* ================= COMPLETED DELIVERIES ================= */}
       <Text className="text-white text-center text-2xl font-medium mb-1">
         Completed Deliveries
       </Text>
 
       {loading ? (
         <View className="px-6">
-          {[1, 2, 3, 4, 5, 6].map((_, index) => (
+          {[1, 2, 3, 4].map((_, index) => (
             <CompletedOrderSkeleton key={index} />
           ))}
         </View>
       ) : (
         <SectionList
-          sections={orderSections}
-          keyExtractor={(item, index) => item.id + index}
+          sections={[
+            {
+              title: "Completed",
+              data: completedDeliveries,
+            },
+          ]}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => <CompletedOrderCards item={item} />}
           renderSectionHeader={renderSectionHeader}
           stickySectionHeadersEnabled
           className="flex-1 px-6"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
+          ListEmptyComponent={() => (
+            <Text className="text-gray-500 text-center mt-4">
+              No completed deliveries yet
+            </Text>
+          )}
         />
       )}
     </SafeAreaView>

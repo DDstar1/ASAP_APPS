@@ -269,7 +269,7 @@ export async function getDeliveryOrderByCode(orderCode: string) {
   }
 }
 
-export async function getRiderCurrentDeliveries() {
+export async function getRiderAcceptedDeliveries() {
   try {
     const { data: authData, error: userError } = await supabase.auth.getUser();
     const user = authData?.user;
@@ -289,7 +289,7 @@ export async function getRiderCurrentDeliveries() {
       .from("delivery_orders")
       .select("*")
       .eq("driver_id", driverId)
-      .in("status", ["pending", "arriving_pickup", "in_transit"]); // active deliveries
+      .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]); // active deliveries
 
     if (error) {
       console.error("❌ Error fetching rider deliveries:", error.message);

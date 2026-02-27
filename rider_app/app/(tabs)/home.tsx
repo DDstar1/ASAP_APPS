@@ -15,8 +15,10 @@ import {
   updateRiderLocation,
   verifyDeliveryCode,
 } from "@/lib/supabase-functions";
+
 import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
-import { useCurrentDeliveryStore } from "@/store/useCurrentDeliveriesStore";
+import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
+
 import {
   startTracking,
   stopTracking,
@@ -25,48 +27,58 @@ import {
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showOrders, setShowOrders] = useState(false);
+
+  // ✅ Controlled state now
+  const [hasOngoingDeliveries, setHasOngoingDeliveries] = useState(false);
+
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null,
   );
 
-  // ✅ Use the store hooks properly
-  const { availableOrders, loading, fetchAvailableOrders } =
-    useRiderOrdersStore();
-  const {
-    currentDeliveries,
-    addCurrentDelivery,
-    updateDeliveryStatus,
-    fetchCurrentDeliveries,
-  } = useCurrentDeliveryStore();
+  const { availableOrders, fetchAvailableOrders } = useRiderOrdersStore();
 
-  // ✅ Fetch data on mount
+  const {
+    AcceptedDeliveries,
+    addAcceptedDelivery,
+    updateDeliveryStatus,
+    fetchAcceptedDeliveries,
+  } = useAcceptedDeliveryStore();
+
+  // ------------------------------------------
+  // Initial Fetch
+  // ------------------------------------------
   useEffect(() => {
     fetchAvailableOrders();
-    fetchCurrentDeliveries();
+    fetchAcceptedDeliveries();
   }, []);
 
-  // Check if rider has ongoing deliveries
-  const hasOngoingDeliveries = currentDeliveries.length > 0;
-  const activeDelivery = currentDeliveries[0]; // Get the first active delivery
+  // ------------------------------------------
+  // Sync hasOngoingDeliveries with store
+  // ------------------------------------------
+  useEffect(() => {
+    setHasOngoingDeliveries(AcceptedDeliveries.length > 0);
+  }, [AcceptedDeliveries]);
+
+  const activeDelivery = AcceptedDeliveries[0];
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
 
-  // Start real-time location updates
+  // ------------------------------------------
+  // Location Tracking
+  // ------------------------------------------
   const startRealtimeLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
-      alert("Location permission is required for online mode.");
+      Alert.alert("Permission Required", "Location permission is required.");
       setIsOnline(false);
       return;
     }
 
-    console.log("Starting location tracking...");
-
     locationSubscription.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Highest,
-        distanceInterval: 0, // update every 5 meters
-        timeInterval: 5000, // update at least every 5 seconds
+        distanceInterval: 5,
+        timeInterval: 5000,
       },
       async (location) => {
         try {
@@ -79,7 +91,6 @@ const RiderHomeScreen = () => {
     );
   };
 
-  // Stop location updates
   const stopRealtimeLocation = () => {
     if (locationSubscription.current) {
       locationSubscription.current.remove();
@@ -87,48 +98,41 @@ const RiderHomeScreen = () => {
     }
   };
 
-  // Watch the switch
   useEffect(() => {
     if (isOnline) startRealtimeLocation();
     else stopRealtimeLocation();
+
     updateRiderActiveMode(isOnline);
 
-    return () => stopRealtimeLocation(); // Cleanup on unmount
+    return () => stopRealtimeLocation();
   }, [isOnline]);
 
-  // Handle order acceptance
+  // ------------------------------------------
+  // Accept Order
+  // ------------------------------------------
   const handleAcceptOrder = async (orderCode: string) => {
     try {
-      // 1️⃣ Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Location permission is required to accept this order.",
-        );
+        Alert.alert("Permission Denied", "Location permission required.");
         return;
       }
 
-      // 2️⃣ Get current location
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+
       const { latitude, longitude } = location.coords;
 
-      // 3️⃣ Accept order
       const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
-
-      console.log("Accept Order Result:", result);
 
       if (result.success && result.data.length > 0) {
         const order = result.data[0];
 
-        // 4️⃣ Add delivery directly to store
-        addCurrentDelivery(result.data);
+        addAcceptedDelivery(result.data);
+        setHasOngoingDeliveries(true); // 👈 manually set true
+        startTracking(order.id);
 
-        startTracking(order.id); // Start background location tracking for this delivery
-
-        // 5️⃣ Notify + navigate
         Alert.alert("Order Accepted", "You have accepted this delivery!", [
           {
             text: "OK",
@@ -152,17 +156,18 @@ const RiderHomeScreen = () => {
     }
   };
 
-  // Handle code submission
+  // ------------------------------------------
+  // Verify Code (Pickup / Dropoff)
+  // ------------------------------------------
   const handleSubmitCode = async (code: string, type: "pickup" | "dropoff") => {
     if (!activeDelivery) return;
 
     try {
-      // ✅ Single unified function call
       const result = await verifyDeliveryCode(activeDelivery.id, code, type);
 
       if (result.success) {
-        // Update delivery status in store with verification flag
         const newStatus = type === "pickup" ? "in_transit" : "completed";
+
         const verificationUpdate =
           type === "pickup"
             ? { pickup_code_verified: true }
@@ -170,34 +175,40 @@ const RiderHomeScreen = () => {
 
         updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
 
+        // ✅ If dropoff confirmed → manually disable ongoing deliveries
+        if (type === "dropoff") {
+          // Remove completed delivery from store
+          useAcceptedDeliveryStore
+            .getState()
+            .removeAcceptedDelivery(activeDelivery.id);
+          setHasOngoingDeliveries(false);
+          stopTracking();
+        }
+
         Alert.alert(
           "Code Authenticated ✓",
-          `${type === "pickup" ? "Pickup" : "Dropoff"} code verified successfully!`,
+          `${type === "pickup" ? "Pickup" : "Dropoff"} verified successfully!`,
           [
             {
               text: "OK",
               onPress: () => {
                 router.replace("/(tabs)/home");
-                if (type === "dropoff") {
-                  stopTracking();
-                  // Navigate to deliveries tab to show completion
-                }
               },
             },
           ],
         );
       } else {
-        Alert.alert(
-          "Invalid Code",
-          result.error || "The code you entered is incorrect.",
-        );
+        Alert.alert("Invalid Code", result.error || "The code is incorrect.");
       }
     } catch (error) {
       console.error("Error verifying code:", error);
-      Alert.alert("Error", "Failed to verify code. Please try again.");
+      Alert.alert("Error", "Failed to verify code.");
     }
   };
 
+  // ------------------------------------------
+  // UI
+  // ------------------------------------------
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
@@ -213,6 +224,7 @@ const RiderHomeScreen = () => {
             <View className="bg-orange-600/40 px-3 py-1 rounded-full self-start">
               <Text className="text-white text-sm font-semibold">Level 1</Text>
             </View>
+
             <Text className="text-3xl text-white font-bold mb-8">
               Partner Alex
             </Text>
@@ -220,6 +232,7 @@ const RiderHomeScreen = () => {
             <Text className="text-white/70 text-[11px] tracking-wide mb-1">
               TOTAL EARNINGS
             </Text>
+
             <Text className="text-white text-5xl font-bold mb-2">₦157.34</Text>
           </View>
         </SafeAreaView>
@@ -233,7 +246,7 @@ const RiderHomeScreen = () => {
 
       {/* Body */}
       <View className="bg-gray-50 px-5 pt-6 pb-24">
-        {/* Online/Offline Switch */}
+        {/* Online Switch */}
         <View className="bg-white rounded-3xl p-5 mb-4 shadow-sm">
           <View className="flex-row justify-between items-center">
             <View className="flex-1">
@@ -246,6 +259,7 @@ const RiderHomeScreen = () => {
                   : "You're currently offline."}
               </Text>
             </View>
+
             <Switch
               value={isOnline}
               onValueChange={setIsOnline}
@@ -259,15 +273,14 @@ const RiderHomeScreen = () => {
           </View>
         </View>
 
-        {/* Conditional Rendering: Code Input OR Available Orders */}
+        {/* Conditional Section */}
         {hasOngoingDeliveries ? (
-          // Show Code Input Component when rider has ongoing deliveries
           <CodeInputComponent
             currentDelivery={activeDelivery}
             onSubmitCode={handleSubmitCode}
+            hasOngoingDeliveries={hasOngoingDeliveries}
           />
         ) : (
-          // Show Available Orders when rider has no ongoing deliveries
           <AvailableOrdersDropdown
             availableOrders={availableOrders}
             showOrders={showOrders}
