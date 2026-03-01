@@ -1,5 +1,12 @@
-import React, { useEffect } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -11,25 +18,28 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { openOrderTrackPage, openOrderChat } from "@/utils/my_utils";
+import { openOrderChat } from "@/utils/my_utils";
 import { router } from "expo-router";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+import { DeliveryOrder } from "@/utils/my_types";
 
 type Props = {
-  item: any;
+  item: DeliveryOrder;
   width: number;
 };
 
 const IncompleteDeliveryCard = ({ item, width }: Props) => {
   const rawStatus = item.status;
   const normalizedStatus = rawStatus?.trim().toLowerCase();
+  const [cancelling, setCancelling] = useState(false);
 
-  // Pulsating animation for pending status
   const pulseProgress = useSharedValue(0);
+  const { removeDelivery } = useCustomerDeliveryStore();
 
   useEffect(() => {
     if (normalizedStatus === "pending") {
       pulseProgress.value = withRepeat(
-        withTiming(1, { duration: 600 }), // Faster animation (was 1500)
+        withTiming(1, { duration: 600 }),
         -1,
         true,
       );
@@ -49,13 +59,30 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
         : [{ scale: 1 }],
   }));
 
-  console.log("📦 Delivery card render", {
-    orderId: item.id,
-    rawStatus: `"${rawStatus}"`,
-    rawLength: rawStatus?.length,
-    normalizedStatus,
-    shouldShowMessageButton: normalizedStatus !== "pending",
-  });
+  const handleCancel = () => {
+    Alert.alert(
+      "Cancel Order",
+      `Are you sure you want to cancel order #${item.order_code}?`,
+      [
+        { text: "Keep Order", style: "cancel" },
+        {
+          text: "Cancel Order",
+          style: "destructive",
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              // Remove from store optimistically
+              removeDelivery(item.order_code);
+              // TODO: call your cancel API here e.g. await cancelOrder(item.id)
+            } catch (err) {
+              setCancelling(false);
+              Alert.alert("Error", "Failed to cancel order. Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View
@@ -69,9 +96,7 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           onPress={() =>
             router.replace({
               pathname: "/trackPackage",
-              params: {
-                order_id: item.id, // must match the route param
-              },
+              params: { order_id: item.id },
             })
           }
           className="p-2 bg-gray-200 rounded-full"
@@ -79,13 +104,28 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           {MY_ICONS.map("black", 25)}
         </TouchableOpacity>
 
-        {/* Message button */}
+        {/* Message button — hidden while pending */}
         {normalizedStatus !== "pending" && (
           <TouchableOpacity
             onPress={() => openOrderChat(item.id)}
             className="p-2 bg-gray-200 rounded-full"
           >
             {MY_ICONS.message("black", 25)}
+          </TouchableOpacity>
+        )}
+
+        {/* Cancel button — only while pending */}
+        {normalizedStatus === "pending" && (
+          <TouchableOpacity
+            onPress={handleCancel}
+            disabled={cancelling}
+            className="p-2 bg-red-500/90 rounded-full"
+          >
+            {cancelling ? (
+              <ActivityIndicator size={25} color="white" />
+            ) : (
+              MY_ICONS.cancel("white", 25)
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -112,9 +152,9 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           </Text>
         </View>
 
-        <View className="flex-row items-center ">
+        <View className="flex-row items-center">
           {/* Status Section */}
-          <View className="flex-1 ">
+          <View className="flex-1">
             <Text
               className={`text-gray-400 text-xs mb-1 ${
                 normalizedStatus === "pending" ? "ml-[63px]" : ""
@@ -161,16 +201,17 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
               </View>
             </View>
           </View>
+
           {/* Code Section */}
-          <View className="">
-            <Text className="text-gray-400 text-xs ">Pickup Code</Text>
+          <View>
+            <Text className="text-gray-400 text-xs">Pickup Code</Text>
             <Text
               selectable
               className="text-white text-xs font-semibold tracking-wider mb-1"
             >
               {item.pickup_code}
             </Text>
-            <Text className="text-gray-400 text-xs ">Dropoff Code</Text>
+            <Text className="text-gray-400 text-xs">Dropoff Code</Text>
             <Text
               selectable
               className="text-white text-xs font-semibold tracking-wider"

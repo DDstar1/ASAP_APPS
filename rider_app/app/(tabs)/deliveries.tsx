@@ -12,6 +12,7 @@ import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkel
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 
 const HIGHLIGHT_WINDOW = 120_000; // 2 minutes
+const ACCENT_COLOR = "#4F8EF7";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
@@ -24,22 +25,15 @@ const OrdersPage = () => {
     fetchAcceptedDeliveries();
   }, []);
 
-  // ✅ Parse accepted time safely
   const acceptedTime =
     typeof time_added === "string" ? Number(time_added) : null;
 
-  // ✅ Highlight logic
   const isHighlightActive = (itemId: number) => {
-    const now = Date.now();
-
     if (!acceptedTime) return false;
     if (Number(itemId) !== Number(newlyAcceptedId)) return false;
-
-    const elapsed = now - acceptedTime;
-    return elapsed <= HIGHLIGHT_WINDOW;
+    return Date.now() - acceptedTime <= HIGHLIGHT_WINDOW;
   };
 
-  // ✅ Separate deliveries properly
   const activeDeliveries = useMemo(
     () =>
       AcceptedDeliveries.filter(
@@ -56,101 +50,141 @@ const OrdersPage = () => {
     [AcceptedDeliveries],
   );
 
-  const renderSectionHeader = ({ section }: { section: any }) => (
-    <View className="bg-gray-900 py-2">
-      <Text className="text-gray-400 text-sm">{section.title}</Text>
+  // ─── Section Label ─────────────────────────────────────────────────────────
+  const SectionLabel = ({
+    title,
+    count,
+  }: {
+    title: string;
+    count?: number;
+  }) => (
+    <View className="flex-row items-center gap-2">
+      <Text className="text-[11px] font-bold tracking-widest text-[#7A7F9A] uppercase">
+        {title}
+      </Text>
+      {count !== undefined && (
+        <View className="bg-[#1A1C24] rounded-lg px-2 py-0.5 border border-[#1F2230]">
+          <Text className="text-[11px] font-semibold text-[#7A7F9A]">
+            {count}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
+  // ─── Divider ───────────────────────────────────────────────────────────────
+  const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
+
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-6 py-4">
-        <Text className="text-white text-2xl font-semibold">
-          All Deliveries
-        </Text>
-        {MY_ICONS.delivery("white", 24)}
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <View className="flex-row items-center justify-between px-6 pt-3 pb-5">
+        <View>
+          <Text className="text-[28px] font-extrabold text-[#F0F2F8] -tracking-wide">
+            Deliveries
+          </Text>
+        </View>
+        <View className="w-11 h-11 rounded-2xl bg-[#1C2E52] items-center justify-center border border-[#4F8EF7]/20">
+          {MY_ICONS.delivery(ACCENT_COLOR, 20)}
+        </View>
       </View>
 
-      {/* ================= ACTIVE DELIVERIES ================= */}
-      <Text className="text-white text-center text-2xl font-medium mb-1">
-        Current Delivery
-      </Text>
+      <Divider />
+
+      {/* ── Active Deliveries — fixed height, never grows ───────────────────── */}
+      <View className="px-6 pt-3 pb-2">
+        <SectionLabel
+          title="Active"
+          count={loading ? undefined : activeDeliveries.length}
+        />
+      </View>
+
+      {/* Fixed 90px height — active section never squeezes completed list */}
+      <View style={{ height: 90 }}>
+        {loading ? (
+          <FlatList
+            horizontal
+            data={[1, 2, 3]}
+            keyExtractor={(item) => item.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              alignItems: "center",
+            }}
+            renderItem={() => <IncompleteDeliverySkeleton width={width} />}
+          />
+        ) : (
+          <FlatList
+            data={activeDeliveries}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              alignItems: "center",
+            }}
+            ItemSeparatorComponent={() => <View className="w-3" />}
+            keyExtractor={(item, index) => `${item.order_code}-${index}`}
+            renderItem={({ item, index }) => (
+              <IncompleteDeliveryCard
+                item={item}
+                index={index}
+                width={width}
+                isHighlighted={isHighlightActive(item.id)}
+              />
+            )}
+            ListEmptyComponent={() => (
+              // Compact single-row empty state instead of a tall centered card
+              <View
+                style={{ width: width - 48, height: 72 }}
+                className="bg-[#12141A] rounded-2xl border border-dashed border-[#1F2230] flex-row items-center px-5 gap-4"
+              >
+                <Text className="text-2xl">📦</Text>
+                <View className="gap-0.5">
+                  <Text className="text-sm font-bold text-[#F0F2F8]">
+                    No Active Deliveries
+                  </Text>
+                  <Text className="text-xs text-[#7A7F9A]">
+                    Accepted deliveries will appear here
+                  </Text>
+                </View>
+              </View>
+            )}
+          />
+        )}
+      </View>
+
+      <Divider />
+
+      {/* ── Completed Deliveries — flex-1 fills ALL remaining space ─────────── */}
+      <View className="px-6 pt-3 pb-2">
+        <SectionLabel
+          title="Completed"
+          count={loading ? undefined : completedDeliveries.length}
+        />
+      </View>
 
       {loading ? (
-        <FlatList
-          horizontal
-          data={[1, 2, 3]}
-          keyExtractor={(item) => item.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            alignItems: "center",
-          }}
-          renderItem={() => <IncompleteDeliverySkeleton width={width} />}
-        />
-      ) : (
-        <FlatList
-          data={activeDeliveries}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            marginBottom: 10,
-            alignItems: "center",
-          }}
-          keyExtractor={(item, index) => `${item.order_code}-${index}`}
-          renderItem={({ item, index }) => (
-            <IncompleteDeliveryCard
-              item={item}
-              index={index}
-              width={width}
-              isHighlighted={isHighlightActive(item.id)}
-            />
-          )}
-          ListEmptyComponent={() => (
-            <View
-              style={{ width: width * 0.9, padding: 35 }}
-              className="bg-gray-700 rounded-2xl flex justify-center items-center"
-            >
-              <Text className="text-white text-base">
-                No current deliveries
-              </Text>
-            </View>
-          )}
-        />
-      )}
-
-      {/* ================= COMPLETED DELIVERIES ================= */}
-      <Text className="text-white text-center text-2xl font-medium mb-1">
-        Completed Deliveries
-      </Text>
-
-      {loading ? (
-        <View className="px-6">
+        <View className="flex-1 px-6 gap-3">
           {[1, 2, 3, 4].map((_, index) => (
             <CompletedOrderSkeleton key={index} />
           ))}
         </View>
       ) : (
         <SectionList
-          sections={[
-            {
-              title: "Completed",
-              data: completedDeliveries,
-            },
-          ]}
+          sections={[{ title: "Completed", data: completedDeliveries }]}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => <CompletedOrderCards item={item} />}
-          renderSectionHeader={renderSectionHeader}
           stickySectionHeadersEnabled
-          className="flex-1 px-6"
+          className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 18 }}
+          ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
           ListEmptyComponent={() => (
-            <Text className="text-gray-500 text-center mt-4">
-              No completed deliveries yet
-            </Text>
+            <View className="py-8 items-center">
+              <Text className="text-sm text-[#3D4160]">
+                No completed deliveries yet
+              </Text>
+            </View>
           )}
         />
       )}

@@ -14,6 +14,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 
 type Props = {
   visible: boolean;
@@ -44,130 +45,120 @@ export default function RiderAwaitingModal({
   package_type,
   package_description,
 }: Props) {
-  // -------------------------
-  // STATE
-  // -------------------------
-  const [pickupName, setPickupName] = useState<string | null>(
-    pickup_name ?? null,
-  );
-  const [dropoffName, setDropoffName] = useState<string | null>(
-    dropoff_name ?? null,
-  );
-
   const progress1 = useSharedValue(0);
   const progress2 = useSharedValue(0);
   const progress3 = useSharedValue(0);
 
-  const orderCodeRef = useRef(`asap-${Date.now()}`);
+  const orderCodeRef = useRef("");
   const dropoffCodeRef = useRef("");
   const pickupCodeRef = useRef("");
 
-  // -------------------------
-  // Sync state if props change
-  // -------------------------
-  useEffect(() => {
-    setPickupName(pickup_name ?? null);
-  }, [pickup_name]);
+  const [resolvedPickupName, setResolvedPickupName] = useState<string | null>(
+    null,
+  );
+  const [resolvedDropoffName, setResolvedDropoffName] = useState<string | null>(
+    null,
+  );
 
-  useEffect(() => {
-    setDropoffName(dropoff_name ?? null);
-  }, [dropoff_name]);
-
-  // -------------------------
-  // Poll backend for rider acceptance
-  // -------------------------
   useEffect(() => {
     if (!visible) return;
 
+    let interval: any;
+
     const init = async () => {
-      let finalPickupName = pickupName;
-      let finalDropoffName = dropoffName;
-      const checkPickup = pickupName?.toLowerCase().trim() || "";
+      // ✅ Read directly from props, not from state
+      let finalPickupName = pickup_name ?? null;
+      let finalDropoffName = dropoff_name ?? null;
+
+      const checkPickup = pickup_name?.toLowerCase().trim() || "";
       if (
         checkPickup.includes("current location") ||
         checkPickup.includes("(saved)") ||
-        !pickupName
+        !pickup_name
       ) {
         finalPickupName = await reverseGeocode(pickup_lat, pickup_long);
-        setPickupName(finalPickupName);
       }
 
-      const checkDropoff = dropoffName?.toLowerCase().trim() || "";
+      const checkDropoff = dropoff_name?.toLowerCase().trim() || "";
       if (
         checkDropoff.includes("current location") ||
         checkDropoff.includes("(saved)") ||
-        !dropoffName
+        !dropoff_name
       ) {
         finalDropoffName = await reverseGeocode(dropoff_lat, dropoff_long);
-        setDropoffName(finalDropoffName);
       }
 
-      console.log(checkPickup);
-      console.log(checkDropoff);
+      // Update display state after resolution
+      setResolvedPickupName(finalPickupName);
+      setResolvedDropoffName(finalDropoffName);
 
-      // Now start interval after names are ready
+      // Generate codes
       orderCodeRef.current = generateOrderCode();
       dropoffCodeRef.current = generateConfirmationCodes("delivery");
       pickupCodeRef.current = generateConfirmationCodes("pickup");
 
-      const interval = setInterval(async () => {
-        const result = await upsertDeliveryOrder({
-          order_code: orderCodeRef.current,
-          dropoff_code: dropoffCodeRef.current,
-          pickup_code: pickupCodeRef.current,
-          image_url,
-          pickup_lat,
-          pickup_long,
-          pickup_name: finalPickupName,
-          dropoff_lat,
-          dropoff_long,
-          dropoff_name: finalDropoffName,
-          status: "pending",
-          drivers_waypoints,
-          package_type,
-          package_description,
-        });
+      const deliveryPayload = {
+        order_code: orderCodeRef.current,
+        dropoff_code: dropoffCodeRef.current,
+        pickup_code: pickupCodeRef.current,
+        image_url,
+        pickup_lat,
+        pickup_long,
+        pickup_name: finalPickupName,
+        dropoff_lat,
+        dropoff_long,
+        dropoff_name: finalDropoffName,
+        status: "pending",
+        drivers_waypoints,
+        package_type,
+        package_description,
+      };
+
+      // First upsert
+      const firstResult = await upsertDeliveryOrder(deliveryPayload);
+      console.log("Initial upsert result:", firstResult.data);
+
+      if (firstResult) {
+        useCustomerDeliveryStore.getState().addNewDelivery(firstResult.data);
+      }
+
+      // Start polling
+      interval = setInterval(async () => {
+        const result = await upsertDeliveryOrder(deliveryPayload);
 
         if (result?.status === "arriving_pickup") {
+          useCustomerDeliveryStore
+            .getState()
+            .updateDeliveryStatus(result.id, "arriving_pickup");
+
+          clearInterval(interval);
+
           router.replace({
             pathname: "/trackPackage",
             params: { order_code: orderCodeRef.current },
           });
+
           onClose();
         }
       }, 2000);
-
-      return () => clearInterval(interval);
     };
 
     init();
-  }, [visible]); // <-- only run when modal becomes visible
 
-  // -------------------------
-  // Wave animation
-  // -------------------------
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [visible]);
+
+  // Animation
   useEffect(() => {
     if (visible) {
-      progress1.value = withRepeat(
-        withTiming(1, { duration: 3000 }),
-        -1,
-        false,
-      );
-
+      progress1.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
       setTimeout(() => {
-        progress2.value = withRepeat(
-          withTiming(1, { duration: 3000 }),
-          -1,
-          false,
-        );
+        progress2.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
       }, 1000);
-
       setTimeout(() => {
-        progress3.value = withRepeat(
-          withTiming(1, { duration: 3000 }),
-          -1,
-          false,
-        );
+        progress3.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
       }, 2000);
     } else {
       progress1.value = 0;
@@ -176,9 +167,6 @@ export default function RiderAwaitingModal({
     }
   }, [visible]);
 
-  // -------------------------
-  // Animated circle styles
-  // -------------------------
   const getCircleStyle = (progress: SharedValue<number>) =>
     useAnimatedStyle(() => ({
       transform: [{ scale: interpolate(progress.value, [0, 1], [0, 4]) }],
@@ -189,9 +177,6 @@ export default function RiderAwaitingModal({
   const circle2 = getCircleStyle(progress2);
   const circle3 = getCircleStyle(progress3);
 
-  // -------------------------
-  // UI
-  // -------------------------
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View className="flex-1 bg-black/90 justify-center items-center">
@@ -203,42 +188,21 @@ export default function RiderAwaitingModal({
         </TouchableOpacity>
 
         <View className="justify-center items-center">
-          <Animated.View
-            style={[
-              {
-                position: "absolute",
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                backgroundColor: "#F97316",
-              },
-              circle1,
-            ]}
-          />
-          <Animated.View
-            style={[
-              {
-                position: "absolute",
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                backgroundColor: "#F97316",
-              },
-              circle2,
-            ]}
-          />
-          <Animated.View
-            style={[
-              {
-                position: "absolute",
-                width: 150,
-                height: 150,
-                borderRadius: 75,
-                backgroundColor: "#F97316",
-              },
-              circle3,
-            ]}
-          />
+          {[circle1, circle2, circle3].map((circle, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                {
+                  position: "absolute",
+                  width: 150,
+                  height: 150,
+                  borderRadius: 75,
+                  backgroundColor: "#F97316",
+                },
+                circle,
+              ]}
+            />
+          ))}
 
           <View className="justify-center items-center p-5 bg-gray-400 rounded-full">
             <Ionicons name="search" size={70} color="white" />
@@ -251,6 +215,28 @@ export default function RiderAwaitingModal({
         <Text className="text-gray-400 text-sm mt-2 text-center">
           Please wait while we find nearby riders
         </Text>
+
+        {/* Optional: show resolved names for confirmation */}
+        {(resolvedPickupName || resolvedDropoffName) && (
+          <View className="mt-6 px-8 gap-1">
+            {resolvedPickupName && (
+              <Text
+                className="text-gray-400 text-xs text-center"
+                numberOfLines={1}
+              >
+                📍 From: {resolvedPickupName}
+              </Text>
+            )}
+            {resolvedDropoffName && (
+              <Text
+                className="text-gray-400 text-xs text-center"
+                numberOfLines={1}
+              >
+                🏁 To: {resolvedDropoffName}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
     </Modal>
   );

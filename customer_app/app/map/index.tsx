@@ -7,7 +7,7 @@ import { calculateFare, fitAll } from "@/utils/mapUtils";
 import { Coordinates, RiderDistanceInfo } from "@/utils/my_types";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
@@ -316,7 +316,10 @@ export default function MapScreen() {
 
       <RiderAwaitingModal
         visible={showAwaitingModal}
-        onClose={() => setShowAwaitingModal(false)}
+        onClose={() => {
+          setShowAwaitingModal(false);
+          router.replace("/(tabs)/deliveries");
+        }}
         pickup_lat={pickup?.coordinates?.latitude ?? 0}
         pickup_long={pickup?.coordinates?.longitude ?? 0}
         pickup_name={`${pickup?.name ?? ""}, ${pickup?.address ?? ""}`}

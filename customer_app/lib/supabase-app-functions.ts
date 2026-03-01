@@ -701,7 +701,7 @@ export const getPendingOrdersWithRider = async () => {
   }));
 };
 
-export async function getClientCurrentDeliveries() {
+export async function getAllClientDeliveries() {
   try {
     const { data: authData, error: userError } = await supabase.auth.getUser();
     const user = authData?.user;
@@ -721,7 +721,7 @@ export async function getClientCurrentDeliveries() {
       .from("delivery_orders")
       .select("*")
       .eq("client_id", clientId)
-      .in("status", ["pending", "arriving_pickup", "in_transit"]); // active deliveries
+      .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]); // active deliveries
 
     if (error) {
       console.error("❌ Error fetching client deliveries:", error.message);
@@ -735,5 +735,28 @@ export async function getClientCurrentDeliveries() {
       err.message,
     );
     return { success: false, data: [], error: err };
+  }
+}
+
+export async function deleteDeliveryByOrderCode(order_code: string) {
+  try {
+    // Ensure user is logged in
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error("User not logged in");
+
+    // Delete the delivery that belongs to this client
+    const { error } = await supabase
+      .from("delivery_orders")
+      .delete()
+      .eq("order_code", order_code)
+      .eq("client_id", user.id); // Ensure the logged-in user owns it
+
+    if (error) throw error;
+
+    console.log(`✅ Deleted delivery with order_code: ${order_code}`);
+    return { success: true, error: null };
+  } catch (error: any) {
+    console.error("Error deleting delivery:", error.message);
+    return { success: false, error };
   }
 }

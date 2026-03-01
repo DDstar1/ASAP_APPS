@@ -1,176 +1,174 @@
-import React, { useEffect, useState } from "react";
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  SectionList,
-  Text,
-  View,
-} from "react-native";
+// app/(tabs)/orders.tsx
+import React, { useEffect, useMemo } from "react";
+import { Dimensions, FlatList, SectionList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { orderSections } from "@/utils/dummyData";
-import { getClientCurrentDeliveries } from "@/lib/supabase-app-functions";
+import { MY_ICONS } from "@/assets/assetsData";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
+import CompletedOrderCards from "@/components/CompletedOrderCards";
+import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
+import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+
+const ACCENT_COLOR = "#4F8EF7";
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
-  const [currentDeliveries, setCurrentDeliveries] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { AllDeliveries, loading, fetchAllDeliveries } =
+    useCustomerDeliveryStore();
 
   useEffect(() => {
-    const fetchDeliveries = async () => {
-      setLoading(true);
-      try {
-        const response = await getClientCurrentDeliveries();
-        if (response.success) {
-          setCurrentDeliveries(response.data);
-        } else {
-          console.error("❌ Failed to fetch deliveries:", response.error);
-        }
-      } catch (err) {
-        console.error("❌ Error fetching deliveries:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDeliveries();
+    fetchAllDeliveries();
   }, []);
 
-  const DirectionArrows = ({ direction }: { direction: string }) => (
-    <View className="flex-row items-center">
-      {direction === "right" ? (
-        <>
-          {MY_ICONS.arrowRight("#fed7aa", 20)}
-          {MY_ICONS.arrowRight("#fed7aa", 20)}
-          {MY_ICONS.arrowRight("#fed7aa", 20)}
-        </>
-      ) : (
-        <>
-          {MY_ICONS.arrowLeft("#fca5a5", 20)}
-          {MY_ICONS.arrowLeft("#fca5a5", 20)}
-          {MY_ICONS.arrowLeft("#fca5a5", 20)}
-        </>
+  // Active = anything not yet delivered
+  const activeDeliveries = useMemo(
+    () =>
+      AllDeliveries.filter(
+        (item) =>
+          item.status === "pending" ||
+          item.status === "arriving_pickup" ||
+          item.status === "in_transit",
+      ),
+    [AllDeliveries],
+  );
+
+  // Completed = delivered
+  const completedDeliveries = useMemo(
+    () => AllDeliveries.filter((item) => item.status === "delivered"),
+    [AllDeliveries],
+  );
+
+  // ─── Sub-components ────────────────────────────────────────────────────────
+  const SectionLabel = ({
+    title,
+    count,
+  }: {
+    title: string;
+    count?: number;
+  }) => (
+    <View className="flex-row items-center gap-2">
+      <Text className="text-[11px] font-bold tracking-widest text-[#7A7F9A] uppercase">
+        {title}
+      </Text>
+      {count !== undefined && (
+        <View className="bg-[#1A1C24] rounded-lg px-2 py-0.5 border border-[#1F2230]">
+          <Text className="text-[11px] font-semibold text-[#7A7F9A]">
+            {count}
+          </Text>
+        </View>
       )}
     </View>
   );
 
-  const renderCompletedOrderCard = ({ item }: { item: any }) => (
-    <View className="bg-orange-500 rounded-2xl p-4 mb-4">
-      {/* 3 columns x 2 rows grid */}
-      <View className="flex-col gap-4">
-        {/* First Row - 3 cells */}
-        <View className="flex-row justify-between items-start">
-          {/* Cell 1 - 33.33% width */}
-          <View style={{ width: "45%" }} className="pr-2">
-            <Text className="text-white text-xl font-bold mb-2">{item.id}</Text>
-            <View className="flex-row items-center gap-2 flex-wrap">
-              <Text className="text-white text-sm font-medium">
-                {item.category}
-              </Text>
-              <Text className="text-orange-200 text-sm">{item.distance}</Text>
-            </View>
-          </View>
-
-          {/* Cell 2 - 40% width */}
-          <View
-            style={{ width: "25%" }}
-            className="flex-col gap-1 items-center justify-start px-2"
-          >
-            <Text className="text-orange-200 text-sm">{item.date}</Text>
-            <Text className="text-orange-200 text-sm">{item.time}</Text>
-          </View>
-
-          {/* Cell 3 - 33.33% width 
-          <View style={{ width: "35%" }} className="items-end pl-2">
-            <Image
-              source={item.materialImage || IMAGES.indomie_package}
-              className="w-14 h-14 rounded-lg bg-white/20"
-              resizeMode="cover"
-            />
-          </View>*/}
-        </View>
-
-        {/* Second Row - 3 cells */}
-        <View className="flex-row justify-between items-center">
-          {/* Cell 4 - 33.33% width */}
-          <View style={{ width: "38%" }} className="pr-2">
-            <Text className="text-white text-base" numberOfLines={2}>
-              {item.location}
-            </Text>
-          </View>
-
-          {/* Cell 5 - 33.33% width */}
-          <View style={{ width: "25%" }} className="items-center">
-            <DirectionArrows direction={item.direction} />
-          </View>
-
-          {/* Cell 6 - 33.33% width */}
-          <View style={{ width: "38%" }} className="items-end pl-2">
-            <Text className="text-white text-base" numberOfLines={2}>
-              {item.location}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderSectionHeader = ({ section }: { section: any }) => (
-    <View className="bg-gray-900 py-2">
-      <Text className="text-gray-400 text-sm">{section.title}</Text>
-    </View>
-  );
+  const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-6 py-4">
-        <Text className="text-white text-2xl font-semibold">My Orders</Text>
-        {MY_ICONS.message("white", 24)}
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
+      {/* ── Header ── */}
+      <View className="flex-row items-center justify-between px-6 pt-3 pb-5">
+        <View>
+          <Text className="text-[28px] font-extrabold text-[#F0F2F8] -tracking-wide">
+            My Orders
+          </Text>
+        </View>
+        <View className="w-11 h-11 rounded-2xl bg-[#1C2E52] items-center justify-center border border-[#4F8EF7]/20">
+          {MY_ICONS.message(ACCENT_COLOR, 20)}
+        </View>
       </View>
 
-      {/* Current Tracking Cards (Horizontal Scroll) */}
-      <FlatList
-        data={currentDeliveries}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          marginBottom: 10,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        style={{
-          maxHeight: currentDeliveries.length > 0 ? 250 : 100,
-        }}
-        keyExtractor={(item, index) => `${item.order_code}-${index}`}
-        renderItem={({ item }) => (
-          <IncompleteDeliveryCard item={item} width={width} />
-        )}
-        ListEmptyComponent={() => (
-          <View
-            style={{ width: width * 0.9, padding: 35 }}
-            className="bg-gray-700 rounded-2xl flex justify-center items-center"
-          >
-            <Text className="text-white text-base">No current deliveries</Text>
-          </View>
-        )}
-      />
+      <Divider />
 
-      {/* Orders History List with Sticky Headers */}
-      <SectionList
-        sections={orderSections}
-        keyExtractor={(item, index) => item.id + index}
-        renderItem={renderCompletedOrderCard}
-        renderSectionHeader={renderSectionHeader}
-        stickySectionHeadersEnabled={true}
-        className="flex-1 px-6"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      />
+      {/* ── Active Deliveries ── */}
+      <View className="px-6 pt-3 pb-2">
+        <SectionLabel
+          title="Active"
+          count={loading ? undefined : activeDeliveries.length}
+        />
+      </View>
+
+      <View style={{ maxHeight: 240 }}>
+        {loading ? (
+          <FlatList
+            horizontal
+            data={[1, 2, 3]}
+            keyExtractor={(item) => item.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              alignItems: "center",
+            }}
+            renderItem={() => <IncompleteDeliverySkeleton width={width} />}
+          />
+        ) : (
+          <FlatList
+            data={activeDeliveries}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              alignItems: "center",
+            }}
+            ItemSeparatorComponent={() => <View className="w-3" />}
+            keyExtractor={(item, index) => `${item.order_code}-${index}`}
+            renderItem={({ item }) => (
+              <IncompleteDeliveryCard item={item} width={width} />
+            )}
+            ListEmptyComponent={() => (
+              <View
+                style={{ width: width - 48, height: 72 }}
+                className="bg-[#12141A] rounded-2xl border my-4 border-dashed border-[#1F2230] flex-row items-center px-5 gap-4"
+              >
+                <Text className="text-2xl">📦</Text>
+                <View className="gap-0.5">
+                  <Text className="text-sm font-bold text-[#F0F2F8]">
+                    No Active Orders
+                  </Text>
+                  <Text className="text-xs text-[#7A7F9A]">
+                    Your current deliveries will appear here
+                  </Text>
+                </View>
+              </View>
+            )}
+          />
+        )}
+      </View>
+
+      <Divider />
+
+      {/* ── Completed Orders ── */}
+      <View className="px-6 pt-3 pb-2">
+        <SectionLabel
+          title="Completed"
+          count={loading ? undefined : completedDeliveries.length}
+        />
+      </View>
+
+      {loading ? (
+        <View className="flex-1 px-6 gap-3">
+          {[1, 2, 3, 4].map((_, i) => (
+            <CompletedOrderSkeleton key={i} />
+          ))}
+        </View>
+      ) : (
+        <SectionList
+          sections={[{ title: "Completed", data: completedDeliveries }]}
+          keyExtractor={(item, index) => `${String(item.id)}-${index}`}
+          renderItem={({ item }) => <CompletedOrderCards item={item} />}
+          stickySectionHeadersEnabled
+          className="flex-1 px-6"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
+          ListEmptyComponent={() => (
+            <View className="py-8 items-center">
+              <Text className="text-sm text-[#3D4160]">
+                No completed orders yet
+              </Text>
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };

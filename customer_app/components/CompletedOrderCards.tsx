@@ -48,7 +48,7 @@ export default function CompletedOrderCard({ item }: Props) {
   };
 
   return (
-    <View className="bg-[#12141A] px-5 py-4  my-2 rounded-2xl border border-[#1F2230]">
+    <View className="bg-[#12141A] px-5 py-4  my-4 rounded-2xl border border-[#1F2230]">
       {/* ── Top row: order code + status badge ── */}
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center gap-2">

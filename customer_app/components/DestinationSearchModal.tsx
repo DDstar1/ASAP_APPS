@@ -51,7 +51,7 @@ const AnimatedSavedItem = React.memo(({ show, item, onPress }: any) => {
   return (
     <Animated.View
       style={[animatedStyle, { overflow: "hidden" }]}
-      className="mb-2"
+      className="w-2/3  self-end"
     >
       <TouchableOpacity
         onPress={onPress}
@@ -175,7 +175,7 @@ export default function DestinationSearchModal({
         : []),
       { type: "google_places" },
     ],
-    [showSaved, savedLocations]
+    [showSaved, savedLocations],
   );
 
   const renderItem = ({ item }: any) => {

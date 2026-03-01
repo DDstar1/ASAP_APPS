@@ -71,6 +71,8 @@ export const reverseGeocode = async (lat: number, lng: number) => {
   const data = await res.json();
   const result = data.results?.[0];
 
+  console.log("Reverse geocode response:", data);
+
   if (!result) return null;
 
   return result.formatted_address;
