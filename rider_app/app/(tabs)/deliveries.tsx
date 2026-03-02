@@ -100,7 +100,7 @@ const OrdersPage = () => {
       </View>
 
       {/* Fixed 90px height — active section never squeezes completed list */}
-      <View style={{ height: 90 }}>
+      <View style={{ maxHeight: 230 }}>
         {loading ? (
           <FlatList
             horizontal

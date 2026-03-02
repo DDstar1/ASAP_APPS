@@ -19,14 +19,12 @@ interface AvailableOrdersDropdownProps {
   availableOrders: any[];
   showOrders: boolean;
   onToggle: () => void;
-  onAcceptOrder: (orderCode: string) => void;
 }
 
 const AvailableOrdersDropdown: React.FC<AvailableOrdersDropdownProps> = ({
   availableOrders,
   showOrders,
   onToggle,
-  onAcceptOrder,
 }) => {
   // Reanimated shared values
   const slide = useSharedValue(0);
@@ -103,10 +101,7 @@ const AvailableOrdersDropdown: React.FC<AvailableOrdersDropdownProps> = ({
                   })
                 }
               >
-                <OrderSummary
-                  order={item}
-                  onAccept={() => onAcceptOrder(item.order_code)}
-                />
+                <OrderSummary order={item} />
               </TouchableOpacity>
             </Animated.View>
           )}

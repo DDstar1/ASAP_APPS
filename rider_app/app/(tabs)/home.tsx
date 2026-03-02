@@ -19,10 +19,7 @@ import {
 import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 
-import {
-  startTracking,
-  stopTracking,
-} from "@/utils/utils_orderLocationTracking";
+import { stopTracking } from "@/utils/utils_orderLocationTracking";
 
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
@@ -37,12 +34,8 @@ const RiderHomeScreen = () => {
 
   const { availableOrders, fetchAvailableOrders } = useRiderOrdersStore();
 
-  const {
-    AcceptedDeliveries,
-    addAcceptedDelivery,
-    updateDeliveryStatus,
-    fetchAcceptedDeliveries,
-  } = useAcceptedDeliveryStore();
+  const { AcceptedDeliveries, updateDeliveryStatus, fetchAcceptedDeliveries } =
+    useAcceptedDeliveryStore();
 
   // ------------------------------------------
   // Initial Fetch
@@ -56,10 +49,13 @@ const RiderHomeScreen = () => {
   // Sync hasOngoingDeliveries with store
   // ------------------------------------------
   useEffect(() => {
-    setHasOngoingDeliveries(AcceptedDeliveries.length > 0);
+    setHasOngoingDeliveries(
+      AcceptedDeliveries.some((d) => d.status !== "delivered"),
+    );
   }, [AcceptedDeliveries]);
 
-  const activeDelivery = AcceptedDeliveries[0];
+  const activeDelivery =
+    AcceptedDeliveries.find((d) => d.status !== "delivered") || null;
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
 
@@ -106,55 +102,6 @@ const RiderHomeScreen = () => {
 
     return () => stopRealtimeLocation();
   }, [isOnline]);
-
-  // ------------------------------------------
-  // Accept Order
-  // ------------------------------------------
-  const handleAcceptOrder = async (orderCode: string) => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Denied", "Location permission required.");
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = location.coords;
-
-      const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
-
-      if (result.success && result.data.length > 0) {
-        const order = result.data[0];
-
-        addAcceptedDelivery(result.data);
-        setHasOngoingDeliveries(true); // 👈 manually set true
-        startTracking(order.id);
-
-        Alert.alert("Order Accepted", "You have accepted this delivery!", [
-          {
-            text: "OK",
-            onPress: () => {
-              router.push({
-                pathname: "/(tabs)/deliveries",
-                params: {
-                  newlyAcceptedId: order.id,
-                  time_added: Date.now(),
-                },
-              });
-            },
-          },
-        ]);
-      } else {
-        Alert.alert("Failed", result.error || "Could not accept order");
-      }
-    } catch (err) {
-      console.error("Error accepting order:", err);
-      Alert.alert("Error", "Failed to accept order. Try again.");
-    }
-  };
 
   // ------------------------------------------
   // Verify Code (Pickup / Dropoff)
@@ -216,10 +163,10 @@ const RiderHomeScreen = () => {
       {/* Header */}
       <LinearGradient
         colors={["#10B981", "#059669"]}
-        className="relative"
+        className="relative "
         style={{ borderBottomRightRadius: 200, overflow: "hidden" }}
       >
-        <SafeAreaView edges={["top"]} className="px-5 pb-10 pt-3">
+        <SafeAreaView edges={["top"]} className="px-5 pb-10 pt-14">
           <View className="z-10">
             <View className="bg-orange-600/40 px-3 py-1 rounded-full self-start">
               <Text className="text-white text-sm font-semibold">Level 1</Text>
@@ -285,7 +232,6 @@ const RiderHomeScreen = () => {
             availableOrders={availableOrders}
             showOrders={showOrders}
             onToggle={toggleDropdown}
-            onAcceptOrder={handleAcceptOrder}
           />
         )}
       </View>

@@ -24,6 +24,12 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ✅ If no active delivery OR manually disabled → hide component
+  console.log(
+    "Rendering CodeInputComponent - hasOngoingDeliveries:",
+    hasOngoingDeliveries,
+    "currentDelivery:",
+    currentDelivery,
+  );
   if (!hasOngoingDeliveries || !currentDelivery) {
     return null;
   }
@@ -33,9 +39,9 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
   const needsDropoffCode = currentDelivery.status === "in_transit";
 
   // If delivery is completed or in unknown state → hide
-  if (!needsPickupCode && !needsDropoffCode) {
-    return null;
-  }
+  // if (!needsPickupCode && !needsDropoffCode) {
+  //  return null;
+  // }
 
   const codeType: "pickup" | "dropoff" = needsPickupCode ? "pickup" : "dropoff";
 
