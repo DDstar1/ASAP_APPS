@@ -58,4 +58,10 @@ export const MY_ICONS = {
   map_marker: (color: string, size = 28) => (
     <FontAwesome name="map-marker" size={size} color={color} />
   ),
+  calendar: (color: string, size = 28) => (
+    <FontAwesome name="calendar" size={size} color={color} />
+  ),
+  clock: (color: string, size = 28) => (
+    <FontAwesome name="clock-o" size={size} color={color} />
+  ),
 };

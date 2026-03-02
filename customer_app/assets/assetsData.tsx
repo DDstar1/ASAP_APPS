@@ -1,3 +1,4 @@
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export const IMAGES = {
@@ -50,4 +51,16 @@ export const MY_ICONS = {
   marker: (color: string, size = 28) => (
     <MaterialIcons name="place" size={size} color={color} />
   ), // ✅ Added marker icon
+  delivery: (color: string, size = 28) => (
+    <Ionicons name={"cube"} size={size} color={color} />
+  ),
+  clock: (color: string, size = 28) => (
+    <FontAwesome name="clock-o" size={size} color={color} />
+  ),
+  calendar: (color: string, size = 28) => (
+    <FontAwesome name="calendar" size={size} color={color} />
+  ),
+  cancel: (color: string, size = 28) => (
+    <MaterialIcons name="delete" size={size} color={color} />
+  ),
 };
