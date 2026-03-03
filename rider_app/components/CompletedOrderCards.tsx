@@ -15,7 +15,7 @@ const STATUS_CONFIG: Record<
 
 type Props = {
   item: {
-    id: string;
+    id: number;
     order_code: string;
     status: string;
     pickup_name: string;

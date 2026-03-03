@@ -5,7 +5,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Image, StatusBar, Text, View } from "react-native";
+import {
+  Alert,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  Text,
+  View,
+} from "react-native";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,8 +32,7 @@ import { stopTracking } from "@/utils/utils_orderLocationTracking";
 const RiderHomeScreen = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [showOrders, setShowOrders] = useState(false);
-
-  // ✅ Controlled state now
+  const [refreshing, setRefreshing] = useState(false);
   const [hasOngoingDeliveries, setHasOngoingDeliveries] = useState(false);
 
   const locationSubscription = useRef<Location.LocationSubscription | null>(
@@ -37,22 +44,22 @@ const RiderHomeScreen = () => {
   const { AcceptedDeliveries, updateDeliveryStatus, fetchAcceptedDeliveries } =
     useAcceptedDeliveryStore();
 
-  // ------------------------------------------
-  // Initial Fetch
-  // ------------------------------------------
   useEffect(() => {
     fetchAvailableOrders();
     fetchAcceptedDeliveries();
   }, []);
 
-  // ------------------------------------------
-  // Sync hasOngoingDeliveries with store
-  // ------------------------------------------
   useEffect(() => {
     setHasOngoingDeliveries(
       AcceptedDeliveries.some((d) => d.status !== "delivered"),
     );
   }, [AcceptedDeliveries]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchAvailableOrders(), fetchAcceptedDeliveries()]);
+    setRefreshing(false);
+  };
 
   const activeDelivery =
     AcceptedDeliveries.find((d) => d.status !== "delivered") || null;
@@ -113,7 +120,7 @@ const RiderHomeScreen = () => {
       const result = await verifyDeliveryCode(activeDelivery.id, code, type);
 
       if (result.success) {
-        const newStatus = type === "pickup" ? "in_transit" : "completed";
+        const newStatus = type === "pickup" ? "in_transit" : "delivered";
 
         const verificationUpdate =
           type === "pickup"
@@ -122,9 +129,7 @@ const RiderHomeScreen = () => {
 
         updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
 
-        // ✅ If dropoff confirmed → manually disable ongoing deliveries
         if (type === "dropoff") {
-          // Remove completed delivery from store
           useAcceptedDeliveryStore
             .getState()
             .removeAcceptedDelivery(activeDelivery.id);
@@ -163,7 +168,7 @@ const RiderHomeScreen = () => {
       {/* Header */}
       <LinearGradient
         colors={["#10B981", "#059669"]}
-        className="relative "
+        className="relative"
         style={{ borderBottomRightRadius: 200, overflow: "hidden" }}
       >
         <SafeAreaView edges={["top"]} className="px-5 pb-10 pt-14">
@@ -192,7 +197,23 @@ const RiderHomeScreen = () => {
       </LinearGradient>
 
       {/* Body */}
-      <View className="bg-gray-50 px-5 pt-6 pb-24">
+      <ScrollView
+        className="bg-gray-50"
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 24,
+          paddingBottom: 96,
+        }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#10B981"
+            colors={["#10B981"]}
+          />
+        }
+      >
         {/* Online Switch */}
         <View className="bg-white rounded-3xl p-5 mb-4 shadow-sm">
           <View className="flex-row justify-between items-center">
@@ -234,7 +255,7 @@ const RiderHomeScreen = () => {
             onToggle={toggleDropdown}
           />
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 };

@@ -491,7 +491,7 @@ export const getMessagesList = async () => {
  * @returns Promise with success status and optional error message
  */
 export const verifyDeliveryCode = async (
-  deliveryId: string,
+  deliveryId: number,
   code: string,
   type: "pickup" | "dropoff",
 ): Promise<{ success: boolean; error?: string }> => {
