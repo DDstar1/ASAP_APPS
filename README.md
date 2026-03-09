@@ -72,3 +72,11 @@ Scan the QR code in **Expo Go** to open on a device.
 - Each app runs independently (**not a monorepo**).
 - Keep configs and `.env` files separate.
 - Built with **React Native + Expo**.
+
+adb pair 172.24.162.241:[PORT_ON_SCREEN]
+adb connect 172.24.162.241:[NEW_PORT]
+adb logcat \*:S ReactNative:V ReactNativeJS:V
+adb logcat | FINDSTR "com.yourname.riderapp"
+adb shell pidof com.yourname.riderapp
+adb logcat --pid=1234
+adb shell ps | FINDSTR "rider"

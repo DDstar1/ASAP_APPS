@@ -44,7 +44,7 @@ export const useAcceptedDeliveryStore = create<AcceptedDeliveryStore>(
             AcceptedDeliveries: response.data,
             loading: false,
           });
-          console.log("✅ Deliveries fetched:", response.data);
+          //console.log("✅ Deliveries fetched:", response.data);
         } else {
           set({
             error: response.error || "Failed to fetch deliveries",
