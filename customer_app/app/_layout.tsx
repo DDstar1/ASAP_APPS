@@ -115,7 +115,7 @@ export default function RootLayout() {
             headerLeft: () => (
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate("(tabs)", { screen: "activity" })
+                  navigation.navigate("(tabs)", { screen: "deliveries" })
                 }
               >
                 <Ionicons

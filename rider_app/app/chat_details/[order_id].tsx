@@ -158,7 +158,7 @@ export default function ChatDetailScreen() {
                           : "bg-gray-700 rounded-bl-none"
                       }`}
                     >
-                      <Text className="text-white text-base">
+                      <Text selectable className="text-white text-base">
                         {item.message}
                       </Text>
 

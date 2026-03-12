@@ -53,8 +53,6 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
 
       const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
 
-      console.log(result);
-
       if (result.success && result.data) {
         const acceptedOrder = result.data;
 

@@ -1,6 +1,13 @@
 // app/(tabs)/orders.tsx
-import React, { useEffect, useMemo } from "react";
-import { Dimensions, FlatList, SectionList, Text, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Dimensions,
+  FlatList,
+  RefreshControl,
+  SectionList,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
@@ -16,10 +23,17 @@ const OrdersPage = () => {
   const { width } = Dimensions.get("window");
   const { AllDeliveries, loading, fetchAllDeliveries } =
     useCustomerDeliveryStore();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchAllDeliveries();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAllDeliveries();
+    setRefreshing(false);
+  };
 
   // Active = anything not yet delivered
   const activeDeliveries = useMemo(
@@ -62,6 +76,15 @@ const OrdersPage = () => {
   );
 
   const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={ACCENT_COLOR}
+      colors={[ACCENT_COLOR]}
+    />
+  );
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
@@ -160,6 +183,7 @@ const OrdersPage = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
           ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
+          refreshControl={refreshControl}
           ListEmptyComponent={() => (
             <View className="py-8 items-center">
               <Text className="text-sm text-[#3D4160]">

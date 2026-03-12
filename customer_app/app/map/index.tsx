@@ -17,7 +17,6 @@ import { MY_ICONS } from "@/assets/assetsData";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
-// ----------------- MAIN COMPONENT -----------------
 export default function MapScreen() {
   const [pickup, setPickup] = useState<any>(null);
   const [destination, setDestination] = useState<any>(null);
@@ -31,17 +30,21 @@ export default function MapScreen() {
     null,
   );
   const [hasMultipleRiders, setHasMultipleRiders] = useState(false);
-
   const [currentRiderIndex, setCurrentRiderIndex] = useState(0);
   const [distance, setDistance] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [waypoints, setWaypoints] = useState<Coordinates[] | null>(null);
 
+  // ✅ NEW: store coordinates for the driver→pickup segment
+  const [driverToPickupCoords, setDriverToPickupCoords] = useState<
+    Coordinates[]
+  >([]);
+
   const mapRef = useRef<MapView>(null);
   const { packageImage, packageType, packageDescription } =
     useLocalSearchParams();
 
-  // Auto-zoom to pickup & destination
+  // Auto-zoom when pickup/destination change (before rider is selected)
   useEffect(() => {
     const coords = [];
     if (pickup?.coordinates) coords.push(pickup.coordinates);
@@ -57,8 +60,24 @@ export default function MapScreen() {
 
   useEffect(() => {
     setHasMultipleRiders(activeRiders.length > 1);
-    console.log(activeRiders.length > 1);
   }, [activeRiders]);
+
+  // ✅ NEW: When both segments are ready, fit the map to the full combined route
+  useEffect(() => {
+    if (
+      selectedRider &&
+      driverToPickupCoords.length > 0 &&
+      waypoints &&
+      waypoints.length > 0 &&
+      mapRef.current
+    ) {
+      const allCoords = [...driverToPickupCoords, ...waypoints];
+      mapRef.current.fitToCoordinates(allCoords, {
+        edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
+        animated: true,
+      });
+    }
+  }, [driverToPickupCoords, waypoints, selectedRider]);
 
   // ----------------- BUTTON HANDLERS -----------------
   const handleConfirmLocations = () => {
@@ -66,10 +85,7 @@ export default function MapScreen() {
       Alert.alert("Missing Info", "Please select both pickup and destination.");
       return;
     }
-    Alert.alert(
-      "Locations Confirmed",
-      "Now searching for nearby activeRiders...",
-    );
+    Alert.alert("Locations Confirmed", "Now searching for nearby riders...");
   };
 
   const handleSearchRider = async () => {
@@ -79,7 +95,6 @@ export default function MapScreen() {
 
     try {
       const allAvailableRiders = await getActiveRiders(pickup.coordinates);
-      console.log("Found activeRiders:", allAvailableRiders);
 
       if (!allAvailableRiders || allAvailableRiders.length === 0) {
         Alert.alert("No active riders nearby", "Please try again later.");
@@ -87,33 +102,19 @@ export default function MapScreen() {
         return;
       }
 
-      // ✅ Store all riders
       setRiders(allAvailableRiders);
 
-      // ✅ Select and store the first (closest) rider
       const closest = allAvailableRiders[0];
       setClosestRider(closest);
       setSelectedRider(closest);
       setCurrentRiderIndex(0);
 
-      // Calculate fare
+      // ✅ Reset segment coords so the useEffect re-fires cleanly
+      setDriverToPickupCoords([]);
+      setWaypoints(null);
+
       const fare = await calculateFare();
       setPrice(fare);
-
-      // Zoom the map to rider → pickup → destination
-      if (mapRef.current) {
-        mapRef.current.fitToCoordinates(
-          [
-            { latitude: closest.latitude, longitude: closest.longitude },
-            pickup.coordinates,
-            destination.coordinates,
-          ],
-          {
-            edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
-            animated: true,
-          },
-        );
-      }
     } catch (err) {
       console.error("Error searching rider:", err);
       Alert.alert("Error", "Failed to search for riders.");
@@ -123,7 +124,6 @@ export default function MapScreen() {
   };
 
   const handleCycleRider = () => {
-    if (activeRiders.length === 0) return;
     if (activeRiders.length <= 1) return;
 
     const nextIndex = (currentRiderIndex + 1) % activeRiders.length;
@@ -131,7 +131,10 @@ export default function MapScreen() {
 
     setCurrentRiderIndex(nextIndex);
     setClosestRider(newRider);
-    setSelectedRider(newRider); // ✅ update selected rider
+    setSelectedRider(newRider);
+
+    // ✅ Reset so map re-fits when new rider's segment loads
+    setDriverToPickupCoords([]);
   };
 
   const handleConfirmDelivery = () => {
@@ -139,7 +142,6 @@ export default function MapScreen() {
       Alert.alert("No rider selected", "Please choose a rider first.");
       return;
     }
-
     setShowAwaitingModal(true);
   };
 
@@ -156,7 +158,7 @@ export default function MapScreen() {
           longitudeDelta: 0.2,
         }}
       >
-        {/* Pickup & Destination */}
+        {/* Pickup Marker */}
         {pickup?.coordinates && (
           <Marker
             coordinate={pickup.coordinates}
@@ -164,6 +166,8 @@ export default function MapScreen() {
             pinColor="green"
           />
         )}
+
+        {/* Destination Marker */}
         {destination?.coordinates && (
           <Marker
             coordinate={destination.coordinates}
@@ -172,7 +176,7 @@ export default function MapScreen() {
           />
         )}
 
-        {/* Riders */}
+        {/* Rider Marker */}
         {selectedRider && (
           <Marker.Animated
             key={selectedRider.id}
@@ -185,47 +189,59 @@ export default function MapScreen() {
           >
             <Image
               source={IMAGES.map_rider}
-              style={{
-                width: 40,
-                height: 40,
-                opacity: 1, // fully visible since it's the selected rider
-              }}
+              style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
           </Marker.Animated>
         )}
 
-        {/* Directions line */}
-        {pickup?.coordinates && destination?.coordinates && (
+        {/* ─────────────────────────────────────────────
+            SEGMENT 1: Driver → Pickup  (blue)
+            Only rendered when a rider is selected.
+        ───────────────────────────────────────────── */}
+        {selectedRider && pickup?.coordinates && (
           <MapViewDirections
-            origin={
-              selectedRider
-                ? {
-                    latitude: selectedRider.latitude,
-                    longitude: selectedRider.longitude,
-                  } // 👈 rider → pickup → destination path
-                : pickup.coordinates // 👈 normal pickup → destination path
-            }
-            destination={destination.coordinates}
-            waypoints={selectedRider ? [pickup.coordinates] : []} // include pickup only if rider is selected
+            origin={{
+              latitude: selectedRider.latitude,
+              longitude: selectedRider.longitude,
+            }}
+            destination={pickup.coordinates}
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={5}
-            strokeColor="#F97316"
-            //optimizeWaypoints
+            strokeColor="#3B82F6" // 🔵 blue
+            onReady={(result) => {
+              setDriverToPickupCoords(result.coordinates);
+            }}
+            onError={(err) =>
+              console.warn("Directions error (driver→pickup):", err)
+            }
+          />
+        )}
+
+        {/* ─────────────────────────────────────────────
+            SEGMENT 2: Pickup → Destination  (orange)
+            Always rendered when both locations are set.
+        ───────────────────────────────────────────── */}
+        {pickup?.coordinates && destination?.coordinates && (
+          <MapViewDirections
+            origin={pickup.coordinates}
+            destination={destination.coordinates}
+            apikey={GOOGLE_MAPS_API_KEY}
+            strokeWidth={5}
+            strokeColor="#F97316" // 🟠 orange
             onReady={(result) => {
               setDistance(result.distance);
               setDuration(result.duration);
               setWaypoints(result.coordinates);
-              mapRef.current?.fitToCoordinates(result.coordinates, {
-                edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
-                animated: true,
-              });
             }}
-            onError={(err) => console.warn("Directions error:", err)}
+            onError={(err) =>
+              console.warn("Directions error (pickup→dest):", err)
+            }
           />
         )}
       </MapView>
 
+      {/* Re-center button */}
       <TouchableOpacity
         className="absolute top-12 right-4 bg-gray-700 px-4 py-2 rounded-xl z-50"
         onPress={() =>
@@ -233,7 +249,7 @@ export default function MapScreen() {
             mapRef,
             pickup: pickup?.coordinates,
             destination: destination?.coordinates,
-            selectedRider: selectedRider,
+            selectedRider,
           })
         }
       >
@@ -249,7 +265,6 @@ export default function MapScreen() {
         </View>
 
         <View className="bg-[#3C3C43] p-4 rounded-b-2xl">
-          {/* Location fields */}
           <View className="flex-row items-center justify-between">
             <TouchableOpacity
               className="flex-1 flex-row items-center bg-white rounded-xl px-2 gap-2 py-3"
@@ -275,7 +290,6 @@ export default function MapScreen() {
           </View>
 
           <View className="flex-row items-center justify-center gap-4">
-            {/* Distance info */}
             {pickup && destination && (
               <View className="mt-2 items-center">
                 <Text className="text-gray-300 text-xs">
@@ -286,7 +300,6 @@ export default function MapScreen() {
                 </Text>
               </View>
             )}
-            {/* Delivery Button (main + cycle) */}
             <DeliveryButton
               pickup={pickup}
               destination={destination}
@@ -310,7 +323,6 @@ export default function MapScreen() {
         onSelect={(location) => {
           if (activeField === "from") setPickup(location);
           if (activeField === "to") setDestination(location);
-          console.log(location);
         }}
       />
 
@@ -325,9 +337,7 @@ export default function MapScreen() {
         pickup_name={`${pickup?.name ?? ""}, ${pickup?.address ?? ""}`}
         dropoff_lat={destination?.coordinates?.latitude ?? 0}
         dropoff_long={destination?.coordinates?.longitude ?? 0}
-        dropoff_name={`${destination?.name ?? ""}, ${
-          destination?.address ?? ""
-        }`}
+        dropoff_name={`${destination?.name ?? ""}, ${destination?.address ?? ""}`}
         image_url={packageImage || IMAGES.riderWithPizza}
         package_type={packageType || "Unknown Item"}
         package_description={packageDescription || ""}

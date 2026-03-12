@@ -63,4 +63,7 @@ export const MY_ICONS = {
   cancel: (color: string, size = 28) => (
     <MaterialIcons name="delete" size={size} color={color} />
   ),
+  phone: (color: string, size = 28) => (
+    <Ionicons name="call" size={size} color={color} />
+  ),
 };

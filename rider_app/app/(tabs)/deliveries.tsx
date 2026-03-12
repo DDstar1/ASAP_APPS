@@ -1,7 +1,14 @@
 // app/(tabs)/deliveries.tsx
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Dimensions, FlatList, SectionList, Text, View } from "react-native";
+import {
+  Dimensions,
+  FlatList,
+  RefreshControl,
+  SectionList,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
@@ -17,13 +24,27 @@ const ACCENT_COLOR = "#4F8EF7";
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
   const { newlyAcceptedId, time_added } = useLocalSearchParams();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { AcceptedDeliveries, loading, fetchAcceptedDeliveries } =
-    useAcceptedDeliveryStore();
+  const AcceptedDeliveries = useAcceptedDeliveryStore(
+    (s) => s.AcceptedDeliveries,
+  );
+
+  const loading = useAcceptedDeliveryStore((s) => s.loading);
+
+  const fetchAcceptedDeliveries = useAcceptedDeliveryStore(
+    (s) => s.fetchAcceptedDeliveries,
+  );
 
   useEffect(() => {
     fetchAcceptedDeliveries();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAcceptedDeliveries();
+    setRefreshing(false);
+  };
 
   const acceptedTime =
     typeof time_added === "string" ? Number(time_added) : null;
@@ -34,20 +55,15 @@ const OrdersPage = () => {
     return Date.now() - acceptedTime <= HIGHLIGHT_WINDOW;
   };
 
-  const activeDeliveries = useMemo(
-    () =>
-      AcceptedDeliveries.filter(
-        (item) =>
-          item.status === "pending" ||
-          item.status === "arriving_pickup" ||
-          item.status === "in_transit",
-      ),
-    [AcceptedDeliveries],
+  const onGoingDeliveries = AcceptedDeliveries.filter(
+    (item) =>
+      item.status === "pending" ||
+      item.status === "arriving_pickup" ||
+      item.status === "in_transit",
   );
 
-  const completedDeliveries = useMemo(
-    () => AcceptedDeliveries.filter((item) => item.status === "delivered"),
-    [AcceptedDeliveries],
+  const completedDeliveries = AcceptedDeliveries.filter(
+    (item) => item.status === "delivered",
   );
 
   // ─── Section Label ─────────────────────────────────────────────────────────
@@ -75,6 +91,15 @@ const OrdersPage = () => {
   // ─── Divider ───────────────────────────────────────────────────────────────
   const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={ACCENT_COLOR}
+      colors={[ACCENT_COLOR]}
+    />
+  );
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -95,11 +120,10 @@ const OrdersPage = () => {
       <View className="px-6 pt-3 pb-2">
         <SectionLabel
           title="Active"
-          count={loading ? undefined : activeDeliveries.length}
+          count={loading ? undefined : onGoingDeliveries.length}
         />
       </View>
 
-      {/* Fixed 90px height — active section never squeezes completed list */}
       <View style={{ maxHeight: 230 }}>
         {loading ? (
           <FlatList
@@ -115,7 +139,7 @@ const OrdersPage = () => {
           />
         ) : (
           <FlatList
-            data={activeDeliveries}
+            data={onGoingDeliveries}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{
@@ -133,18 +157,17 @@ const OrdersPage = () => {
               />
             )}
             ListEmptyComponent={() => (
-              // Compact single-row empty state instead of a tall centered card
               <View
-                style={{ width: width - 48, height: 72 }}
+                style={{ width: width - 48, height: 150 }}
                 className="bg-[#12141A] rounded-2xl border border-dashed border-[#1F2230] flex-row items-center px-5 gap-4"
               >
-                <Text className="text-2xl">📦</Text>
+                <Text className="text-4xl">📦</Text>
                 <View className="gap-0.5">
-                  <Text className="text-sm font-bold text-[#F0F2F8]">
-                    No Active Deliveries
+                  <Text className="text-lg font-bold text-[#F0F2F8]">
+                    No Ongoing Deliveries
                   </Text>
-                  <Text className="text-xs text-[#7A7F9A]">
-                    Accepted deliveries will appear here
+                  <Text className="text-md text-[#7A7F9A]">
+                    Ongoing deliveries will appear here
                   </Text>
                 </View>
               </View>
@@ -179,6 +202,7 @@ const OrdersPage = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 18 }}
           ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
+          refreshControl={refreshControl}
           ListEmptyComponent={() => (
             <View className="py-8 items-center">
               <Text className="text-sm text-[#3D4160]">

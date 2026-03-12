@@ -24,12 +24,12 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ✅ If no active delivery OR manually disabled → hide component
-  console.log(
-    "Rendering CodeInputComponent - hasOngoingDeliveries:",
-    hasOngoingDeliveries,
-    "currentDelivery:",
-    currentDelivery,
-  );
+  //console.log(
+  //"Rendering CodeInputComponent - hasOngoingDeliveries:",
+  //hasOngoingDeliveries,
+  //"currentDelivery:",
+  //currentDelivery,
+  //);
   if (!hasOngoingDeliveries || !currentDelivery) {
     return null;
   }

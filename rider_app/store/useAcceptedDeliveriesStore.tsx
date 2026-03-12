@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { getRiderAcceptedDeliveries } from "@/lib/supabase-functions";
 
 interface AcceptedDelivery {
-  id: string;
+  id: number;
   order_code: string;
   status: string;
   pickup_lat: number;
@@ -24,8 +24,8 @@ interface AcceptedDeliveryStore {
 
   fetchAcceptedDeliveries: () => Promise<void>;
   addAcceptedDelivery: (delivery: AcceptedDelivery) => void;
-  updateDeliveryStatus: (orderId: string, newStatus: string) => void;
-  removeAcceptedDelivery: (orderId: string) => void; // ✅ added
+  updateDeliveryStatus: (orderId: number, newStatus: string) => void;
+  removeAcceptedDelivery: (orderId: number) => void; // ✅ added
   clearDeliveries: () => void;
 }
 
@@ -44,7 +44,7 @@ export const useAcceptedDeliveryStore = create<AcceptedDeliveryStore>(
             AcceptedDeliveries: response.data,
             loading: false,
           });
-          console.log("✅ Deliveries fetched:", response.data);
+          //console.log("✅ Deliveries fetched:", response.data);
         } else {
           set({
             error: response.error || "Failed to fetch deliveries",
@@ -81,6 +81,7 @@ export const useAcceptedDeliveryStore = create<AcceptedDeliveryStore>(
       }),
 
     updateDeliveryStatus: (orderId, newStatus) => {
+      console.log(`Updating delivery ${orderId} to status: ${newStatus}`);
       set((state) => ({
         AcceptedDeliveries: state.AcceptedDeliveries.map((delivery) =>
           delivery.id === orderId
