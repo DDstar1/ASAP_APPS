@@ -35,8 +35,6 @@ export default function RiderTrackingScreen() {
   const order =
     AllDeliveries.find((d) => String(d.id) === String(order_id)) ?? null;
 
-  console.log(order);
-
   useEffect(() => {
     if (AllDeliveries.length === 0) {
       fetchAllDeliveries();
@@ -122,7 +120,14 @@ export default function RiderTrackingScreen() {
 
       console.log(cleaned.slice(-MAX_POINTS));
 
-      return cleaned.slice(-MAX_POINTS);
+      console.log(
+        `Cleaned ${cleaned.slice(-MAX_POINTS).length} waypoints, showing last ${MAX_POINTS}`,
+      );
+      //return cleaned.slice(-MAX_POINTS);
+      return waypoints.map((wp: any) => ({
+        latitude: Number(wp.lat),
+        longitude: Number(wp.lng),
+      }));
     } catch (err) {
       console.log("Waypoint parse error", err);
       return [];
@@ -138,8 +143,8 @@ export default function RiderTrackingScreen() {
 
     const coordinates: LatLng[] = [];
 
-    if (pickupLocation) coordinates.push(pickupLocation);
-    if (destination) coordinates.push(destination);
+    /* if (pickupLocation) coordinates.push(pickupLocation);
+    if (destination) coordinates.push(destination);  */
 
     if (driverRoute.length > 0) {
       coordinates.push(...driverRoute);
@@ -223,7 +228,7 @@ export default function RiderTrackingScreen() {
           <Polyline
             coordinates={driverRoute}
             strokeColor="#0066FF"
-            strokeWidth={4}
+            strokeWidth={2}
           />
         )}
 
@@ -237,6 +242,19 @@ export default function RiderTrackingScreen() {
             />
           </Marker>
         )}
+
+        {/*   {driverRoute.map((point, index) => (
+  <Marker key={index} coordinate={point}>
+    <View
+      style={{
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: "#0066FF",
+      }}
+    />
+  </Marker>
+))}*/}
       </MapView>
 
       {/* Bottom Card */}

@@ -219,8 +219,8 @@ export const startTracking = async (orderId: number) => {
   }
 
   await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-    accuracy: Location.Accuracy.Balanced,
-    timeInterval: 5000,
+    accuracy: Location.Accuracy.BestForNavigation,
+    timeInterval: 3000,
     distanceInterval: 0,
     foregroundService: {
       notificationTitle: "Delivery in Progress",
