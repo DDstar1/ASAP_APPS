@@ -9,7 +9,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        animation: "fade", // or 'shift'
+        animation: "shift", // or 'shift'
         transitionSpec: {
           animation: "timing",
           config: { duration: 250 },

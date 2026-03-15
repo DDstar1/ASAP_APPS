@@ -11,12 +11,12 @@ import type {
   RiderDistanceInfo,
   SavedLocationInput,
 } from "@/utils/my_types";
+import { formatMessageTime } from "@/utils/my_utils";
 import {
   checkOrderExists,
   deleteOldPendingDeliveries,
   hasDriverAcceptedDelivery,
 } from "./supabase-utils";
-import { formatMessageTime } from "@/utils/my_utils";
 
 export async function getCurrentUserId() {
   try {
@@ -483,6 +483,7 @@ export const getMessages = async (otherUserId: string) => {
     return [];
   }
 };
+
 export const sendMessageToSupabase = async (messageData: {
   message: string;
   sender_id: string;
@@ -722,6 +723,29 @@ export async function getAllClientDeliveries() {
       .select("*")
       .eq("client_id", clientId)
       .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]); // active deliveries
+
+    if (error) {
+      console.error("❌ Error fetching client deliveries:", error.message);
+      return { success: false, data: [], error };
+    }
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error(
+      "❌ Unexpected error fetching client deliveries:",
+      err.message,
+    );
+    return { success: false, data: [], error: err };
+  }
+}
+
+export async function getAllDriverDeliveryWaypoints(order_id: number) {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_orders_waypoints")
+      .select("lat,long,created_at")
+      .eq("order_id", order_id)
+      .order("created_at", { ascending: true });
 
     if (error) {
       console.error("❌ Error fetching client deliveries:", error.message);

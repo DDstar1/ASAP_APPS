@@ -1,9 +1,9 @@
 // store/deliveryStore.ts
-import { create } from "zustand";
 import {
-  getAllClientDeliveries,
   deleteDeliveryByOrderCode,
+  getAllClientDeliveries,
 } from "@/lib/supabase-app-functions";
+import { create } from "zustand";
 
 interface CustomerDelivery {
   id: string;
@@ -18,6 +18,7 @@ interface CustomerDelivery {
   image_url?: string;
   statusColor?: string;
   delivery_accepted_time: number;
+  initial_waypoints?: { latitude: number; longitude: number }[];
 }
 
 interface CustomerDeliveryStore {

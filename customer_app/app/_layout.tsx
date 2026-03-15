@@ -55,17 +55,14 @@ export default function RootLayout() {
         const lat = normalizeParam(queryParams.lat);
         const lng = normalizeParam(queryParams.lng);
 
-        // Optional safety check
         if (lat && lng) {
           setPendingLink({ lat, lng });
         }
       }
     };
 
-    // App already open
     const sub = Linking.addEventListener("url", handleDeepLink);
 
-    // Cold start
     Linking.getInitialURL().then((url) => {
       if (url) handleDeepLink({ url });
     });
@@ -99,7 +96,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack
+        screenOptions={{
+          animation: "slide_from_left",
+        }}
+      >
         <Stack.Screen
           name="onboarding/index"
           options={{ headerShown: false }}
@@ -109,27 +110,26 @@ export default function RootLayout() {
 
         <Stack.Screen
           name="trackPackage/index"
-          options={({ navigation }) => ({
+          options={{
             title: "Track ...",
             headerShown: true,
             headerLeft: () => (
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("(tabs)", { screen: "deliveries" })
-                }
+                onPress={() => router.push("/(tabs)/deliveries")}
               >
                 <Ionicons
                   name="arrow-back"
                   size={24}
                   color="black"
-                  style={{ marginLeft: 10 }}
+                  style={{ marginLeft: 10, marginRight: 15 }}
                 />
               </TouchableOpacity>
             ),
-          })}
+          }}
         />
 
         <Stack.Screen name="index" options={{ headerShown: false }} />
+
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
         <Stack.Screen
@@ -141,6 +141,7 @@ export default function RootLayout() {
         />
 
         <Stack.Screen name="auth" options={{ headerShown: false }} />
+
         <Stack.Screen name="+not-found" />
       </Stack>
 

@@ -1,9 +1,21 @@
+import { DeliveryOrder } from "@/utils/my_types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import Constant from "expo-constants";
+import mitt from "mitt";
 
 console.log(Constant);
-const { SUPABASE_URL, SUPABASE_SERVICE_KEY } = Constant.expoConfig.extra;
+const { SUPABASE_URL, SUPABASE_SERVICE_KEY }: any = Constant.expoConfig.extra;
+
+export type SupabaseEventMap = {
+  delivery_insert: DeliveryOrder;
+  delivery_update: DeliveryOrder;
+  delivery_delete: DeliveryOrder;
+  waypoint_insert: any;
+};
+
+// Create typed emitter
+export const supabaseEvents = mitt<SupabaseEventMap>();
 
 const supabaseUrl = SUPABASE_URL;
 const supabasePublishableKey = SUPABASE_SERVICE_KEY;
