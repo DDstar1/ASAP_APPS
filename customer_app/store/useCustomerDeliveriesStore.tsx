@@ -2,6 +2,7 @@
 import {
   deleteDeliveryByOrderCode,
   getAllClientDeliveries,
+  getUnreadMessageCount,
 } from "@/lib/supabase-app-functions";
 import { create } from "zustand";
 
@@ -19,25 +20,32 @@ interface CustomerDelivery {
   statusColor?: string;
   delivery_accepted_time: number;
   initial_waypoints?: { latitude: number; longitude: number }[];
+  driver_id?: string;
+  pickup_code?: string;
+  dropoff_code?: string;
 }
 
 interface CustomerDeliveryStore {
   AllDeliveries: CustomerDelivery[];
   loading: boolean;
   error: string | null;
+  unreadCounts: Record<string, number>;
 
   fetchAllDeliveries: () => Promise<void>;
+  fetchUnreadCounts: (orderIds: string[]) => Promise<void>;
+  setUnreadCount: (orderId: string, count: number) => void;
   addNewDelivery: (delivery: CustomerDelivery) => void;
   updateDeliveryStatus: (orderId: string, newStatus: string) => void;
-  removeDelivery: (orderId: string) => void; // ✅ added
+  removeDelivery: (orderId: string) => void;
   clearDeliveries: () => void;
 }
 
 export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
-  (set) => ({
+  (set, get) => ({
     AllDeliveries: [],
     loading: false,
     error: null,
+    unreadCounts: {},
 
     fetchAllDeliveries: async () => {
       set({ loading: true, error: null });
@@ -48,7 +56,10 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
             AllDeliveries: response.data,
             loading: false,
           });
-          //console.log("✅ Deliveries fetched:", response.data);
+
+          // Auto-fetch unread counts after deliveries load
+          const orderIds = response.data.map((d: CustomerDelivery) => d.id);
+          get().fetchUnreadCounts(orderIds);
         } else {
           set({
             error: response.error || "Failed to fetch deliveries",
@@ -61,6 +72,31 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
           loading: false,
         });
       }
+    },
+
+    fetchUnreadCounts: async (orderIds: string[]) => {
+      try {
+        const counts = await Promise.all(
+          orderIds.map(async (id) => ({
+            id,
+            count: await getUnreadMessageCount(Number(id)),
+          })),
+        );
+
+        const map: Record<string, number> = {};
+        counts.forEach(({ id, count }) => (map[id] = count));
+
+        set({ unreadCounts: map });
+      } catch (err) {
+        console.error("Failed to fetch unread counts:", err);
+      }
+    },
+
+    // Use this to clear badge instantly when chat is opened
+    setUnreadCount: (orderId: string, count: number) => {
+      set((state) => ({
+        unreadCounts: { ...state.unreadCounts, [orderId]: count },
+      }));
     },
 
     addNewDelivery: (delivery) =>
@@ -92,18 +128,26 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
       }));
     },
 
-    // ✅ NEW METHOD — remove delivery by order_code from backend first
     removeDelivery: async (order_code: string) => {
       try {
         const result = await deleteDeliveryByOrderCode(order_code);
 
         if (result.success) {
-          // Only remove from store if backend deletion succeeded
-          set((state) => ({
-            AllDeliveries: state.AllDeliveries.filter(
-              (delivery) => delivery.order_code !== order_code,
-            ),
-          }));
+          set((state) => {
+            // Also clean up unread count for removed order
+            const removedOrder = state.AllDeliveries.find(
+              (d) => d.order_code === order_code,
+            );
+            const newUnreadCounts = { ...state.unreadCounts };
+            if (removedOrder) delete newUnreadCounts[removedOrder.id];
+
+            return {
+              AllDeliveries: state.AllDeliveries.filter(
+                (delivery) => delivery.order_code !== order_code,
+              ),
+              unreadCounts: newUnreadCounts,
+            };
+          });
           console.log(`✅ Delivery removed from store: ${order_code}`);
         } else {
           console.error(
@@ -120,7 +164,7 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
     },
 
     clearDeliveries: () => {
-      set({ AllDeliveries: [], error: null });
+      set({ AllDeliveries: [], error: null, unreadCounts: {} });
     },
   }),
 );

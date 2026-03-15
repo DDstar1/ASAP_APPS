@@ -1,27 +1,27 @@
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   Text,
   TouchableOpacity,
   View,
-  Alert,
-  ActivityIndicator,
 } from "react-native";
-import MaskedView from "@react-native-masked-view/masked-view";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
-  interpolate,
 } from "react-native-reanimated";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { openOrderChat } from "@/utils/my_utils";
-import { router } from "expo-router";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { DeliveryOrder } from "@/utils/my_types";
+import { openOrderChat } from "@/utils/my_utils";
+import { router } from "expo-router";
 
 type Props = {
   item: DeliveryOrder;
@@ -34,7 +34,9 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
   const [cancelling, setCancelling] = useState(false);
 
   const pulseProgress = useSharedValue(0);
-  const { removeDelivery } = useCustomerDeliveryStore();
+  const { removeDelivery, unreadCounts } = useCustomerDeliveryStore();
+
+  const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
 
   useEffect(() => {
     if (normalizedStatus === "pending") {
@@ -71,9 +73,7 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           onPress: async () => {
             setCancelling(true);
             try {
-              // Remove from store optimistically
               removeDelivery(item.order_code);
-              // TODO: call your cancel API here e.g. await cancelOrder(item.id)
             } catch (err) {
               setCancelling(false);
               Alert.alert("Error", "Failed to cancel order. Please try again.");
@@ -110,7 +110,29 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
             onPress={() => openOrderChat(item.id)}
             className="p-2 bg-gray-200 rounded-full"
           >
-            {MY_ICONS.message("black", 25)}
+            {/* Icon + unread badge */}
+            <View>
+              {MY_ICONS.message("black", 25)}
+              {unreadCount > 0 && (
+                <View
+                  className="absolute bg-red-500 rounded-full items-center justify-center"
+                  style={{
+                    top: -5,
+                    right: -5,
+                    minWidth: 17,
+                    height: 17,
+                    paddingHorizontal: 3,
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 9, lineHeight: 11 }}
+                    className="text-white font-bold"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         )}
 

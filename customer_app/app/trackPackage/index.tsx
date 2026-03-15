@@ -261,11 +261,11 @@ export default function RiderTrackingScreen() {
         />
 
         {/* Route */}
-        {driverRoute.length > 1 && is_order_accepted /*  <Polyline
+        {driverRoute.length > 1 && is_order_accepted ? /*  <Polyline
             coordinates={driverRoute}
             strokeColor="#0066FF"
             strokeWidth={3}
-          />*/ ? null : (
+          />*/ null : (
           <Polyline
             coordinates={order?.initial_waypoints ?? []}
             strokeColor="#0066FF"

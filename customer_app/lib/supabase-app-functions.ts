@@ -520,6 +520,43 @@ export const sendMessageToSupabase = async (messageData: {
   }
 };
 
+export const getUnreadMessageCount = async (
+  orderId: number,
+): Promise<number> => {
+  try {
+    const { success, userId } = await getCurrentUserId();
+    if (!success || !userId) return 0;
+
+    const { count, error } = await supabase
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("delivery_order_id", orderId)
+      .eq("receiver_id", userId)
+      .eq("is_read", false);
+
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const markMessagesAsRead = async (orderId: number): Promise<void> => {
+  try {
+    const { success, userId } = await getCurrentUserId();
+    if (!success || !userId) return;
+
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("delivery_order_id", orderId)
+      .eq("receiver_id", userId)
+      .eq("is_read", false);
+  } catch (err) {
+    console.error("Failed to mark messages as read:", err);
+  }
+};
+
 export const getMessagesList = async () => {
   try {
     // Get the currently logged-in user
