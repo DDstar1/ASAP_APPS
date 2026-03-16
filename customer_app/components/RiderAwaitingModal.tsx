@@ -26,7 +26,7 @@ type Props = {
   dropoff_long: number;
   dropoff_name: string;
   image_url?: string;
-  drivers_waypoints?: Coordinates[] | null;
+  initial_waypoints?: Coordinates[] | null;
   package_type: string;
   package_description: string;
 };
@@ -41,7 +41,7 @@ export default function RiderAwaitingModal({
   dropoff_long,
   dropoff_name,
   image_url,
-  drivers_waypoints,
+  initial_waypoints,
   package_type,
   package_description,
 }: Props) {
@@ -109,7 +109,7 @@ export default function RiderAwaitingModal({
         dropoff_long,
         dropoff_name: finalDropoffName,
         status: "pending",
-        drivers_waypoints,
+        initial_waypoints,
         package_type,
         package_description,
       };

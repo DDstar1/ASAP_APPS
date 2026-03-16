@@ -187,7 +187,7 @@ const OrdersPage = () => {
       </View>
 
       {loading ? (
-        <View className="flex-1 px-6 gap-3">
+        <View className="flex-1 px-6 gap-6">
           {[1, 2, 3, 4].map((_, index) => (
             <CompletedOrderSkeleton key={index} />
           ))}
@@ -201,7 +201,9 @@ const OrdersPage = () => {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 18 }}
-          ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
+          ItemSeparatorComponent={() => (
+            <View className="h-px my-3 bg-[#1F2230]" />
+          )}
           refreshControl={refreshControl}
           ListEmptyComponent={() => (
             <View className="py-8 items-center">

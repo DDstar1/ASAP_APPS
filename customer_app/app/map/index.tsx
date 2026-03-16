@@ -341,7 +341,7 @@ export default function MapScreen() {
         image_url={packageImage || IMAGES.riderWithPizza}
         package_type={packageType || "Unknown Item"}
         package_description={packageDescription || ""}
-        waypoints={waypoints}
+        initial_waypoints={waypoints}
       />
     </View>
   );

@@ -1,20 +1,26 @@
-import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState, useRef, useMemo } from "react";
-import {
-  View,
-  ActivityIndicator,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from "react-native";
-import MapView, { Marker, Polyline, LatLng } from "react-native-maps";
-import { useLayoutEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
-import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { getAllDriverDeliveryWaypoints } from "@/lib/supabase-app-functions";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { openOrderChat } from "@/utils/my_utils";
+import { useNavigation } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import MapView, { LatLng, Marker, Polyline } from "react-native-maps";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RiderTrackingScreen() {
   const { order_id } = useLocalSearchParams();
@@ -22,6 +28,7 @@ export default function RiderTrackingScreen() {
 
   const [destination, setDestination] = useState<LatLng | null>(null);
   const [pickupLocation, setPickupLocation] = useState<LatLng | null>(null);
+  const [driverWaypoints, setDriverWaypoints] = useState<LatLng[]>([]);
   const [showDetails, setShowDetails] = useState(true);
 
   const navigation = useNavigation();
@@ -35,7 +42,15 @@ export default function RiderTrackingScreen() {
   const order =
     AllDeliveries.find((d) => String(d.id) === String(order_id)) ?? null;
 
-  console.log(order);
+  const is_order_accepted =
+    order?.status &&
+    ["assigned", "arriving_pickup", "in_transit", "delivered"].includes(
+      order.status,
+    );
+
+  /*
+  FETCH DELIVERIES
+  */
 
   useEffect(() => {
     if (AllDeliveries.length === 0) {
@@ -43,11 +58,19 @@ export default function RiderTrackingScreen() {
     }
   }, []);
 
+  /*
+  NAVIGATION TITLE
+  */
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: order?.order_code ? `Track ${order.order_code}` : "Track Package",
     });
   }, [navigation, order?.order_code]);
+
+  /*
+  PARSE PICKUP + DESTINATION
+  */
 
   useEffect(() => {
     if (!order) {
@@ -67,67 +90,85 @@ export default function RiderTrackingScreen() {
     const dropoffLong = parseCoord(order.dropoff_long);
 
     if (pickupLat != null && pickupLong != null) {
-      setPickupLocation({ latitude: pickupLat, longitude: pickupLong });
+      setPickupLocation({
+        latitude: pickupLat,
+        longitude: pickupLong,
+      });
     }
 
     if (dropoffLat != null && dropoffLong != null) {
-      setDestination({ latitude: dropoffLat, longitude: dropoffLong });
+      setDestination({
+        latitude: dropoffLat,
+        longitude: dropoffLong,
+      });
     }
   }, [order]);
 
   /*
-  CLEAN DRIVER WAYPOINTS
+  LOAD DRIVER WAYPOINTS
+  */
+
+  useEffect(() => {
+    console.log("Order ID for waypoints:", order_id);
+    console.log("Is order accepted?", is_order_accepted);
+    const loadDriverWaypoints = async () => {
+      if (!is_order_accepted || !order_id) {
+        setDriverWaypoints([]);
+        return;
+      }
+
+      try {
+        const result = await getAllDriverDeliveryWaypoints(Number(order_id));
+
+        console.log("Raw waypoints result:", result);
+
+        if (!result.success || !result.data?.length) {
+          setDriverWaypoints([]);
+          return;
+        }
+
+        const formatted: LatLng[] = result.data.map((wp: any) => ({
+          latitude: Number(wp.lat),
+          longitude: Number(wp.long),
+        }));
+
+        console.log("Fetched waypoints:", formatted);
+
+        setDriverWaypoints(formatted);
+      } catch (err) {
+        console.log("Waypoint fetch error", err);
+        setDriverWaypoints([]);
+      }
+    };
+
+    loadDriverWaypoints();
+  }, [order_id, is_order_accepted]);
+
+  /*
+  CLEAN ROUTE
   */
 
   const driverRoute: LatLng[] = useMemo(() => {
-    if (!order?.drivers_waypoints) return [];
+    if (!driverWaypoints.length) return [];
 
-    try {
-      let waypoints = order.drivers_waypoints;
+    const cleaned: LatLng[] = [];
+    let last: LatLng | null = null;
 
-      if (typeof waypoints === "string") {
-        waypoints = JSON.parse(waypoints);
+    for (const point of driverWaypoints) {
+      if (
+        !last ||
+        Math.abs(last.latitude - point.latitude) > 0.00001 ||
+        Math.abs(last.longitude - point.longitude) > 0.00001
+      ) {
+        cleaned.push(point);
+        last = point;
       }
-
-      const sorted = [...waypoints].sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
-
-      const cleaned: LatLng[] = [];
-      let last: LatLng | null = null;
-
-      for (const wp of sorted) {
-        const lat = Number(wp.lat);
-        const lng = Number(wp.lng);
-
-        if (isNaN(lat) || isNaN(lng)) continue;
-
-        const point = {
-          latitude: lat,
-          longitude: lng,
-        };
-
-        if (
-          !last ||
-          Math.abs(last.latitude - point.latitude) > 0.00001 ||
-          Math.abs(last.longitude - point.longitude) > 0.00001
-        ) {
-          cleaned.push(point);
-          last = point;
-        }
-      }
-
-      const MAX_POINTS = 500;
-
-      console.log(cleaned.slice(-MAX_POINTS));
-
-      return cleaned.slice(-MAX_POINTS);
-    } catch (err) {
-      console.log("Waypoint parse error", err);
-      return [];
     }
-  }, [order]);
+
+    const MAX_POINTS = 500;
+
+    return cleaned.slice(-MAX_POINTS);
+  }, [driverWaypoints]);
 
   /*
   FIT MAP
@@ -137,9 +178,6 @@ export default function RiderTrackingScreen() {
     if (!mapRef.current || StoreLoading) return;
 
     const coordinates: LatLng[] = [];
-
-    if (pickupLocation) coordinates.push(pickupLocation);
-    if (destination) coordinates.push(destination);
 
     if (driverRoute.length > 0) {
       coordinates.push(...driverRoute);
@@ -154,6 +192,10 @@ export default function RiderTrackingScreen() {
       }, 500);
     }
   }, [pickupLocation, destination, driverRoute, StoreLoading]);
+
+  /*
+  STATUS COLOR
+  */
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -210,7 +252,7 @@ export default function RiderTrackingScreen() {
           pinColor="green"
         />
 
-        {/* Dropoff */}
+        {/* Destination */}
         <Marker
           coordinate={destination}
           title="Destination"
@@ -218,16 +260,20 @@ export default function RiderTrackingScreen() {
           pinColor="red"
         />
 
-        {/* Driver Route */}
-        {driverRoute.length > 1 && (
-          <Polyline
+        {/* Route */}
+        {driverRoute.length > 1 && is_order_accepted ? /*  <Polyline
             coordinates={driverRoute}
             strokeColor="#0066FF"
-            strokeWidth={4}
+            strokeWidth={3}
+          />*/ null : (
+          <Polyline
+            coordinates={order?.initial_waypoints ?? []}
+            strokeColor="#0066FF"
+            strokeWidth={2}
           />
         )}
 
-        {/* Driver Current Location */}
+        {/* Driver Marker */}
         {driverLocation && (
           <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
             <Image
@@ -304,10 +350,9 @@ export default function RiderTrackingScreen() {
               {/* Driver */}
               {order?.driver_id && (
                 <View className="flex-row items-center justify-around">
-                  {/* Left side: driver info */}
                   <View className="flex-row items-center">
                     <Image
-                      source={{ uri: "https://i.pravatar.cc/100" }} // dummy avatar
+                      source={{ uri: "https://i.pravatar.cc/100" }}
                       className="w-10 h-10 rounded-full mr-3"
                     />
 
@@ -322,7 +367,6 @@ export default function RiderTrackingScreen() {
                     </View>
                   </View>
 
-                  {/* Right side: actions */}
                   <View className="flex-row items-center gap-5">
                     <TouchableOpacity className="bg-green-500 p-2 rounded-full">
                       {MY_ICONS.phone("white", 25)}
@@ -338,7 +382,6 @@ export default function RiderTrackingScreen() {
                 </View>
               )}
 
-              {/* Accepted */}
               <View className="border-t border-gray-200 pt-4">
                 <Text className="text-xs text-gray-500">
                   Accepted:{" "}
