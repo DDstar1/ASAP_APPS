@@ -108,7 +108,7 @@ const openOrderChat = async (orderId: number) => {
 
     if (!riderInfo) return;
 
-    router.navigate({
+    router.push({
       pathname: "/chat_details/[order_id]",
       params: {
         order_id: orderId, // must match the route param

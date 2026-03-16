@@ -534,6 +534,8 @@ export const getUnreadMessageCount = async (
       .eq("receiver_id", userId)
       .eq("is_read", false);
 
+    console.log(`Unread messages for order ${orderId}:`, count);
+
     if (error) return 0;
     return count ?? 0;
   } catch {
