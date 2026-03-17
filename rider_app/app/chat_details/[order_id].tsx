@@ -1,4 +1,9 @@
-import { getMessages, sendMessageToSupabase } from "@/lib/supabase-functions";
+import {
+  getMessages,
+  markMessagesAsRead,
+  sendMessageToSupabase,
+} from "@/lib/supabase-functions";
+import { useUnreadCountStore } from "@/store/useUnreadCountStore";
 import { useUserStore } from "@/store/useUserStore";
 import { timeAgo } from "@/utils/utils_for_me";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,27 +23,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Helper function to format timestamp
-
 export default function ChatDetailScreen() {
   const { id: clientId, order_id, name } = useLocalSearchParams();
   const { fetchUserSession, user } = useUserStore();
+  const { clearCount } = useUnreadCountStore();
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  console.log("ChatDetailScreen params:", { clientId, order_id, name });
-  console.log("Current user:", user);
+  const flatListRef = useRef<FlatList>(null);
+  const orderId = Number(order_id);
 
-  // Get current user session
   useEffect(() => {
     fetchUserSession();
   }, []);
 
-  const flatListRef = useRef<FlatList>(null);
-
-  // Fetching messages from API or Supabase
+  // Load messages + mark as read on open
   useEffect(() => {
     const loadMessages = async () => {
       setLoading(true);
@@ -49,6 +50,10 @@ export default function ChatDetailScreen() {
         () => flatListRef.current?.scrollToEnd({ animated: true }),
         100,
       );
+
+      // Mark as read + clear badge
+      await markMessagesAsRead(orderId);
+      clearCount(orderId);
     };
 
     loadMessages();
@@ -63,31 +68,33 @@ export default function ChatDetailScreen() {
       id: Date.now().toString(),
       message: message,
       sender_id: user?.id,
-      receiver_id: clientId as string, // Set appropriately based on your logic
-      delivery_order_id: Number(order_id),
+      receiver_id: clientId as string,
+      delivery_order_id: orderId,
       created_at: new Date().toISOString(),
     };
 
-    // Optimistically update UI
     setMessages((prev) => [...prev, newMsg]);
     setMessage("");
     Keyboard.dismiss();
 
     try {
-      // Send message to Supabase
       await sendMessageToSupabase({
         message: newMsg.message,
         sender_id: user?.id!,
         receiver_id: clientId as string,
-        delivery_order_id: newMsg.delivery_order_id,
+        delivery_order_id: orderId,
       });
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Optionally: Remove the optimistic message or show error
     }
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
+
+  // Find the index of the first unread message
+  const firstUnreadIndex = messages.findIndex(
+    (msg) => msg.sender_id !== user?.id && msg.is_read === false,
+  );
 
   return (
     <KeyboardAvoidingView
@@ -142,36 +149,50 @@ export default function ChatDetailScreen() {
               ref={flatListRef}
               data={messages}
               keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
+              renderItem={({ item, index }) => {
                 const isMyMessage = item.sender_id === user?.id;
+                const isFirstUnread = index === firstUnreadIndex;
 
                 return (
-                  <View
-                    className={`my-1 px-4 ${
-                      isMyMessage ? "items-end" : "items-start"
-                    }`}
-                  >
+                  <>
+                    {/* Unread separator */}
+                    {isFirstUnread && (
+                      <View className="flex-row items-center px-4 my-3">
+                        <View className="flex-1 h-px bg-blue-500 opacity-50" />
+                        <View className="mx-3 px-3 py-1 bg-blue-500/20 rounded-full border border-blue-500/40">
+                          <Text className="text-blue-400 text-xs font-semibold">
+                            Unread messages
+                          </Text>
+                        </View>
+                        <View className="flex-1 h-px bg-blue-500 opacity-50" />
+                      </View>
+                    )}
+
                     <View
-                      className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                        isMyMessage
-                          ? "bg-blue-500 rounded-br-none"
-                          : "bg-gray-700 rounded-bl-none"
+                      className={`my-1 px-4 ${
+                        isMyMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <Text selectable className="text-white text-base">
-                        {item.message}
-                      </Text>
-
-                      {/* Timestamp */}
-                      <Text
-                        className={`text-xs mt-1 ${
-                          isMyMessage ? "text-blue-100" : "text-gray-400"
+                      <View
+                        className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                          isMyMessage
+                            ? "bg-blue-500 rounded-br-none"
+                            : "bg-gray-700 rounded-bl-none"
                         }`}
                       >
-                        {timeAgo(item.created_at)}
-                      </Text>
+                        <Text selectable className="text-white text-base">
+                          {item.message}
+                        </Text>
+                        <Text
+                          className={`text-xs mt-1 ${
+                            isMyMessage ? "text-blue-100" : "text-gray-400"
+                          }`}
+                        >
+                          {timeAgo(item.created_at)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
+                  </>
                 );
               }}
               contentContainerStyle={{ paddingVertical: 10 }}

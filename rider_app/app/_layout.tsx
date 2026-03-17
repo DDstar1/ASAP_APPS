@@ -17,12 +17,14 @@ import { useEffect } from "react";
 import { useUserStore } from "@/store/useUserStore";
 import {
   startDeliveryEvents,
+  startMessageEvents,
   stopAllListeners,
 } from "@/lib/supabase-realtime-functions";
 import "@/utils/utils_orderLocationTracking";
 
 export default function RootLayout() {
   const { fetchUserSession, user } = useUserStore();
+
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -42,11 +44,13 @@ export default function RootLayout() {
     // Start messages realtime (anonymous users CAN receive messages)
     startDeliveryEvents();
 
+    startMessageEvents(user.id);
+
     // Cleanup
     return () => {
       stopAllListeners();
     };
-  }, [user?.userId, user?.isAnonymous]);
+  }, [user?.id, user?.isAnonymous]);
 
   if (!loaded) {
     // Async font loading only occurs in development.

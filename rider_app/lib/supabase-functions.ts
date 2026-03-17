@@ -5,6 +5,29 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
 
+export async function getCurrentUserId() {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("❌ No logged-in user found", userError);
+      return {
+        success: false,
+        error: userError || "No user session",
+        userId: null,
+      };
+    }
+
+    return { success: true, userId: user.id, email: user.email };
+  } catch (err) {
+    console.error("🚨 Unexpected error while getting user:", err);
+    return { success: false, error: err, userId: null };
+  }
+}
+
 export const handleLogout = async () => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -356,6 +379,53 @@ export const getMessages = async (otherUserId: string) => {
   } catch (err: any) {
     console.error("Unexpected error fetching messages:", err.message || err);
     return [];
+  }
+};
+
+export const getUnreadMessageCounts = async (): Promise<
+  Record<number, number>
+> => {
+  try {
+    const user = await requireUser();
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("delivery_order_id")
+      .eq("receiver_id", user.id)
+      .eq("is_read", false);
+
+    if (error) throw error;
+
+    // Group and count by delivery_order_id
+    const counts: Record<number, number> = {};
+    for (const row of data ?? []) {
+      const id = row.delivery_order_id;
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+
+    return counts;
+  } catch (err: any) {
+    console.error(
+      "Unexpected error fetching unread counts:",
+      err.message || err,
+    );
+    return {};
+  }
+};
+
+export const markMessagesAsRead = async (orderId: number): Promise<void> => {
+  try {
+    const { success, userId } = await getCurrentUserId();
+    if (!success || !userId) return;
+
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("delivery_order_id", orderId)
+      .eq("receiver_id", userId)
+      .eq("is_read", false);
+  } catch (err) {
+    console.error("Failed to mark messages as read:", err);
   }
 };
 

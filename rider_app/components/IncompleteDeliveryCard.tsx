@@ -11,32 +11,36 @@ import Animated, {
 } from "react-native-reanimated";
 import { openGoogleMaps, openOrderChat } from "@/utils/utils_for_me";
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { useUnreadCountStore } from "@/store/useUnreadCountStore";
 
 type Props = {
   item: any;
   index?: number;
   width: number;
-  isHighlighted?: boolean; // ✅ Add this prop
+  isHighlighted?: boolean;
 };
 
 export default function IncompleteDeliveryCard({
   item,
   index,
   width,
-  isHighlighted = false, // ✅ Default to false
+  isHighlighted = false,
 }: Props) {
   const rawStatus = item.status;
   const normalizedStatus = rawStatus?.trim().toLowerCase();
+
+  const unreadCount = useUnreadCountStore(
+    (state) => state.counts[item.id] ?? 0,
+  );
 
   // Animated value for shiny border
   const shimmer = useSharedValue(0);
 
   useEffect(() => {
     if (isHighlighted) {
-      // Start shimmer animation
       shimmer.value = withRepeat(
         withTiming(1, { duration: 1500, easing: Easing.linear }),
-        3, // Repeat 3 times (4.5 seconds total)
+        3,
         false,
       );
     }
@@ -75,6 +79,15 @@ export default function IncompleteDeliveryCard({
               className="p-2 bg-gray-200 rounded-full"
             >
               {MY_ICONS.message("black", 25)}
+
+              {/* Unread badge */}
+              {unreadCount > 0 && (
+                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1">
+                  <Text className="text-white text-[10px] font-bold">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
         </View>
