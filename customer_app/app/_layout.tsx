@@ -17,6 +17,12 @@ import { TouchableOpacity } from "react-native";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
+import {
+  startMessageEvents,
+  stopAllListeners,
+} from "@/lib/supabase-realtime-functions";
+import { useUserStore } from "@/store/useUserStore";
+
 /* -------------------------------------------------
  * Types
  * ------------------------------------------------- */
@@ -35,12 +41,18 @@ const normalizeParam = (value?: string | string[]): string | undefined => {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const { fetchUserSession, user } = useUserStore();
 
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   const [pendingLink, setPendingLink] = useState<PendingLink | null>(null);
+
+  // ✅ Fetch user session from Supabase
+  useEffect(() => {
+    fetchUserSession();
+  }, []);
 
   /* -------------------------------------------------
    * 1️⃣ Parse deep links (NO navigation here)
@@ -69,6 +81,21 @@ export default function RootLayout() {
 
     return () => sub.remove();
   }, []);
+
+  // Handle Supabase Realtime Notifications
+  useEffect(() => {
+    console.log("RootLayout: User changed:", user);
+    if (!user) return;
+    console.log(`${user.id} logged in, setting up realtime listeners...`);
+
+    // Start messages realtime (anonymous users CAN receive messages)
+    startMessageEvents(); // add this
+
+    // Cleanup
+    return () => {
+      stopAllListeners();
+    };
+  }, [user?.userId, user?.isAnonymous]);
 
   /* -------------------------------------------------
    * 2️⃣ Navigate ONLY after Stack is mounted

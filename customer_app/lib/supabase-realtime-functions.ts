@@ -1,10 +1,11 @@
 // lib/supabaseListeners.ts
-import { supabase } from "./supabase";
-import { supabaseEvents } from "./supabase";
+import { supabase, supabaseEvents } from "./supabase";
+import { getCurrentUserId } from "./supabase-app-functions";
 
 // Separate channels
 let DeliveryEventChannel: any = null;
 let WaypointsEventChannel: any = null;
+let MessagesEventChannel: any = null;
 
 // Track which order_id the waypoints channel is currently bound to
 let currentWaypointsOrderId: string | number | null = null;
@@ -101,6 +102,55 @@ export function startWaypointEvents(orderId: string | number) {
 }
 
 /**
+ * 🟢 LISTEN FOR NEW MESSAGES
+ *
+ * Filters only messages where the current user is the receiver.
+ * Emits:
+ *   "message_insert" → payload.new (new MessageRow)
+ *   "unread_count_increment" → { order_id: string } (for badge update)
+ */
+export async function startMessageEvents() {
+  if (MessagesEventChannel) {
+    console.log("Messages event channel already running");
+    return MessagesEventChannel;
+  }
+
+  const { success, userId } = await getCurrentUserId();
+  if (!success || !userId) {
+    console.warn("⚠️ Cannot start message listener — no user session");
+    return null;
+  }
+
+  console.log("Starting messages realtime listener...");
+
+  MessagesEventChannel = supabase
+    .channel("messages-channel")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${userId}`,
+      },
+      (payload) => {
+        console.log("📩 New message received:", payload.new);
+
+        // Emit the full message for any screen that wants it (e.g. ChatDetailScreen)
+        supabaseEvents.emit("message_insert", payload.new);
+
+        // Emit a targeted badge increment for the delivery store
+        supabaseEvents.emit("unread_count_increment", {
+          order_id: String(payload.new.delivery_order_id),
+        });
+      },
+    )
+    .subscribe();
+
+  return MessagesEventChannel;
+}
+
+/**
  * 🔴 STOP ONLY delivery LISTENER
  */
 export function stopDeliveryEvents() {
@@ -120,9 +170,20 @@ export function stopWaypointEvents() {
 }
 
 /**
+ * 🔴 STOP ONLY messages LISTENER
+ */
+export function stopMessageEvents() {
+  if (!MessagesEventChannel) return;
+  MessagesEventChannel.unsubscribe();
+  MessagesEventChannel = null;
+  console.log("🔌 Messages listener stopped");
+}
+
+/**
  * 🔴 STOP EVERYTHING
  */
 export function stopAllListeners() {
   stopDeliveryEvents();
   stopWaypointEvents();
+  stopMessageEvents();
 }

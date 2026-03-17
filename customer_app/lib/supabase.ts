@@ -1,4 +1,8 @@
-import { DeliveryOrder } from "@/utils/my_types";
+import {
+  DeliveryOrder,
+  MessageRow,
+  UnreadCountIncrement,
+} from "@/utils/my_types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import Constant from "expo-constants";
@@ -12,6 +16,8 @@ export type SupabaseEventMap = {
   delivery_update: DeliveryOrder;
   delivery_delete: DeliveryOrder;
   waypoint_insert: any;
+  message_insert: MessageRow;
+  unread_count_increment: UnreadCountIncrement;
 };
 
 // Create typed emitter

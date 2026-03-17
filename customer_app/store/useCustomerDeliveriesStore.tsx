@@ -1,4 +1,5 @@
 // store/deliveryStore.ts
+import { supabaseEvents } from "@/lib/supabase";
 import {
   deleteDeliveryByOrderCode,
   getAllClientDeliveries,
@@ -34,6 +35,7 @@ interface CustomerDeliveryStore {
   fetchAllDeliveries: () => Promise<void>;
   fetchUnreadCounts: (orderIds: string[]) => Promise<void>;
   setUnreadCount: (orderId: string, count: number) => void;
+  incrementUnreadCount: (orderId: string) => void;
   addNewDelivery: (delivery: CustomerDelivery) => void;
   updateDeliveryStatus: (orderId: string, newStatus: string) => void;
   removeDelivery: (orderId: string) => void;
@@ -41,130 +43,164 @@ interface CustomerDeliveryStore {
 }
 
 export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
-  (set, get) => ({
-    AllDeliveries: [],
-    loading: false,
-    error: null,
-    unreadCounts: {},
+  (set, get) => {
+    // 1️⃣ Core state + functions
+    const state: CustomerDeliveryStore = {
+      AllDeliveries: [],
+      loading: false,
+      error: null,
+      unreadCounts: {},
 
-    fetchAllDeliveries: async () => {
-      set({ loading: true, error: null });
-      try {
-        const response = await getAllClientDeliveries();
-        if (response.success) {
-          set({
-            AllDeliveries: response.data,
-            loading: false,
-          });
+      fetchAllDeliveries: async () => {
+        set({ loading: true, error: null });
+        try {
+          const response = await getAllClientDeliveries();
+          if (response.success) {
+            set({ AllDeliveries: response.data, loading: false });
 
-          // Auto-fetch unread counts after deliveries load
-          const orderIds = response.data.map((d: CustomerDelivery) => d.id);
-          get().fetchUnreadCounts(orderIds);
-        } else {
+            // Auto-fetch unread counts after deliveries load
+            const orderIds = response.data.map((d: CustomerDelivery) => d.id);
+            get().fetchUnreadCounts(orderIds);
+          } else {
+            set({
+              error: response.error || "Failed to fetch deliveries",
+              loading: false,
+            });
+          }
+        } catch (err) {
           set({
-            error: response.error || "Failed to fetch deliveries",
+            error: err instanceof Error ? err.message : "Unknown error",
             loading: false,
           });
         }
-      } catch (err) {
-        set({
-          error: err instanceof Error ? err.message : "Unknown error",
-          loading: false,
-        });
-      }
-    },
+      },
 
-    fetchUnreadCounts: async (orderIds: string[]) => {
-      try {
-        const counts = await Promise.all(
-          orderIds.map(async (id) => ({
-            id,
-            count: await getUnreadMessageCount(Number(id)),
-          })),
-        );
+      fetchUnreadCounts: async (orderIds: string[]) => {
+        try {
+          const counts = await Promise.all(
+            orderIds.map(async (id) => ({
+              id,
+              count: await getUnreadMessageCount(Number(id)),
+            })),
+          );
 
-        const map: Record<string, number> = {};
-        counts.forEach(({ id, count }) => (map[id] = count));
+          const map: Record<string, number> = {};
+          counts.forEach(({ id, count }) => (map[id] = count));
 
-        set({ unreadCounts: map });
-      } catch (err) {
-        console.error("Failed to fetch unread counts:", err);
-      }
-    },
+          set({ unreadCounts: map });
+        } catch (err) {
+          console.error("Failed to fetch unread counts:", err);
+        }
+      },
 
-    // Use this to clear badge instantly when chat is opened
-    setUnreadCount: (orderId: string, count: number) => {
-      set((state) => ({
-        unreadCounts: { ...state.unreadCounts, [orderId]: count },
-      }));
-    },
+      // Set a specific order's unread count (e.g. zero it out when chat opens)
+      setUnreadCount: (orderId: string, count: number) => {
+        set((state) => ({
+          unreadCounts: { ...state.unreadCounts, [orderId]: count },
+        }));
+      },
 
-    addNewDelivery: (delivery) =>
-      set((state) => {
-        const normalized = {
-          ...delivery,
-          delivery_accepted_time:
-            typeof delivery.delivery_accepted_time === "string"
-              ? new Date(delivery.delivery_accepted_time).getTime()
-              : (delivery.delivery_accepted_time ?? Date.now()),
-        };
+      // Increment a specific order's unread count by 1 (called by realtime)
+      incrementUnreadCount: (orderId: string) => {
+        set((state) => ({
+          unreadCounts: {
+            ...state.unreadCounts,
+            [orderId]: (state.unreadCounts[orderId] ?? 0) + 1,
+          },
+        }));
+      },
 
-        return {
-          AllDeliveries: state.AllDeliveries.some((d) => d.id === normalized.id)
-            ? state.AllDeliveries.map((d) =>
-                d.id === normalized.id ? { ...d, ...normalized } : d,
-              )
-            : [normalized, ...state.AllDeliveries],
-        };
-      }),
+      addNewDelivery: (delivery) =>
+        set((state) => {
+          const normalized = {
+            ...delivery,
+            delivery_accepted_time:
+              typeof delivery.delivery_accepted_time === "string"
+                ? new Date(delivery.delivery_accepted_time).getTime()
+                : (delivery.delivery_accepted_time ?? Date.now()),
+          };
 
-    updateDeliveryStatus: (orderId, newStatus) => {
-      set((state) => ({
-        AllDeliveries: state.AllDeliveries.map((delivery) =>
-          delivery.id === orderId
-            ? { ...delivery, status: newStatus }
-            : delivery,
-        ),
-      }));
-    },
+          return {
+            AllDeliveries: state.AllDeliveries.some(
+              (d) => d.id === normalized.id,
+            )
+              ? state.AllDeliveries.map((d) =>
+                  d.id === normalized.id ? { ...d, ...normalized } : d,
+                )
+              : [normalized, ...state.AllDeliveries],
+          };
+        }),
 
-    removeDelivery: async (order_code: string) => {
-      try {
-        const result = await deleteDeliveryByOrderCode(order_code);
+      updateDeliveryStatus: (orderId, newStatus) => {
+        set((state) => ({
+          AllDeliveries: state.AllDeliveries.map((delivery) =>
+            delivery.id === orderId
+              ? { ...delivery, status: newStatus }
+              : delivery,
+          ),
+        }));
+      },
 
-        if (result.success) {
-          set((state) => {
-            // Also clean up unread count for removed order
-            const removedOrder = state.AllDeliveries.find(
-              (d) => d.order_code === order_code,
+      removeDelivery: async (order_code: string) => {
+        try {
+          const result = await deleteDeliveryByOrderCode(order_code);
+
+          if (result.success) {
+            set((state) => {
+              const removedOrder = state.AllDeliveries.find(
+                (d) => d.order_code === order_code,
+              );
+              const newUnreadCounts = { ...state.unreadCounts };
+              if (removedOrder) delete newUnreadCounts[removedOrder.id];
+
+              return {
+                AllDeliveries: state.AllDeliveries.filter(
+                  (delivery) => delivery.order_code !== order_code,
+                ),
+                unreadCounts: newUnreadCounts,
+              };
+            });
+            console.log(`✅ Delivery removed from store: ${order_code}`);
+          } else {
+            console.error(
+              `❌ Failed to delete delivery: ${order_code}`,
+              result.error,
             );
-            const newUnreadCounts = { ...state.unreadCounts };
-            if (removedOrder) delete newUnreadCounts[removedOrder.id];
-
-            return {
-              AllDeliveries: state.AllDeliveries.filter(
-                (delivery) => delivery.order_code !== order_code,
-              ),
-              unreadCounts: newUnreadCounts,
-            };
-          });
-          console.log(`✅ Delivery removed from store: ${order_code}`);
-        } else {
+          }
+        } catch (err: any) {
           console.error(
-            `❌ Failed to delete delivery: ${order_code}`,
-            result.error,
+            `❌ Error deleting delivery: ${order_code}`,
+            err.message || err,
           );
         }
-      } catch (err: any) {
-        console.error(
-          `❌ Error deleting delivery: ${order_code}`,
-          err.message || err,
-        );
-      }
-    },
+      },
 
-    clearDeliveries: () => {
-      set({ AllDeliveries: [], error: null, unreadCounts: {} });
-    },
-  }),
+      clearDeliveries: () => {
+        set({ AllDeliveries: [], error: null, unreadCounts: {} });
+      },
+    };
+
+    // 2️⃣ Auto-subscribe to realtime events
+    if (!(state as any)._realtimeSubscribed) {
+      supabaseEvents.on("delivery_update", (order) => {
+        get().updateDeliveryStatus(order.id, order.status);
+      });
+
+      supabaseEvents.on("delivery_insert", (order) => {
+        get().addNewDelivery(order);
+      });
+
+      supabaseEvents.on(
+        "unread_count_increment",
+        ({ order_id }: { order_id: string }) => {
+          console.log(`📩 Incrementing unread count for order ${order_id}`);
+          get().incrementUnreadCount(order_id);
+        },
+      );
+
+      (state as any)._realtimeSubscribed = true;
+    }
+
+    return state;
+  },
 );

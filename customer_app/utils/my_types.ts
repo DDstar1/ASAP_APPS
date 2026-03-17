@@ -56,10 +56,26 @@ type DeliveryOrder = {
   package_description?: string | null;
 };
 
+type MessageRow = {
+  id: number;
+  created_at: string;
+  sender_id: string;
+  receiver_id: string;
+  delivery_order_id: number;
+  message: string;
+  is_read: boolean;
+};
+
+type UnreadCountIncrement = {
+  order_id: string;
+};
+
 export type {
   Coordinates,
   DeliveryOrder,
   FitAllParams,
+  MessageRow,
   RiderDistanceInfo,
   SavedLocationInput,
+  UnreadCountIncrement,
 };
