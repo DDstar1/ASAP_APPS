@@ -4,13 +4,16 @@ import { supabaseEvents } from "./supabase";
 
 // Separate channels
 let DeliveryEventChannel: any = null;
+let MessageEventChannel: any = null;
 
 /**
  * 🟢 LISTEN FOR DELIVERY ORDERS
  */
 export function startDeliveryEvents() {
-  if (DeliveryEventChannel) return;
-  else console.log("Delivery event channel already running");
+  if (DeliveryEventChannel) {
+    console.log("Delivery event channel already running");
+    return;
+  }
 
   console.log("Starting delivery orders realtime listener...");
 
@@ -47,6 +50,50 @@ export function startDeliveryEvents() {
 }
 
 /**
+ * 🟢 LISTEN FOR MESSAGES
+ */
+export function startMessageEvents(userId: string) {
+  if (MessageEventChannel) {
+    console.log("Message event channel already running");
+    return;
+  }
+
+  console.log("Starting messages realtime listener...");
+
+  MessageEventChannel = supabase
+    .channel(`messages-channel-${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${userId}`,
+      },
+      (payload) => {
+        console.log("Message INSERT event received:", payload);
+        supabaseEvents.emit("message_insert", payload.new);
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${userId}`,
+      },
+      (payload) => {
+        console.log("Message UPDATE event received:", payload);
+        supabaseEvents.emit("message_update", payload.new);
+      },
+    )
+    .subscribe();
+
+  return MessageEventChannel;
+}
+
+/**
  * 🔴 STOP ONLY delivery LISTENER
  */
 export function stopDeliveryEvents() {
@@ -56,8 +103,18 @@ export function stopDeliveryEvents() {
 }
 
 /**
- * 🔴 STOP EVERYTHING (optional helper)
+ * 🔴 STOP ONLY message LISTENER
+ */
+export function stopMessageEvents() {
+  if (!MessageEventChannel) return;
+  MessageEventChannel.unsubscribe();
+  MessageEventChannel = null;
+}
+
+/**
+ * 🔴 STOP EVERYTHING
  */
 export function stopAllListeners() {
   stopDeliveryEvents();
+  stopMessageEvents();
 }

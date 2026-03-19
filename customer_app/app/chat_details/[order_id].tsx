@@ -1,7 +1,9 @@
 import {
   getMessages,
+  markMessagesAsRead,
   sendMessageToSupabase,
 } from "@/lib/supabase-app-functions";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { useUserStore } from "@/store/useUserStore";
 import { timeAgo } from "@/utils/my_utils";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,37 +23,43 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Helper function to format timestamp
-
 export default function ChatDetailScreen() {
   const { id: riderId, order_id, name } = useLocalSearchParams();
   const { fetchUserSession, user } = useUserStore();
+  const { setUnreadCount, fetchUnreadCounts, AllDeliveries } =
+    useCustomerDeliveryStore();
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  console.log("ChatDetailScreen params:", { riderId, order_id, name });
-  console.log("Current user:", user);
+  const flatListRef = useRef<FlatList>(null);
 
-  // Get current user session
   useEffect(() => {
     fetchUserSession();
   }, []);
 
-  const flatListRef = useRef<FlatList>(null);
-
-  // Fetching messages from API or Supabase
   useEffect(() => {
     const loadMessages = async () => {
       setLoading(true);
+
       const msgs = await getMessages(String(riderId));
       setMessages(msgs);
       setLoading(false);
+
       setTimeout(
         () => flatListRef.current?.scrollToEnd({ animated: true }),
         100,
       );
+
+      // Clear badge instantly in store
+      setUnreadCount(String(order_id), 0);
+
+      // Mark as read in DB
+      await markMessagesAsRead(Number(order_id));
+
+      // Refresh all counts from DB to stay in sync
+      fetchUnreadCounts(AllDeliveries.map((d) => String(d.id)));
     };
 
     loadMessages();
@@ -66,18 +74,17 @@ export default function ChatDetailScreen() {
       id: Date.now().toString(),
       message: message,
       sender_id: user?.id,
-      receiver_id: riderId as string, // Set appropriately based on your logic
+      receiver_id: riderId as string,
       delivery_order_id: Number(order_id),
       created_at: new Date().toISOString(),
+      is_read: false,
     };
 
-    // Optimistically update UI
     setMessages((prev) => [...prev, newMsg]);
     setMessage("");
     Keyboard.dismiss();
 
     try {
-      // Send message to Supabase
       await sendMessageToSupabase({
         message: newMsg.message,
         sender_id: user?.id!,
@@ -86,7 +93,6 @@ export default function ChatDetailScreen() {
       });
     } catch (error) {
       console.error("Failed to send message:", error);
-      // Optionally: Remove the optimistic message or show error
     }
 
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -145,36 +151,67 @@ export default function ChatDetailScreen() {
               ref={flatListRef}
               data={messages}
               keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
+              ListHeaderComponent={() => (
+                <View className="items-center py-3">
+                  <View className="flex-row items-center gap-2 px-4">
+                    <View className="flex-1 h-[0.5px] bg-gray-700" />
+                    <Text className="text-gray-600 text-xs tracking-widest uppercase">
+                      {messages.length} message
+                      {messages.length !== 1 ? "s" : ""}
+                    </Text>
+                    <View className="flex-1 h-[0.5px] bg-gray-700" />
+                  </View>
+                </View>
+              )}
+              renderItem={({ item, index }) => {
                 const isMyMessage = item.sender_id === user?.id;
 
+                // Show unread divider above the first unread message from the other person
+                const isFirstUnread =
+                  !item.is_read &&
+                  item.sender_id !== user?.id &&
+                  (index === 0 ||
+                    messages[index - 1]?.is_read ||
+                    messages[index - 1]?.sender_id === user?.id);
+
                 return (
-                  <View
-                    className={`my-1 px-4 ${
-                      isMyMessage ? "items-end" : "items-start"
-                    }`}
-                  >
+                  <>
+                    {isFirstUnread && (
+                      <View className="flex-row items-center gap-2 px-4 my-2">
+                        <View className="flex-1 h-[0.5px] bg-blue-100/60" />
+                        <Text className="text-blue-900/60 text-[10px] tracking-widest uppercase">
+                          Unread
+                        </Text>
+                        <View className="flex-1 h-[0.5px] bg-blue-100/60" />
+                      </View>
+                    )}
+
                     <View
-                      className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                        isMyMessage
-                          ? "bg-blue-500 rounded-br-none"
-                          : "bg-gray-700 rounded-bl-none"
+                      className={`my-1 px-4 ${
+                        isMyMessage ? "items-end" : "items-start"
                       }`}
                     >
-                      <Text className="text-white text-base">
-                        {item.message}
-                      </Text>
-
-                      {/* Timestamp */}
-                      <Text
-                        className={`text-xs mt-1 ${
-                          isMyMessage ? "text-blue-100" : "text-gray-400"
+                      <View
+                        className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                          isMyMessage
+                            ? "bg-blue-500 rounded-br-none"
+                            : "bg-gray-700 rounded-bl-none"
                         }`}
                       >
-                        {timeAgo(item.created_at)}
-                      </Text>
+                        <Text className="text-white text-base">
+                          {item.message}
+                        </Text>
+
+                        <Text
+                          className={`text-xs mt-1 ${
+                            isMyMessage ? "text-blue-100" : "text-gray-400"
+                          }`}
+                        >
+                          {timeAgo(item.created_at)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
+                  </>
                 );
               }}
               contentContainerStyle={{ paddingVertical: 10 }}
