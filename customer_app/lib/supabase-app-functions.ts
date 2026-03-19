@@ -520,26 +520,34 @@ export const sendMessageToSupabase = async (messageData: {
   }
 };
 
-export const getUnreadMessageCount = async (
-  orderId: number,
-): Promise<number> => {
+export const getUnreadMessageCounts = async (): Promise<
+  Record<number, number>
+> => {
   try {
-    const { success, userId } = await getCurrentUserId();
-    if (!success || !userId) return 0;
+    const user = await requireUser();
 
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from("messages")
-      .select("*", { count: "exact", head: true })
-      .eq("delivery_order_id", orderId)
-      .eq("receiver_id", userId)
+      .select("delivery_order_id")
+      .eq("receiver_id", user.id)
       .eq("is_read", false);
 
-    console.log(`Unread messages for order ${orderId}:`, count);
+    if (error) throw error;
 
-    if (error) return 0;
-    return count ?? 0;
-  } catch {
-    return 0;
+    // Group and count by delivery_order_id
+    const counts: Record<number, number> = {};
+    for (const row of data ?? []) {
+      const id = row.delivery_order_id;
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+
+    return counts;
+  } catch (err: any) {
+    console.error(
+      "Unexpected error fetching unread counts:",
+      err.message || err,
+    );
+    return {};
   }
 };
 

@@ -16,8 +16,8 @@ export type SupabaseEventMap = {
   delivery_update: DeliveryOrder;
   delivery_delete: DeliveryOrder;
   waypoint_insert: any;
-  message_insert: MessageRow;
-  unread_count_increment: UnreadCountIncrement;
+  message_insert: any; // replace with actual message type
+  message_update: any; // replace with actual message type
 };
 
 // Create typed emitter

@@ -109,22 +109,19 @@ export function startWaypointEvents(orderId: string | number) {
  *   "message_insert" → payload.new (new MessageRow)
  *   "unread_count_increment" → { order_id: string } (for badge update)
  */
-export async function startMessageEvents() {
+/**
+ * 🟢 LISTEN FOR MESSAGES
+ */
+export function startMessageEvents(userId: string) {
   if (MessagesEventChannel) {
-    console.log("Messages event channel already running");
-    return MessagesEventChannel;
-  }
-
-  const { success, userId } = await getCurrentUserId();
-  if (!success || !userId) {
-    console.warn("⚠️ Cannot start message listener — no user session");
-    return null;
+    console.log("Message event channel already running");
+    return;
   }
 
   console.log("Starting messages realtime listener...");
 
   MessagesEventChannel = supabase
-    .channel("messages-channel")
+    .channel(`messages-channel-${userId}`)
     .on(
       "postgres_changes",
       {
@@ -134,15 +131,21 @@ export async function startMessageEvents() {
         filter: `receiver_id=eq.${userId}`,
       },
       (payload) => {
-        console.log("📩 New message received:", payload.new);
-
-        // Emit the full message for any screen that wants it (e.g. ChatDetailScreen)
+        console.log("Message INSERT event received:", payload);
         supabaseEvents.emit("message_insert", payload.new);
-
-        // Emit a targeted badge increment for the delivery store
-        supabaseEvents.emit("unread_count_increment", {
-          order_id: String(payload.new.delivery_order_id),
-        });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${userId}`,
+      },
+      (payload) => {
+        console.log("Message UPDATE event received:", payload);
+        supabaseEvents.emit("message_update", payload.new);
       },
     )
     .subscribe();

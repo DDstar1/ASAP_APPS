@@ -89,7 +89,7 @@ export default function RootLayout() {
     console.log(`${user.id} logged in, setting up realtime listeners...`);
 
     // Start messages realtime (anonymous users CAN receive messages)
-    startMessageEvents(); // add this
+    startMessageEvents(user.id); // add this
 
     // Cleanup
     return () => {
