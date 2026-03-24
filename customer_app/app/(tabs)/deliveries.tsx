@@ -204,6 +204,7 @@ const OrdersPage = () => {
           )}
           ListEmptyComponent={() => (
             <CompletedOrdersEmptyState
+              activeDeliveriesCount={activeDeliveries.length}
               onSendPackage={() => {
                 setItemTypeVisible(true);
               }}

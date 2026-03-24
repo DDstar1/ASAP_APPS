@@ -11,9 +11,13 @@ import { Animated, Easing, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
   onSendPackage?: () => void;
+  activeDeliveriesCount?: any; // For potential future use (e.g. "You have X active deliveries")
 };
 
-const CompletedOrdersEmptyState = ({ onSendPackage }: Props) => {
+const CompletedOrdersEmptyState = ({
+  activeDeliveriesCount,
+  onSendPackage,
+}: Props) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -97,7 +101,7 @@ const CompletedOrdersEmptyState = ({ onSendPackage }: Props) => {
       {/* <View className="h-px bg-[#1F2230]/80 my-1" /> */}
 
       {/* Optional CTA nudge */}
-      {onSendPackage && (
+      {onSendPackage && activeDeliveriesCount == 0 && (
         <TouchableOpacity
           onPress={onSendPackage}
           activeOpacity={0.75}
