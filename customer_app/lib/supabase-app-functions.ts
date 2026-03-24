@@ -41,6 +41,14 @@ export async function getCurrentUserId() {
   }
 }
 
+async function requireUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    throw new Error("User not authenticated");
+  }
+  return data.user;
+}
+
 export const handleLogout = async () => {
   try {
     const { error } = await supabase.auth.signOut();

@@ -19,7 +19,10 @@ import Animated, {
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+<<<<<<< HEAD
 import { useUnreadCountStore } from "@/store/useUnreadCountStore";
+=======
+>>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
 import { DeliveryOrder } from "@/utils/my_types";
 import { openOrderChat } from "@/utils/my_utils";
 import { router } from "expo-router";
@@ -35,11 +38,17 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
   const [cancelling, setCancelling] = useState(false);
 
   const pulseProgress = useSharedValue(0);
+<<<<<<< HEAD
   const { removeDelivery } = useCustomerDeliveryStore();
 
   const unreadCount = useUnreadCountStore(
     (state) => state.counts[item.id] ?? 0,
   );
+=======
+  const { removeDelivery, unreadCounts } = useCustomerDeliveryStore();
+
+  const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
+>>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
 
   useEffect(() => {
     if (normalizedStatus === "pending") {
@@ -113,6 +122,7 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
             onPress={() => openOrderChat(item.id)}
             className="p-2 bg-gray-200 rounded-full"
           >
+<<<<<<< HEAD
             {MY_ICONS.message("black", 25)}
 
             {/* Unread badge */}
@@ -123,6 +133,31 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
                 </Text>
               </View>
             )}
+=======
+            {/* Icon + unread badge */}
+            <View>
+              {MY_ICONS.message("black", 25)}
+              {unreadCount > 0 && (
+                <View
+                  className="absolute bg-red-500 rounded-full items-center justify-center"
+                  style={{
+                    top: -5,
+                    right: -5,
+                    minWidth: 17,
+                    height: 17,
+                    paddingHorizontal: 3,
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 9, lineHeight: 11 }}
+                    className="text-white font-bold"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+>>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
           </TouchableOpacity>
         )}
 
