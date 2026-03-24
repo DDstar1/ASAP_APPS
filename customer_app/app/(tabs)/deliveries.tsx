@@ -1,11 +1,12 @@
 // app/(tabs)/orders.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Dimensions,
   FlatList,
-  RefreshControl,
   SectionList,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,27 +16,32 @@ import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import CompletedOrderCards from "@/components/CompletedOrderCards";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
 import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
+import ActiveDeliveriesEmptyState from "@/components/ActiveDeliveriesEmptyState";
+import CompletedOrdersEmptyState from "@/components/CompletedOrdersEmptyState";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+import { router } from "expo-router";
+import SelectItemTypeScreen from "@/components/SelectItemTypeScreen";
 
-const ACCENT_COLOR = "#4F8EF7";
+// ─── Kinetic Noir tokens ───────────────────────────────────────────────────
+// primary:           #ff923e
+// surface (base):    #080e1c
+// surface-container-low:     #0d1424
+// surface-container-high:    #111827
+// surface-container-highest: #1a2235
+// on-surface:        #e0e5f9
+// on-surface-variant:#a5abbd
+// ---------------------------------------------------------------------------
 
 const OrdersPage = () => {
   const { width } = Dimensions.get("window");
+  const [ItemTypeVisible, setItemTypeVisible] = useState(false);
   const { AllDeliveries, loading, fetchAllDeliveries } =
     useCustomerDeliveryStore();
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchAllDeliveries();
   }, []);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchAllDeliveries();
-    setRefreshing(false);
-  };
-
-  // Active = anything not yet delivered
   const activeDeliveries = useMemo(
     () =>
       AllDeliveries.filter(
@@ -47,13 +53,21 @@ const OrdersPage = () => {
     [AllDeliveries],
   );
 
-  // Completed = delivered
   const completedDeliveries = useMemo(
     () => AllDeliveries.filter((item) => item.status === "delivered"),
+
     [AllDeliveries],
   );
 
+  console.log("Active Deliveries:", activeDeliveries);
+  console.log("Completed Deliveries:", completedDeliveries);
   // ─── Sub-components ────────────────────────────────────────────────────────
+
+  /**
+   * SectionLabel
+   * "ACTIVE  [2]" — uppercase label with optional count badge.
+   * Matches the design-system's editorial hierarchy: small label + count pill.
+   */
   const SectionLabel = ({
     title,
     count,
@@ -62,12 +76,14 @@ const OrdersPage = () => {
     count?: number;
   }) => (
     <View className="flex-row items-center gap-2">
-      <Text className="text-[11px] font-bold tracking-widest text-[#7A7F9A] uppercase">
+      <Text className="text-[11px] font-bold tracking-widest text-[#a5abbd] uppercase">
         {title}
       </Text>
       {count !== undefined && (
-        <View className="bg-[#1A1C24] rounded-lg px-2 py-0.5 border border-[#1F2230]">
-          <Text className="text-[11px] font-semibold text-[#7A7F9A]">
+        // Surface-container-highest pill — no hard border (No-Line rule),
+        // tonal contrast defines the boundary.
+        <View className="bg-[#1a2235] rounded-lg px-2 py-0.5">
+          <Text className="text-[11px] font-semibold text-[#a5abbd]">
             {count}
           </Text>
         </View>
@@ -75,28 +91,32 @@ const OrdersPage = () => {
     </View>
   );
 
-  const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
+  /**
+   * Divider
+   * "2px vertical gap of the base surface color" — design-system rule.
+   * Very low opacity so it never reads as a hard 1px line.
+   */
+  const Divider = () => <View className="h-px bg-[#e0e5f9]/[0.06] mx-6 my-2" />;
 
-  const refreshControl = (
-    <RefreshControl
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      tintColor={ACCENT_COLOR}
-      colors={[ACCENT_COLOR]}
-    />
-  );
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
+    // Surface base: #080e1c — the deep saturated navy-black foundation
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#080e1c]">
       {/* ── Header ── */}
       <View className="flex-row items-center justify-between px-6 pt-3 pb-5">
-        <View>
-          <Text className="text-[28px] font-extrabold text-[#F0F2F8] -tracking-wide">
-            My Orders
-          </Text>
-        </View>
-        <View className="w-11 h-11 rounded-2xl bg-[#1C2E52] items-center justify-center border border-[#4F8EF7]/20">
-          {MY_ICONS.message(ACCENT_COLOR, 20)}
+        {/* Display-lg title — editorial scale difference vs section labels */}
+        <Text className="text-[28px] font-extrabold text-[#e0e5f9] -tracking-wide">
+          My Orders
+        </Text>
+
+        {/*
+          Message icon button — surface-container-highest bg.
+          Ghost border at outline-variant opacity (No full-opacity border rule).
+          Primary tint on the border to tie to brand.
+        */}
+        <View className="w-11 h-11 rounded-2xl bg-[#1a2235] items-center justify-center border border-[#ff923e]/20">
+          {MY_ICONS.message("#ff923e", 20)}
         </View>
       </View>
 
@@ -110,6 +130,7 @@ const OrdersPage = () => {
         />
       </View>
 
+      {/* maxHeight caps the horizontal scroll area at roughly one card height */}
       <View style={{ maxHeight: 240 }}>
         {loading ? (
           <FlatList
@@ -138,20 +159,7 @@ const OrdersPage = () => {
               <IncompleteDeliveryCard item={item} width={width} />
             )}
             ListEmptyComponent={() => (
-              <View
-                style={{ width: width - 48, height: 72 }}
-                className="bg-[#12141A] rounded-2xl border my-4 border-dashed border-[#1F2230] flex-row items-center px-5 gap-4"
-              >
-                <Text className="text-2xl">📦</Text>
-                <View className="gap-0.5">
-                  <Text className="text-sm font-bold text-[#F0F2F8]">
-                    No Active Orders
-                  </Text>
-                  <Text className="text-xs text-[#7A7F9A]">
-                    Your current deliveries will appear here
-                  </Text>
-                </View>
-              </View>
+              <ActiveDeliveriesEmptyState width={width} />
             )}
           />
         )}
@@ -168,6 +176,7 @@ const OrdersPage = () => {
       </View>
 
       {loading ? (
+        // Surface-container-low background behind the skeleton list
         <View className="flex-1 px-6 gap-3">
           {[1, 2, 3, 4].map((_, i) => (
             <CompletedOrderSkeleton key={i} />
@@ -175,24 +184,57 @@ const OrdersPage = () => {
         </View>
       ) : (
         <SectionList
-          sections={[{ title: "Completed", data: completedDeliveries }]}
+          sections={
+            completedDeliveries?.length
+              ? [{ title: "Completed", data: completedDeliveries }]
+              : []
+          }
           keyExtractor={(item, index) => `${String(item.id)}-${index}`}
           renderItem={({ item }) => <CompletedOrderCards item={item} />}
           stickySectionHeadersEnabled
-          className="flex-1 px-6"
+          className=" px-6 "
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
-          ItemSeparatorComponent={() => <View className="h-px bg-[#1F2230]" />}
-          refreshControl={refreshControl}
+          contentContainerStyle={{
+            paddingBottom: 32,
+            flexGrow: 1, // 👈 THIS IS KEY
+          }}
+          // Separator: ghost divider, very low opacity — never a hard 1px line
+          ItemSeparatorComponent={() => (
+            <View className="h-px bg-[#e0e5f9]/[0.06]" />
+          )}
           ListEmptyComponent={() => (
-            <View className="py-8 items-center">
-              <Text className="text-sm text-[#3D4160]">
-                No completed orders yet
-              </Text>
-            </View>
+            <CompletedOrdersEmptyState
+              onSendPackage={() => {
+                setItemTypeVisible(true);
+              }}
+            />
           )}
         />
       )}
+
+      {/* Select Item Modal */}
+      <SelectItemTypeScreen
+        visible={ItemTypeVisible}
+        onClose={() => setItemTypeVisible(false)}
+        onConfirm={async (packageType, description) => {
+          console.log("📦 Selected type:", packageType);
+          console.log("📝 Description:", description);
+
+          try {
+            router.navigate({
+              pathname: "/map",
+              params: {
+                packageType,
+                packageDescription: description,
+              },
+            });
+          } catch (error) {
+            console.error("Failed to save package type:", error);
+            Alert.alert("Error", "Failed to save package type");
+            router.navigate("/map");
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
