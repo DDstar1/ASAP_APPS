@@ -56,7 +56,10 @@ export default function AccountScreen() {
         {/* Menu Section 2 */}
         <View className="mt-4 mx-4 rounded-2xl bg-[#2c2c2e]">
           <MenuItem title="Settings" />
-          <MenuItem title="Messages" />
+          <MenuItem
+            onclick={() => router.navigate("all_chats")}
+            title="Messages"
+          />
           <MenuItem title="Become a driver" border={false} />
         </View>
 
@@ -82,9 +85,18 @@ export default function AccountScreen() {
   );
 }
 
-function MenuItem({ title, border = true }) {
+function MenuItem({
+  title,
+  onclick = () => {},
+  border = true,
+}: {
+  title: string;
+  onclick?: () => void;
+  border?: boolean;
+}) {
   return (
     <TouchableOpacity
+      onPress={onclick}
       className={`flex-row justify-between items-center px-4 py-4 ${
         border ? "border-b border-gray-600/50" : ""
       }`}

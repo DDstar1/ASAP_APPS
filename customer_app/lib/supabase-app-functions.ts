@@ -11,7 +11,7 @@ import type {
   RiderDistanceInfo,
   SavedLocationInput,
 } from "@/utils/my_types";
-import { formatMessageTime } from "@/utils/my_utils";
+import { formatMessageTime } from "@/lib/supabase-utils";
 import {
   checkOrderExists,
   deleteOldPendingDeliveries,
@@ -154,6 +154,14 @@ export async function getCusUserById(userId: string) {
     console.error("❌ Error fetching user:", err.message);
     return null;
   }
+}
+
+async function requireUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    throw new Error("User not authenticated");
+  }
+  return data.user;
 }
 
 export async function uploadDeliveryImage(
@@ -540,6 +548,8 @@ export const getUnreadMessageCounts = async (): Promise<
       const id = row.delivery_order_id;
       counts[id] = (counts[id] ?? 0) + 1;
     }
+
+    console.log("Unread message counts:", counts);
 
     return counts;
   } catch (err: any) {

@@ -18,44 +18,7 @@ function timeAgo(timestamp: string | Date) {
   const days = Math.floor(diff / 86400);
   return days > 1 ? `${days} days ago` : `1 day ago`;
 }
-function formatMessageTime(timestamp: string | Date): string {
-  const messageDate = new Date(timestamp);
-  const now = new Date();
-  const diffInMs = now.getTime() - messageDate.getTime();
-  const diffInHours = diffInMs / (1000 * 60 * 60);
-  const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
-  // Today - show time (e.g., "2:45 PM")
-  if (diffInHours < 24 && messageDate.getDate() === now.getDate()) {
-    return messageDate.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  }
-
-  // Yesterday - show time (e.g., "8:20 PM")
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (messageDate.getDate() === yesterday.getDate()) {
-    return messageDate.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  }
-
-  // This week - show day name (e.g., "Mon", "Tue")
-  if (diffInDays < 7) {
-    return messageDate.toLocaleDateString("en-US", { weekday: "short" });
-  }
-
-  // Older - show date (e.g., "Jan 15")
-  return messageDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 function cleanAddress(address: string) {
   if (!address) return "";
 
@@ -150,7 +113,6 @@ export {
   openOrderTrackPage,
   openOrderChat,
   timeAgo,
-  formatMessageTime,
   generateOrderCode,
   generateConfirmationCodes,
 };
