@@ -1,250 +1,276 @@
-import {
-  getMessages,
-  markMessagesAsRead,
-  sendMessageToSupabase,
-} from "@/lib/supabase-app-functions";
-import { useUnreadCountStore } from "@/store/useUnreadCountStore";
-import { useUserStore } from "@/store/useUserStore";
-import { timeAgo } from "@/utils/my_utils";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { Stack, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
+  Alert,
+  Image,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
-export default function ChatDetailScreen() {
-  const { id: riderId, order_id, name } = useLocalSearchParams();
-  const { fetchUserSession, user } = useUserStore();
-  const { clearCount } = useUnreadCountStore();
+import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+import { DeliveryOrder } from "@/utils/my_types";
+import { openOrderChat } from "@/utils/my_utils";
+import { router } from "expo-router";
 
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+type Props = {
+  item: DeliveryOrder;
+  width: number;
+};
 
-  const flatListRef = useRef<FlatList>(null);
-  const orderId = Number(order_id);
+const IncompleteDeliveryCard = ({ item, width }: Props) => {
+  const rawStatus = item.status;
+  const normalizedStatus = rawStatus?.trim().toLowerCase();
+  const [cancelling, setCancelling] = useState(false);
+
+  const pulseProgress = useSharedValue(0);
+  const { removeDelivery, unreadCounts } = useCustomerDeliveryStore();
+
+  const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
 
   useEffect(() => {
-    fetchUserSession();
-  }, []);
-
-  useEffect(() => {
-    const loadMessages = async () => {
-      setLoading(true);
-
-      const msgs = await getMessages(String(riderId));
-      setMessages(msgs);
-      setLoading(false);
-
-      setTimeout(
-        () => flatListRef.current?.scrollToEnd({ animated: true }),
-        100,
+    if (normalizedStatus === "pending") {
+      pulseProgress.value = withRepeat(
+        withTiming(1, { duration: 600 }),
+        -1,
+        true,
       );
-
-      // Mark as read + clear badge
-      await markMessagesAsRead(orderId);
-      clearCount(orderId);
-    };
-
-    loadMessages();
-  }, [order_id]);
-
-  const sendMessage = async () => {
-    if (!message.trim()) return;
-
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    const newMsg = {
-      id: Date.now().toString(),
-      message: message,
-      sender_id: user?.id,
-      receiver_id: riderId as string,
-      delivery_order_id: orderId,
-      created_at: new Date().toISOString(),
-      is_read: false,
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-    setMessage("");
-    Keyboard.dismiss();
-
-    try {
-      await sendMessageToSupabase({
-        message: newMsg.message,
-        sender_id: user?.id!,
-        receiver_id: riderId as string,
-        delivery_order_id: orderId,
-      });
-    } catch (error) {
-      console.error("Failed to send message:", error);
+    } else {
+      pulseProgress.value = 0;
     }
+  }, [normalizedStatus]);
 
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity:
+      normalizedStatus === "pending"
+        ? interpolate(pulseProgress.value, [0, 1], [0.3, 1])
+        : 1,
+    transform:
+      normalizedStatus === "pending"
+        ? [{ scale: interpolate(pulseProgress.value, [0, 1], [0.6, 20]) }]
+        : [{ scale: 1 }],
+  }));
+
+  const handleCancel = () => {
+    Alert.alert(
+      "Cancel Order",
+      `Are you sure you want to cancel order #${item.order_code}?`,
+      [
+        { text: "Keep Order", style: "cancel" },
+        {
+          text: "Cancel Order",
+          style: "destructive",
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              removeDelivery(item.order_code);
+            } catch (err) {
+              setCancelling(false);
+              Alert.alert("Error", "Failed to cancel order. Please try again.");
+            }
+          },
+        },
+      ],
+    );
   };
 
-  // Pre-compute first unread index
-  const firstUnreadIndex = messages.findIndex(
-    (msg) => msg.sender_id !== user?.id && msg.is_read === false,
-  );
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 50}
+    <View
+      style={{ width: width * 0.9, height: "100%" }}
+      className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3 mr-4"
     >
-      <SafeAreaView
-        className="flex-1 bg-gray-900"
-        edges={["left", "right", "bottom"]}
-      >
-        <Stack.Screen
-          options={{
-            headerTitle: () => (
-              <View className="flex-row items-center gap-2">
-                <View className="w-10 h-10 rounded-full bg-gray-700 items-center justify-center">
-                  <Text className="text-white font-semibold text-base">
-                    {name ? String(name).charAt(0).toUpperCase() : "#"}
+      {/* Top-right action buttons */}
+      <View className="absolute top-3 z-20 right-3 flex-col gap-3">
+        {/* Map button */}
+        <TouchableOpacity
+          onPress={() =>
+            router.replace({
+              pathname: "/trackPackage",
+              params: { order_id: item.id },
+            })
+          }
+          className="p-2 bg-gray-200 rounded-full"
+        >
+          {MY_ICONS.map("black", 25)}
+        </TouchableOpacity>
+
+        {/* Message button — hidden while pending */}
+        {normalizedStatus !== "pending" && (
+          <TouchableOpacity
+            onPress={() => openOrderChat(item.id)}
+            className="p-2 bg-gray-200 rounded-full"
+          >
+            {/* Icon + unread badge */}
+            <View>
+              {MY_ICONS.message("black", 25)}
+              {unreadCount > 0 && (
+                <View
+                  className="absolute bg-red-500 rounded-full items-center justify-center"
+                  style={{
+                    top: -5,
+                    right: -5,
+                    minWidth: 17,
+                    height: 17,
+                    paddingHorizontal: 3,
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 9, lineHeight: 11 }}
+                    className="text-white font-bold"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </Text>
                 </View>
-                <Text className="text-black text-lg font-semibold">
-                  {name ? String(name) : `Chat #${order_id}`}
-                </Text>
-              </View>
-            ),
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={() =>
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                }
-                className="mr-2"
-              >
-                <Ionicons name="call" size={24} color="black" />
-              </TouchableOpacity>
-            ),
-          }}
-        />
-
-        {/* Messages */}
-        <View className="flex-1 justify-center">
-          {loading ? (
-            <ActivityIndicator size="large" color="#3B82F6" />
-          ) : messages.length === 0 ? (
-            <View className="flex-1 items-center justify-center px-8">
-              <Ionicons name="chatbubbles-outline" size={64} color="#6B7280" />
-              <Text className="text-gray-400 text-center mt-4 text-base">
-                No messages yet. Start the conversation!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              keyExtractor={(item) => item.id.toString()}
-              ListHeaderComponent={() => (
-                <View className="items-center py-3">
-                  <View className="flex-row items-center gap-2 px-4">
-                    <View className="flex-1 h-[0.5px] bg-gray-700" />
-                    <Text className="text-gray-600 text-xs tracking-widest uppercase">
-                      {messages.length} message
-                      {messages.length !== 1 ? "s" : ""}
-                    </Text>
-                    <View className="flex-1 h-[0.5px] bg-gray-700" />
-                  </View>
-                </View>
               )}
-              renderItem={({ item, index }) => {
-                const isMyMessage = item.sender_id === user?.id;
-                const isFirstUnread = index === firstUnreadIndex;
-
-                return (
-                  <>
-                    {/* Unread separator */}
-                    {isFirstUnread && (
-                      <View className="flex-row items-center px-4 my-3">
-                        <View className="flex-1 h-px bg-blue-500 opacity-50" />
-                        <View className="mx-3 px-3 py-1 bg-blue-500/20 rounded-full border border-blue-500/40">
-                          <Text className="text-blue-400 text-xs font-semibold">
-                            Unread messages
-                          </Text>
-                        </View>
-                        <View className="flex-1 h-px bg-blue-500 opacity-50" />
-                      </View>
-                    )}
-
-                    <View
-                      className={`my-1 px-4 ${
-                        isMyMessage ? "items-end" : "items-start"
-                      }`}
-                    >
-                      <View
-                        className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-                          isMyMessage
-                            ? "bg-blue-500 rounded-br-none"
-                            : "bg-gray-700 rounded-bl-none"
-                        }`}
-                      >
-                        <Text selectable className="text-white text-base">
-                          {item.message}
-                        </Text>
-                        <Text
-                          className={`text-xs mt-1 ${
-                            isMyMessage ? "text-blue-100" : "text-gray-400"
-                          }`}
-                        >
-                          {timeAgo(item.created_at)}
-                        </Text>
-                      </View>
-                    </View>
-                  </>
-                );
-              }}
-              contentContainerStyle={{ paddingVertical: 10 }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              onContentSizeChange={() =>
-                flatListRef.current?.scrollToEnd({ animated: true })
-              }
-            />
-          )}
-        </View>
-
-        {/* Input bar */}
-        <View className="flex-row items-center px-4 py-3 border-t border-gray-800">
-          <TextInput
-            className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-2xl mr-2"
-            placeholder="Type a message..."
-            placeholderTextColor="#9CA3AF"
-            value={message}
-            onChangeText={setMessage}
-            onSubmitEditing={sendMessage}
-            returnKeyType="send"
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            onPress={sendMessage}
-            activeOpacity={0.8}
-            className={`p-3 rounded-full ${
-              message.trim() ? "bg-blue-500" : "bg-gray-700"
-            }`}
-            disabled={!message.trim()}
-          >
-            <Ionicons name="send" size={20} color="white" />
+            </View>
           </TouchableOpacity>
+        )}
+
+        {/* Cancel button — only while pending */}
+        {normalizedStatus === "pending" && (
+          <TouchableOpacity
+            onPress={handleCancel}
+            disabled={cancelling}
+            className="p-2 bg-red-500/90 rounded-full"
+          >
+            {cancelling ? (
+              <ActivityIndicator size={25} color="white" />
+            ) : (
+              MY_ICONS.cancel("white", 25)
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Left Side */}
+      <View className="flex-1 mr-20 z-10">
+        <Text selectable className="text-white text-lg font-bold mb-2">
+          #{item.order_code}
+        </Text>
+
+        <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
+        <View className="flex-row items-center mb-2">
+          {MY_ICONS.location("#9CA3AF", 14)}
+          <Text numberOfLines={2} className="text-white text-sm ml-2">
+            {item.pickup_name || "Unknown"}
+          </Text>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+
+        <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
+        <View className="flex-row items-center mb-2">
+          {MY_ICONS.location("#9CA3AF", 14)}
+          <Text numberOfLines={2} className="text-white text-sm ml-2">
+            {item.dropoff_name || "Unknown"}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center">
+          {/* Status Section */}
+          <View className="flex-1">
+            <Text
+              className={`text-gray-400 text-xs mb-1 ${
+                normalizedStatus === "pending" ? "ml-[63px]" : ""
+              }`}
+            >
+              Status
+            </Text>
+
+            <View className="flex-row items-center relative">
+              {/* Pulsating background effect */}
+              <Animated.View
+                style={[
+                  pulseStyle,
+                  {
+                    opacity: 0.1,
+                    position: "absolute",
+                    zIndex: -20,
+                    left: 0,
+                  },
+                ]}
+              >
+                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
+              </Animated.View>
+
+              {/* Static foreground circle */}
+              <View style={{ zIndex: 10 }}>
+                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
+              </View>
+
+              <View className="ml-2 flex-1">
+                <Text
+                  className={`text-white text-sm ${
+                    normalizedStatus === "pending" ? "ml-[50px]" : ""
+                  }`}
+                >
+                  {rawStatus?.replace("_", " ")}
+                </Text>
+
+                {normalizedStatus === "pending" && (
+                  <Text className="ml-[50px] text-gray-400 text-xs">
+                    Awaiting a rider...
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Code Section */}
+          <View>
+            <Text className="text-gray-400 text-xs">Pickup Code</Text>
+            <Text
+              selectable
+              className="text-white text-xs font-semibold tracking-wider mb-1"
+            >
+              {item.pickup_code}
+            </Text>
+            <Text className="text-gray-400 text-xs">Dropoff Code</Text>
+            <Text
+              selectable
+              className="text-white text-xs font-semibold tracking-wider"
+            >
+              {item.dropoff_code}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Map / Image */}
+      <MaskedView
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "50%",
+          height: "110%",
+        }}
+        maskElement={
+          <LinearGradient
+            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={{ flex: 1 }}
+          />
+        }
+      >
+        <Image
+          source={IMAGES.indomie_package}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="cover"
+        />
+      </MaskedView>
+    </View>
   );
-}
+};
+
+export default IncompleteDeliveryCard;

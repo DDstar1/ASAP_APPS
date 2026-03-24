@@ -3,7 +3,7 @@ import { supabaseEvents } from "@/lib/supabase";
 import {
   deleteDeliveryByOrderCode,
   getAllClientDeliveries,
-  getUnreadMessageCount,
+  getUnreadMessageCounts,
 } from "@/lib/supabase-app-functions";
 import { create } from "zustand";
 
@@ -80,7 +80,7 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
           const counts = await Promise.all(
             orderIds.map(async (id) => ({
               id,
-              count: await getUnreadMessageCount(Number(id)),
+              count: await getUnreadMessageCounts(),
             })),
           );
 

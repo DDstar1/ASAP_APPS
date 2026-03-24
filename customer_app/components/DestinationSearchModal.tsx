@@ -231,7 +231,7 @@ export default function DestinationSearchModal({
         );
       case "no_saved":
         return (
-          <View className="p-4 bg-gray-800 rounded-xl mb-2 items-center">
+          <View className="w-2/3  self-end p-4 bg-gray-800 rounded-xl mb-2 m items-center">
             <Text className="text-gray-400 text-center">
               No saved locations yet.
             </Text>
