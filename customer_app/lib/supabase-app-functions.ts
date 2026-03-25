@@ -164,14 +164,6 @@ export async function getCusUserById(userId: string) {
   }
 }
 
-async function requireUser() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    throw new Error("User not authenticated");
-  }
-  return data.user;
-}
-
 export async function uploadDeliveryImage(
   fileUri: string,
   bucketName = "package_images", // ✅ Renamed for clarity

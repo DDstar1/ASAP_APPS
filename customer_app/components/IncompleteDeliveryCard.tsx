@@ -19,10 +19,6 @@ import Animated, {
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
-<<<<<<< HEAD
-import { useUnreadCountStore } from "@/store/useUnreadCountStore";
-=======
->>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
 import { DeliveryOrder } from "@/utils/my_types";
 import { openOrderChat } from "@/utils/my_utils";
 import { router } from "expo-router";
@@ -38,17 +34,9 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
   const [cancelling, setCancelling] = useState(false);
 
   const pulseProgress = useSharedValue(0);
-<<<<<<< HEAD
-  const { removeDelivery } = useCustomerDeliveryStore();
-
-  const unreadCount = useUnreadCountStore(
-    (state) => state.counts[item.id] ?? 0,
-  );
-=======
   const { removeDelivery, unreadCounts } = useCustomerDeliveryStore();
 
   const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
->>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
 
   useEffect(() => {
     if (normalizedStatus === "pending") {
@@ -122,18 +110,6 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
             onPress={() => openOrderChat(item.id)}
             className="p-2 bg-gray-200 rounded-full"
           >
-<<<<<<< HEAD
-            {MY_ICONS.message("black", 25)}
-
-            {/* Unread badge */}
-            {unreadCount > 0 && (
-              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1">
-                <Text className="text-white text-[10px] font-bold">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            )}
-=======
             {/* Icon + unread badge */}
             <View>
               {MY_ICONS.message("black", 25)}
@@ -157,7 +133,6 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
                 </View>
               )}
             </View>
->>>>>>> 9bb8c77c4d950f8c4084d2f6c41b79817134161e
           </TouchableOpacity>
         )}
 
