@@ -10,15 +10,33 @@ import {
   Platform,
   Pressable,
   Animated,
+  Keyboard,
 } from "react-native";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 
 export function UpdatePhoneModal({ visible, onClose }) {
   const [newPhone, setNewPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
+
+  const [behaviour, setBehaviour] = useState<"padding" | undefined>("padding");
+
+  useEffect(() => {
+    const showListener = Keyboard.addListener("keyboardDidShow", () => {
+      setBehaviour("padding");
+    });
+    const hideListener = Keyboard.addListener("keyboardDidHide", () => {
+      setBehaviour(undefined);
+    });
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   const otpHeight = useRef(new Animated.Value(0)).current;
   const otpOpacity = useRef(new Animated.Value(0)).current;
@@ -100,13 +118,7 @@ export function UpdatePhoneModal({ visible, onClose }) {
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{
-          flex: 1,
-          justifyContent: "flex-end",
-        }}
-      >
+      <MyKeyboardAvoidingWrapper>
         <Pressable className="flex-1 bg-black/90" onPress={handleClose} />
 
         <SafeAreaView
@@ -231,7 +243,7 @@ export function UpdatePhoneModal({ visible, onClose }) {
             )}
           </TouchableOpacity>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </MyKeyboardAvoidingWrapper>
     </Modal>
   );
 }

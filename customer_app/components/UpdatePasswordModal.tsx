@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 
 export function UpdatePasswordModal({ visible, onClose }) {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -61,10 +62,7 @@ export function UpdatePasswordModal({ visible, onClose }) {
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1, justifyContent: "flex-end" }}
-      >
+      <MyKeyboardAvoidingWrapper>
         <Pressable className="flex-1 bg-black/90" onPress={handleClose} />
 
         <SafeAreaView
@@ -157,7 +155,7 @@ export function UpdatePasswordModal({ visible, onClose }) {
             )}
           </TouchableOpacity>
         </SafeAreaView>
-      </KeyboardAvoidingView>
+      </MyKeyboardAvoidingWrapper>
     </Modal>
   );
 }
