@@ -16,6 +16,8 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useUserStore } from "@/store/useUserStore";
+import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
+import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -27,14 +29,23 @@ export default function AccountScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  // 🔄 Sync profile image from store
+  // Preferences
+  const [deliveryAlerts, setDeliveryAlerts] = useState(true);
+  const [promotions, setPromotions] = useState(false);
+  const [smsUpdates, setSmsUpdates] = useState(true);
+
+  // Modals
+  const [phoneModalVisible, setPhoneModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+
+  // Sync profile image
   useEffect(() => {
     if (user?.profileImage) {
       setProfileImage(user.profileImage);
     }
   }, [user]);
 
-  // 🔄 Pull-to-refresh handler
+  // Pull to refresh
   const onRefresh = async () => {
     try {
       setRefreshing(true);
@@ -85,10 +96,8 @@ export default function AccountScreen() {
         asset.mimeType,
       );
 
-      // 🔥 update UI instantly
       setProfileImage(publicUrl);
 
-      // 🔥 update global store
       setUser({
         ...user,
         profileImage: publicUrl,
@@ -113,7 +122,7 @@ export default function AccountScreen() {
           />
         }
       >
-        {/* 🔥 HERO */}
+        {/* HERO */}
         <View className="items-center mt-10">
           <View className="relative">
             <View className="rounded-2xl p-1 bg-[#ff923e]/20">
@@ -125,7 +134,6 @@ export default function AccountScreen() {
               />
             </View>
 
-            {/* Edit button */}
             <TouchableOpacity
               onPress={onEditProfileImage}
               disabled={uploadingImage}
@@ -142,97 +150,131 @@ export default function AccountScreen() {
           <Text className="text-[#e0e5f9] text-2xl font-bold mt-5">
             {user?.username ?? "User"}
           </Text>
+          <Text className="text-[#a5abbd] text-sm mt-1">
+            {user?.email ?? ""}
+          </Text>
         </View>
 
-        {/* ⚙️ PREFERENCES */}
-        <Section title="PREFERENCES">
-          <ToggleItem title="Delivery Alerts" active />
-          <ToggleItem title="Promotions" />
-          <ToggleItem title="SMS Updates" active />
+        {/* ACCOUNT SETTINGS */}
+        <Section title="ACCOUNT SETTINGS" icon="manage-accounts">
+          <EditItem
+            title="Phone Number"
+            subtitle={user?.phone ?? "Not set"}
+            icon="phone-android"
+            onPress={() => setPhoneModalVisible(true)}
+          />
+          <View className="h-px bg-[#1e2a40] mx-1" />
+          <EditItem
+            title="Password"
+            subtitle="Change password"
+            icon="lock-outline"
+            onPress={() => setPasswordModalVisible(true)}
+          />
         </Section>
 
-        {/* 💳 PAYMENTS */}
-        <Section title="PAYMENT ECOSYSTEM">
-          <PaymentCard title="Solana Wallet" value="12.45 SOL" />
-          <PaymentCard title="Business Debit" value="•••• 8821" />
-
-          <TouchableOpacity className="mt-4 py-4 rounded-2xl border border-[#ff923e]/30 items-center">
-            <Text className="text-[#ff923e] font-semibold">
-              + ADD NEW METHOD
-            </Text>
-          </TouchableOpacity>
+        {/* PREFERENCES */}
+        <Section title="PREFERENCES" icon="tune">
+          <ToggleItem
+            title="Delivery Alerts"
+            icon="notifications-active"
+            value={deliveryAlerts}
+            onValueChange={setDeliveryAlerts}
+          />
+          <ToggleItem
+            title="Promotions"
+            icon="local-offer"
+            value={promotions}
+            onValueChange={setPromotions}
+          />
+          <ToggleItem
+            title="SMS Updates"
+            icon="sms"
+            value={smsUpdates}
+            onValueChange={setSmsUpdates}
+          />
         </Section>
 
-        {/* 🧩 SUPPORT */}
-        <Section title="SUPPORT CENTER">
-          <View className="flex-row gap-4">
-            <SupportCard title="Browse FAQs" />
-            <SupportCard title="Live Chat" />
-          </View>
-        </Section>
-
-        {/* 🚀 CTA */}
+        {/* LOGOUT */}
         <TouchableOpacity
           onPress={onLogoutPress}
           disabled={loading}
-          className="mx-4 mt-8 mb-8 py-5 rounded-full items-center justify-center"
+          className="mx-4 mt-8 mb-6 py-5 rounded-full items-center justify-center flex-row gap-2"
           style={{ backgroundColor: "#ff923e" }}
         >
           {loading ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text className="text-black font-bold text-base">
-              LOGOUT ACCOUNT
-            </Text>
+            <>
+              <MaterialIcons name="logout" size={20} color="#000" />
+              <Text className="text-black font-bold text-base">
+                LOGOUT ACCOUNT
+              </Text>
+            </>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <UpdatePhoneModal
+        visible={phoneModalVisible}
+        onClose={() => setPhoneModalVisible(false)}
+      />
+      <UpdatePasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
-// --- Sub-components ---
+// ---------- COMPONENTS ----------
 
-function Section({ title, children }) {
+function Section({ title, icon, children }) {
   return (
     <View className="mx-4 mt-8">
-      <Text className="text-[#a5abbd] text-xs tracking-widest mb-4">
-        {title}
-      </Text>
+      <View className="flex-row items-center gap-2 mb-4">
+        <MaterialIcons name={icon} size={14} color="#a5abbd" />
+        <Text className="text-[#a5abbd] text-xs tracking-widest">{title}</Text>
+      </View>
       <View className="bg-[#121a2b] rounded-3xl p-4 space-y-3">{children}</View>
     </View>
   );
 }
 
-function ToggleItem({ title, active }) {
-  const [isEnabled, setIsEnabled] = useState(active ?? false);
+function EditItem({ title, subtitle, icon, onPress }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-row justify-between items-center py-3"
+    >
+      <View className="flex-row items-center gap-3">
+        <View className="w-8 h-8 rounded-xl bg-[#0f1626] items-center justify-center">
+          <MaterialIcons name={icon} size={16} color="#ff923e" />
+        </View>
+        <View>
+          <Text className="text-[#e0e5f9] text-sm">{title}</Text>
+          <Text className="text-[#a5abbd] text-xs mt-0.5">{subtitle}</Text>
+        </View>
+      </View>
+      <MaterialIcons name="chevron-right" size={20} color="#a5abbd" />
+    </TouchableOpacity>
+  );
+}
 
+function ToggleItem({ title, icon, value, onValueChange }) {
   return (
     <View className="flex-row justify-between items-center py-3">
-      <Text className="text-[#e0e5f9]">{title}</Text>
+      <View className="flex-row items-center gap-3">
+        <View className="w-8 h-8 rounded-xl bg-[#0f1626] items-center justify-center">
+          <MaterialIcons name={icon} size={16} color="#ff923e" />
+        </View>
+        <Text className="text-[#e0e5f9]">{title}</Text>
+      </View>
       <Switch
-        value={isEnabled}
-        onValueChange={setIsEnabled}
+        value={value}
+        onValueChange={onValueChange}
         trackColor={{ false: "#2a3245", true: "#ff923e" }}
-        thumbColor={isEnabled ? "#fff" : "#a5abbd"}
+        thumbColor={value ? "#fff" : "#a5abbd"}
       />
-    </View>
-  );
-}
-
-function PaymentCard({ title, value }) {
-  return (
-    <View className="bg-[#0f1626] p-4 rounded-2xl flex-row justify-between items-center">
-      <Text className="text-[#e0e5f9]">{title}</Text>
-      <Text className="text-[#ff923e] font-semibold">{value}</Text>
-    </View>
-  );
-}
-
-function SupportCard({ title }) {
-  return (
-    <View className="flex-1 bg-[#0f1626] p-4 rounded-2xl items-center">
-      <Text className="text-[#e0e5f9] text-sm">{title}</Text>
     </View>
   );
 }

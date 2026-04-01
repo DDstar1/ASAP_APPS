@@ -159,8 +159,16 @@ export default function RootLayout() {
 
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-        <Stack.Screen
+        {/* <Stack.Screen
           name="saved-locations"
+          options={{
+            headerShown: false,
+            presentation: "transparentModal",
+          }}
+        /> */}
+
+        <Stack.Screen
+          name="all_chats/index"
           options={{
             headerShown: false,
             presentation: "transparentModal",
