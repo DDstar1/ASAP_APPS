@@ -1,5 +1,5 @@
 import { IMAGES } from "@/assets/assetsData";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as ImagePicker from "expo-image-picker";
 import {
   Image,
   ScrollView,
@@ -7,15 +7,44 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Switch,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { handleLogout } from "@/lib/supabase-app-functions";
+import { handleLogout, updateProfileImage } from "@/lib/supabase-app-functions";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function AccountScreen() {
   const router = useRouter();
+
+  const { user, fetchUserSession, setUser } = useUserStore();
+
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // 🔄 Sync profile image from store
+  useEffect(() => {
+    if (user?.profileImage) {
+      setProfileImage(user.profileImage);
+    }
+  }, [user]);
+
+  // 🔄 Pull-to-refresh handler
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchUserSession();
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const onLogoutPress = async () => {
     try {
@@ -28,46 +57,91 @@ export default function AccountScreen() {
     }
   };
 
+  const onEditProfileImage = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        alert("Permission to access media library is required.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setUploadingImage(true);
+
+      const publicUrl = await updateProfileImage(
+        user?.id ?? "",
+        asset.uri,
+        asset.mimeType,
+      );
+
+      // 🔥 update UI instantly
+      setProfileImage(publicUrl);
+
+      // 🔥 update global store
+      setUser({
+        ...user,
+        profileImage: publicUrl,
+      });
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert("Failed to update profile image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 pb-2 bg-[#080e1c]">
-      <ScrollView>
+      <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#ff923e"
+            colors={["#ff923e"]}
+          />
+        }
+      >
         {/* 🔥 HERO */}
         <View className="items-center mt-10">
-          <View className="rounded-2xl p-1 bg-[#ff923e]/20">
-            <Image
-              source={IMAGES.profile_img}
-              className="w-28 h-28 rounded-2xl"
-            />
+          <View className="relative">
+            <View className="rounded-2xl p-1 bg-[#ff923e]/20">
+              <Image
+                source={
+                  profileImage ? { uri: profileImage } : IMAGES.profile_img
+                }
+                className="w-28 h-28 rounded-2xl"
+              />
+            </View>
+
+            {/* Edit button */}
+            <TouchableOpacity
+              onPress={onEditProfileImage}
+              disabled={uploadingImage}
+              className="absolute -bottom-2 -right-2 bg-[#ff923e] rounded-full p-1.5"
+            >
+              {uploadingImage ? (
+                <ActivityIndicator size={14} color="#000" />
+              ) : (
+                <MaterialIcons name="edit" size={14} color="#000" />
+              )}
+            </TouchableOpacity>
           </View>
 
-          <View className="flex-row items-center mt-3 bg-[#ff923e] px-3 py-1 rounded-full">
-            <Text className="text-black font-semibold text-sm">4.9 ★</Text>
-          </View>
-
-          <Text className="text-[#e0e5f9] text-2xl font-bold mt-3">
-            Marcus Vance
+          <Text className="text-[#e0e5f9] text-2xl font-bold mt-5">
+            {user?.username ?? "User"}
           </Text>
-
-          <Text className="text-[#a5abbd] text-sm mt-1 tracking-widest">
-            ELITE COURIER • LEVEL 4
-          </Text>
-        </View>
-
-        {/* 📊 STATS CARD */}
-        <View className="mx-4 mt-8 p-5 rounded-3xl bg-[#121a2b]">
-          <Text className="text-[#a5abbd] text-xs tracking-widest mb-2">
-            WEEKLY PERFORMANCE
-          </Text>
-
-          <Text className="text-[#e0e5f9] text-xl font-bold mb-4">
-            Driver Stats
-          </Text>
-
-          <View className="flex-row justify-between">
-            <Stat label="Orders" value="142" />
-            <Stat label="Earned" value="$2.4k" highlight />
-            <Stat label="Online" value="38h" />
-          </View>
         </View>
 
         {/* ⚙️ PREFERENCES */}
@@ -101,10 +175,8 @@ export default function AccountScreen() {
         <TouchableOpacity
           onPress={onLogoutPress}
           disabled={loading}
-          className="mx-4 mt-8 py-5 rounded-full items-center justify-center"
-          style={{
-            backgroundColor: "#ff923e",
-          }}
+          className="mx-4 mt-8 mb-8 py-5 rounded-full items-center justify-center"
+          style={{ backgroundColor: "#ff923e" }}
         >
           {loading ? (
             <ActivityIndicator color="#000" />
@@ -119,28 +191,7 @@ export default function AccountScreen() {
   );
 }
 
-function Stat({ label, value, highlight }) {
-  return (
-    <View
-      className={`flex-1 p-3 rounded-2xl ${
-        highlight ? "bg-[#ff923e]" : "bg-[#0f1626]"
-      }`}
-    >
-      <Text
-        className={`text-xs ${highlight ? "text-black" : "text-[#a5abbd]"}`}
-      >
-        {label}
-      </Text>
-      <Text
-        className={`text-lg font-bold ${
-          highlight ? "text-black" : "text-[#e0e5f9]"
-        }`}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
+// --- Sub-components ---
 
 function Section({ title, children }) {
   return (
@@ -148,21 +199,22 @@ function Section({ title, children }) {
       <Text className="text-[#a5abbd] text-xs tracking-widest mb-4">
         {title}
       </Text>
-
       <View className="bg-[#121a2b] rounded-3xl p-4 space-y-3">{children}</View>
     </View>
   );
 }
 
 function ToggleItem({ title, active }) {
+  const [isEnabled, setIsEnabled] = useState(active ?? false);
+
   return (
     <View className="flex-row justify-between items-center py-3">
       <Text className="text-[#e0e5f9]">{title}</Text>
-
-      <View
-        className={`w-12 h-6 rounded-full ${
-          active ? "bg-[#ff923e]" : "bg-[#2a3245]"
-        }`}
+      <Switch
+        value={isEnabled}
+        onValueChange={setIsEnabled}
+        trackColor={{ false: "#2a3245", true: "#ff923e" }}
+        thumbColor={isEnabled ? "#fff" : "#a5abbd"}
       />
     </View>
   );

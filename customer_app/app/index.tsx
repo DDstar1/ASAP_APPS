@@ -7,13 +7,16 @@ export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
-    // redirect to onboarding when app starts
-    router.replace("/onboarding");
+    const timer = setTimeout(() => {
+      router.replace("/onboarding");
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <View className="flex-1 justify-center items-center">
-      <ActivityIndicator size="large" color="black" />
+      <ActivityIndicator size="large" color="#ff923e" />
     </View>
   );
 }

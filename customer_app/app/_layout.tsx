@@ -119,7 +119,7 @@ export default function RootLayout() {
   /* -------------------------------------------------
    * 3️⃣ Prevent rendering until fonts load
    * ------------------------------------------------- */
-  if (!loaded) return null;
+  // if (!loaded) return null;
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
