@@ -221,6 +221,9 @@ export default function AccountScreen() {
       <UpdatePasswordModal
         visible={passwordModalVisible}
         onClose={() => setPasswordModalVisible(false)}
+        onForgotPassword={() =>
+          router.push("/auth/resetPassword/forgot-password")
+        }
       />
     </SafeAreaView>
   );

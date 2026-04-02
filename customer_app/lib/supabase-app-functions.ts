@@ -796,3 +796,63 @@ export const getMessagesList = async () => {
     return { success: false, error: err, data: [] };
   }
 };
+
+/**
+ * Get settings for a specific user
+ * @param userId - the UUID of the user
+ * @returns success flag, settings data, and optional error
+ */
+export async function getUserSettings(): Promise<{
+  success: boolean;
+  data?: {
+    delivery_alerts: boolean;
+    promotions: boolean;
+    sms_updates: boolean;
+  } | null;
+  error?: any;
+}> {
+  try {
+    const user = await requireUser();
+    const userId = user.id;
+    const { data, error } = await supabase
+      .from("settings")
+      .select("delivery_alerts, promotions, sms_updates")
+      .eq("id", userId)
+      .single(); // since id is primary key
+
+    if (error) {
+      console.error("❌ Error fetching user settings:", error.message);
+      return { success: false, data: null, error };
+    }
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error("❌ Unexpected error fetching user settings:", err.message);
+    return { success: false, data: null, error: err };
+  }
+}
+
+export async function updateUserSetting(
+  userId: string,
+  newSettings: Partial<{
+    delivery_alerts: boolean;
+    promotions: boolean;
+    sms_updates: boolean;
+  }>,
+): Promise<{ success: boolean; data?: any; error?: any }> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .update(newSettings)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error("❌ updateUserSetting error:", err.message);
+    return { success: false, error: err };
+  }
+}

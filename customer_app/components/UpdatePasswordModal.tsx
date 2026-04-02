@@ -6,15 +6,13 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
 } from "react-native";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 
-export function UpdatePasswordModal({ visible, onClose }) {
+export function UpdatePasswordModal({ visible, onClose, onForgotPassword }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,6 +51,11 @@ export function UpdatePasswordModal({ visible, onClose }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = () => {
+    handleClose();
+    onForgotPassword?.();
   };
 
   return (
@@ -98,7 +101,18 @@ export function UpdatePasswordModal({ visible, onClose }) {
             onToggleShow={() => setShowCurrent(!showCurrent)}
           />
 
-          <View className="h-3" />
+          {/* Forgot password — sits flush right under the current password field */}
+          <TouchableOpacity
+            onPress={handleForgotPassword}
+            className="self-end mt-1.5 mb-1"
+            hitSlop={{ top: 6, bottom: 6, left: 12, right: 4 }}
+          >
+            <Text className="text-[#ff923e] text-xs font-medium">
+              Forgot password?
+            </Text>
+          </TouchableOpacity>
+
+          <View className="h-2" />
 
           {/* New Password */}
           <PasswordField

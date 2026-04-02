@@ -48,6 +48,9 @@ export default function RootLayout() {
   });
 
   const [pendingLink, setPendingLink] = useState<PendingLink | null>(null);
+  const [passwordResetToken, setPasswordResetToken] = useState<string | null>(
+    null,
+  );
 
   // ✅ Fetch user session from Supabase
   useEffect(() => {
@@ -59,17 +62,30 @@ export default function RootLayout() {
    * ------------------------------------------------- */
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { hostname, queryParams } = Linking.parse(event.url);
+      const parsed = Linking.parse(event.url);
 
       console.log("📩 Incoming deep link:", event.url);
 
-      if (hostname === "view-location" && queryParams) {
-        const lat = normalizeParam(queryParams.lat);
-        const lng = normalizeParam(queryParams.lng);
+      // Manually extract fragment (everything after #)
+      const hashIndex = event.url.indexOf("#");
+      const fragment = hashIndex >= 0 ? event.url.substring(hashIndex + 1) : "";
 
-        if (lat && lng) {
-          setPendingLink({ lat, lng });
-        }
+      console.log("🔹 fragment:", fragment);
+
+      // ✅ Handle Supabase password recovery
+      if (fragment.includes("type=recovery")) {
+        console.log(
+          "🔐 Detected password recovery link, navigating to reset screen...",
+        );
+        setPasswordResetToken(fragment); // Store token if needed later
+      }
+
+      // Existing logic: location links
+      if (parsed.hostname === "view-location" && parsed.queryParams) {
+        const lat = normalizeParam(parsed.queryParams.lat);
+        const lng = normalizeParam(parsed.queryParams.lng);
+
+        if (lat && lng) setPendingLink({ lat, lng });
       }
     };
 
@@ -115,6 +131,27 @@ export default function RootLayout() {
 
     setPendingLink(null);
   }, [loaded, pendingLink]);
+
+  /* -------------------------------------------------
+   * 2️⃣ Navigate To Set New Password Screen (if token exists)
+   * ------------------------------------------------- */
+  // RootLayout.tsx
+  useEffect(() => {
+    if (!loaded || !passwordResetToken) return;
+
+    console.log(
+      "Detected password recovery token, navigating to set-new-password...",
+    );
+    router.navigate({
+      pathname: "/auth/resetPassword/set-new-password",
+      params: {
+        token: passwordResetToken,
+      },
+    });
+
+    // DON'T clear the token here! Let the page handle session restoration.
+    // setPasswordResetToken(null);
+  }, [loaded, passwordResetToken]);
 
   /* -------------------------------------------------
    * 3️⃣ Prevent rendering until fonts load

@@ -59,8 +59,8 @@ const OrdersPage = () => {
     [AllDeliveries],
   );
 
-  console.log("Active Deliveries:", activeDeliveries);
-  console.log("Completed Deliveries:", completedDeliveries);
+  console.log("Active Deliveries:", activeDeliveries?.length);
+  console.log("Completed Deliveries:", completedDeliveries?.length);
   // ─── Sub-components ────────────────────────────────────────────────────────
 
   /**

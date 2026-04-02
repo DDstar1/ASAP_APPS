@@ -1,34 +1,171 @@
-| Role                   | Hex       | Tailwind Class    | Usage                                        |
-| ---------------------- | --------- | ----------------- | -------------------------------------------- |
-| **Primary Background** | `#111827` | `bg-gray-900`     | App background, SafeAreaView                 |
-| **Surface / Cards**    | `#3C3C43` | custom gray       | Cards, modals, banners, quick action circles |
-| **Primary Text**       | `#FFFFFF` | `text-white`      | Headings, key info                           |
-| **Secondary Text**     | `#9CA3AF` | `text-gray-400`   | Labels, muted info, icons                    |
-| **Tertiary Text**      | `#D1D5DB` | `text-gray-300`   | Input text, subtle UI                        |
-| **Accent Orange**      | `#F97316` | `bg-orange-500`   | CTAs, buttons, user avatars                  |
-| **Status Orange**      | `#FB923C` | `text-orange-400` | In-progress status                           |
-| **Status Green**       | `#34D399` | `text-green-400`  | Completed status                             |
-| **Border Gray**        | `#9CA3AF` | `border-gray-400` | Search input border, dividers                |
-| **Accent Blue**        | `#2563EB` | `text-blue-600`   | (Optional) route polyline / highlights       |
+# Design System Document: Logistics & Delivery Excellence
 
 
-white abd yellow tab layout theme
-   <Tabs
-      screenOptions={{
-        tabBarHideOnKeyboard: true,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopColor: "#E5E7EB",
-          borderTopWidth: 2,
-        },
-        tabBarActiveTintColor: "#10B981", // green-500
-        tabBarInactiveTintColor: "#9CA3AF", // gray-400
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-        },
-      }}
-    >
+
+## 1. Overview & Creative North Star: "The Kinetic Noir"
+
+This design system moves away from the sterile, utilitarian aesthetic of typical logistics apps. Instead, it adopts **"The Kinetic Noir"**—a creative North Star that treats the movement of goods as a premium, high-speed experience.
+By leveraging a deep, midnight foundation (`surface`) contrasted against high-octane oranges (`primary`), we create an environment that feels both authoritative and urgent. We break the "template" look through **intentional asymmetry**, using staggered card layouts and expansive typography scales that feel more like a luxury editorial magazine than a database. The goal is to provide the user with a sense of "command and control" through sophisticated depth and breathing room.
+
+
+
+---
+
+
+
+## 2. Colors
+
+Our palette is rooted in a high-contrast dark mode designed to reduce eye strain for couriers and customers alike, while maintaining a signature "glow."
+
+
+
+### Core Palette
+
+- **Primary (`#ff923e`):** Used for critical action paths and brand presence.
+- **Surface (`#080e1c`):** The foundation. A deep, saturated navy-black.
+- **On-Surface (`#e0e5f9`):** High-readability cool white for primary information.
+- **On-Surface-Variant (`#a5abbd`):** The "Secondary Text" for timestamps and metadata.
+
+
+
+### The "No-Line" Rule
+
+To achieve a premium feel, **1px solid borders are strictly prohibited** for sectioning. Definition must be created through background shifts. For example, a delivery tracking card (`surface-container-high`) should sit atop the main background (`surface`) without a stroke. The contrast in tonal value is sufficient to define the boundary.
+
+
+
+### Surface Hierarchy & Nesting
+
+Use the `surface-container` tiers to create "physical" depth:
+
+- **Surface (Base):** Global background.
+- **Surface-Container-Low:** Subtle grouping areas (e.g., background behind a list).
+- **Surface-Container-Highest:** Interactive cards and active delivery modules.
+
+
+### The "Glass & Gradient" Rule
+
+Floating elements, such as the bottom navigation or urgent alerts, should utilize a **Glassmorphism** effect:
+
+- **Background:** `surface-variant` at 60% opacity.
+- **Effect:** 20px Backdrop Blur.
+- **Signature Texture:** Apply a subtle linear gradient from `primary` to `primary-container` on major CTAs to give them a "machined" metallic sheen rather than a flat, plastic appearance.
+
+
+
+---
+
+
+
+## 3. Typography
+
+We utilize a dual-font strategy to balance character with functional clarity.
+
+
+
+* **Display & Headlines (Plus Jakarta Sans):** Chosen for its modern, geometric curves. Use `display-lg` for welcome states and `headline-sm` for section titles like "Track Shipping."
+* **Body & Labels (Inter):** The industry standard for legibility. Used for all data-heavy points (Tracking IDs, addresses).
+
+
+
+**Editorial Hierarchy:** Use extreme scale differences. A `display-md` page title ("My Orders") paired with a `label-sm` metadata tag ("#ASAP-EQSW") creates a sophisticated, intentional contrast that guides the eye immediately to the most important information.
+
+
+
+---
+
+
+
+## 4. Elevation & Depth
+
+In this system, elevation is a product of light and shadow, not lines.
+
+
+
+### The Layering Principle
+
+Stack tiers to create natural lift. Place a `surface-container-highest` card (the most urgent delivery) on top of a `surface-container-low` section. The "lift" is perceived through the shift in brightness.
+
+
+
+### Ambient Shadows
+
+For floating elements like the "Link Wallet" button or the floating action menu:
+
+- **Shadow:** 0px 12px 32px.
+- **Color:** `surface-container-lowest` at 8% opacity.
+- **Tint:** The shadow should be tinted with 2% of the `primary` orange to simulate the orange light reflecting off the dark surface.
+
+
+
+### The "Ghost Border" Fallback
+
+If a container requires a border for accessibility (e.g., input fields), use the **Ghost Border**:
+
+- **Token:** `outline-variant`.
+- **Opacity:** 15%.
+- **Rule:** Never use 100% opacity for borders; it breaks the "Kinetic Noir" immersion.
+
+
+
+---
+
+
+
+## 5. Components
+
+
+
+### Primary Buttons (Large)
+
+- **Rounding:** `full` (9999px) for a "pill" aesthetic that feels ergonomic.
+- **Style:** Gradient fill from `primary` to `primary-container`.
+- **Text:** `title-md` (Inter, Bold).
+- **Padding:** `4` (1rem) vertical, `8` (2rem) horizontal.
+
+
+
+### Rounded Cards
+
+- **Rounding:** `xl` (1.5rem) for main containers; `lg` (1rem) for nested items.
+- **Logic:** Forbid dividers. Use `spacing-6` (1.5rem) to separate internal card content (e.g., separating "Pickup" from "Dropoff" addresses).
+
+
+
+### Bottom Navigation
+
+- **Structure:** Home, Deliveries, Account.
+- **Visuals:** Transparent background with a `surface-variant` backdrop blur.
+- **Active State:** Use the `primary` orange for the icon and a small `primary` glow dot beneath the active label.
+
+
+
+### Input Fields
+
+- **Background:** `surface-container-highest`.
+- **Shape:** `md` (0.75rem).
+- **Interaction:** On focus, the `outline` becomes `primary` at 40% opacity—a soft glow rather than a hard line.
+
+
+
+---
+
+
+
+## 6. Do's and Don'ts
+
+
+
+### Do
+
+- **Do** use `spacing-10` and `spacing-12` between major sections to allow the dark theme to "breathe."
+- **Do** use the `tertiary` (yellow/gold) tokens for "In Progress" or "Pending" states to maintain high visibility against the blue-gray background.
+- **Do** utilize `surface-bright` for hover states on dark cards to provide immediate tactile feedback.
+
+
+
+### Don't
+
+- **Don't** use pure white (#FFFFFF) for text. Always use `on-surface` (#e0e5f9) to prevent "haloing" and visual vibration.
+- **Don't** use standard 1px dividers to separate delivery items in a list. Use a `2px` vertical gap of the base `surface` color to create a "slotted" look.
+- **Don't** use shadows on every card. Shadows are reserved for elements that actually "float" over the UI, not for those that are part of the page flow.
