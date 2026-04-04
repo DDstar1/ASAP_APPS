@@ -1,4 +1,4 @@
-import { getOrderClientInfo } from "@/lib/supabase-functions";
+import { getOrderClientInfo } from "@/lib/supabase-app-functions";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { Alert, Linking } from "react-native";

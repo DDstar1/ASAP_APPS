@@ -17,6 +17,7 @@ import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
+import ActiveDeliveriesEmptyState from "@/components/ActiveDeliveriesEmptyState";
 
 const HIGHLIGHT_WINDOW = 120_000; // 2 minutes
 const ACCENT_COLOR = "#4F8EF7";
@@ -157,20 +158,7 @@ const OrdersPage = () => {
               />
             )}
             ListEmptyComponent={() => (
-              <View
-                style={{ width: width - 48, height: 150 }}
-                className="bg-[#12141A] rounded-2xl border border-dashed border-[#1F2230] flex-row items-center px-5 gap-4"
-              >
-                <Text className="text-4xl">📦</Text>
-                <View className="gap-0.5">
-                  <Text className="text-lg font-bold text-[#F0F2F8]">
-                    No Ongoing Deliveries
-                  </Text>
-                  <Text className="text-md text-[#7A7F9A]">
-                    Ongoing deliveries will appear here
-                  </Text>
-                </View>
-              </View>
+              <ActiveDeliveriesEmptyState width={width} />
             )}
           />
         )}

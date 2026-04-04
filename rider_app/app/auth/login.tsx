@@ -13,7 +13,7 @@ import * as Linking from "expo-linking";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
-import { signInUser } from "@/lib/supabase-functions";
+import { signInUser } from "@/lib/supabase-app-functions";
 
 const redirectTo = makeRedirectUri({
   scheme: "com.asapRider",

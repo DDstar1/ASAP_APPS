@@ -879,3 +879,31 @@ export async function updateUserSetting(
     return { success: false, error: err };
   }
 }
+
+export async function updateUserPassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  // Step 1: Get current user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) throw new Error("No authenticated user found.");
+
+  // Step 2: Verify current password by re-signing in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (signInError) throw new Error("Current password is incorrect.");
+
+  // Step 3: Update to new password
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) throw updateError;
+}

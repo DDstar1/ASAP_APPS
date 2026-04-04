@@ -11,7 +11,7 @@ import {
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 import * as Location from "expo-location";
 import { startTracking } from "@/utils/utils_orderLocationTracking";
-import { acceptDeliveryOrder } from "@/lib/supabase-functions";
+import { acceptDeliveryOrder } from "@/lib/supabase-app-functions";
 import { router } from "expo-router";
 
 interface OrderSummaryProps {

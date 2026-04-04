@@ -1,6 +1,6 @@
 // store/deliveryStore.ts
 import { create } from "zustand";
-import { getRiderAcceptedDeliveries } from "@/lib/supabase-functions";
+import { getRiderAcceptedDeliveries } from "@/lib/supabase-app-functions";
 
 interface AcceptedDelivery {
   id: number;

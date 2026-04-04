@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { supabaseEvents } from "@/lib/supabase";
-import { getUnreadMessageCounts } from "@/lib/supabase-functions";
+import { getUnreadMessageCounts } from "@/lib/supabase-app-functions";
 
 type UnreadCounts = Record<number, number>;
 

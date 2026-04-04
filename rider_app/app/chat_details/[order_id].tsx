@@ -4,7 +4,7 @@ import {
   getMessages,
   markMessagesAsRead,
   sendMessageToSupabase,
-} from "@/lib/supabase-functions";
+} from "@/lib/supabase-app-functions";
 import { useUnreadCountStore } from "@/store/useUnreadCountStore";
 import { useUserStore } from "@/store/useUserStore";
 import { timeAgo } from "@/utils/utils_for_me";

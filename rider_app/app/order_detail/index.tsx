@@ -1,5 +1,5 @@
 import { IMAGES } from "@/assets/assetsData";
-import { getDeliveryOrderByCode } from "@/lib/supabase-functions";
+import { getDeliveryOrderByCode } from "@/lib/supabase-app-functions";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useNavigation } from "expo-router";

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { supabaseEvents } from "@/lib/supabase";
 import { RiderOrder } from "@/utils/my_types";
-import { fetchAvailableOrders } from "@/lib/supabase-functions";
+import { fetchAvailableOrders } from "@/lib/supabase-app-functions";
 
 interface RiderOrdersState {
   availableOrders: RiderOrder[];

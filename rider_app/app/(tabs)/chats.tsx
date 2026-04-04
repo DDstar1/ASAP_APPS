@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
-import { getMessagesList } from "@/lib/supabase-functions";
+import { getMessagesList } from "@/lib/supabase-app-functions";
 import { openOrderChat } from "@/utils/utils_for_me";
 
 const ChatsListPage = () => {

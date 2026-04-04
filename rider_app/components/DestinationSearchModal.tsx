@@ -59,7 +59,7 @@ export default function DestinationSearchModal({
       const filtered = locationSuggestions.filter(
         (location) =>
           location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          location.address.toLowerCase().includes(searchQuery.toLowerCase())
+          location.address.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredSuggestions(filtered);
     }

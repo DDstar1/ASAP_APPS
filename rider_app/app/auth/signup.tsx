@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { makeRedirectUri } from "expo-auth-session";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as Linking from "expo-linking";
-import { signUpUser } from "@/lib/supabase-functions";
+import { signUpUser } from "@/lib/supabase-app-functions";
 
 const createSessionFromUrl = async (url: string) => {
   const { params } = QueryParams.getQueryParams(url);

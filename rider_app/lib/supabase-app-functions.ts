@@ -4,6 +4,7 @@ import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
+import { createUploadTask } from "expo-file-system/legacy";
 
 export async function getCurrentUserId() {
   try {
@@ -133,6 +134,28 @@ async function requireUser() {
     throw new Error("User not authenticated");
   }
   return data.user;
+}
+
+/* -------------------------------------------------
+ * User
+ * ------------------------------------------------- */
+
+export async function getCusUserById(userId: string) {
+  try {
+    if (!userId) throw new Error("User ID is required");
+
+    const { data, error } = await supabase
+      .from("custom_users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    console.error("❌ Error fetching user:", err.message);
+    return null;
+  }
 }
 
 export async function updateRiderLocation(latitude: number, longitude: number) {
@@ -617,4 +640,126 @@ export const verifyDeliveryCode = async (
     console.error("Unexpected error in verifyDeliveryCode:", err);
     return { success: false, error: "An unexpected error occurred" };
   }
+};
+
+export async function getUserSettings(): Promise<{
+  success: boolean;
+  data?: {
+    delivery_alerts: boolean;
+    promotions: boolean;
+    sms_updates: boolean;
+  } | null;
+  error?: any;
+}> {
+  const DEFAULT_SETTINGS = {
+    delivery_alerts: true,
+    promotions: false,
+    sms_updates: true,
+  };
+  try {
+    const user = await requireUser();
+    const userId = user.id;
+
+    const { data, error } = await supabase
+      .from("settings")
+      .select("delivery_alerts, promotions, sms_updates")
+      .eq("id", userId)
+      .single();
+
+    // Row exists — return it
+    if (!error) return { success: true, data };
+
+    // Unexpected error (not "row not found")
+    if (error.code !== "PGRST116") {
+      console.error("❌ Error fetching user settings:", error.message);
+      return { success: false, data: null, error };
+    }
+
+    // Row doesn't exist — create it with defaults
+    const { data: newRow, error: insertError } = await supabase
+      .from("settings")
+      .insert({ id: userId, ...DEFAULT_SETTINGS })
+      .select("delivery_alerts, promotions, sms_updates")
+      .single();
+
+    if (insertError) {
+      console.error("❌ Error creating default settings:", insertError.message);
+      return { success: false, data: null, error: insertError };
+    }
+
+    return { success: true, data: newRow };
+  } catch (err: any) {
+    console.error("❌ Unexpected error fetching user settings:", err.message);
+    return { success: false, data: null, error: err };
+  }
+}
+
+export async function updateUserSetting(
+  userId: string,
+  newSettings: Partial<{
+    delivery_alerts: boolean;
+    promotions: boolean;
+    sms_updates: boolean;
+  }>,
+): Promise<{ success: boolean; data?: any; error?: any }> {
+  try {
+    const { data, error } = await supabase
+      .from("settings")
+      .update(newSettings)
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error("❌ updateUserSetting error:", err.message);
+    return { success: false, error: err };
+  }
+}
+
+/* -------------------------------------------------
+ * Profile Image
+ * ------------------------------------------------- */
+
+export const updateProfileImage = async (
+  userId: string,
+  imageUri: string,
+  mimeType?: string,
+): Promise<string> => {
+  const fileExt = imageUri.split(".").pop() ?? "jpg";
+  const fileName = `${userId}_${Date.now()}.${fileExt}`;
+
+  // Use signed upload URL + upload task (consistent with uploadDeliveryImage)
+  const { data: signedData, error: signedError } = await supabase.storage
+    .from("profile_image_bucket")
+    .createSignedUploadUrl(fileName);
+
+  if (signedError) throw signedError;
+
+  const uploadTask = createUploadTask(signedData.signedUrl, imageUri, {
+    httpMethod: "PUT",
+    headers: { "Content-Type": mimeType ?? "image/jpeg" },
+  });
+
+  const result = await uploadTask.uploadAsync();
+  if (result.status !== 200) {
+    throw new Error(`Profile image upload failed with status ${result.status}`);
+  }
+
+  const { data: urlData } = supabase.storage
+    .from("profile_image_bucket")
+    .getPublicUrl(fileName);
+
+  const publicUrl = urlData.publicUrl;
+
+  const { error: dbError } = await supabase
+    .from("custom_users")
+    .update({ profileImage: publicUrl })
+    .eq("id", userId);
+
+  if (dbError) throw dbError;
+
+  return publicUrl;
 };
