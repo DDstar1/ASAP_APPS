@@ -802,6 +802,7 @@ export const getMessagesList = async () => {
  * @param userId - the UUID of the user
  * @returns success flag, settings data, and optional error
  */
+
 export async function getUserSettings(): Promise<{
   success: boolean;
   data?: {
@@ -811,21 +812,43 @@ export async function getUserSettings(): Promise<{
   } | null;
   error?: any;
 }> {
+  const DEFAULT_SETTINGS = {
+    delivery_alerts: true,
+    promotions: false,
+    sms_updates: true,
+  };
   try {
     const user = await requireUser();
     const userId = user.id;
+
     const { data, error } = await supabase
       .from("settings")
       .select("delivery_alerts, promotions, sms_updates")
       .eq("id", userId)
-      .single(); // since id is primary key
+      .single();
 
-    if (error) {
+    // Row exists — return it
+    if (!error) return { success: true, data };
+
+    // Unexpected error (not "row not found")
+    if (error.code !== "PGRST116") {
       console.error("❌ Error fetching user settings:", error.message);
       return { success: false, data: null, error };
     }
 
-    return { success: true, data };
+    // Row doesn't exist — create it with defaults
+    const { data: newRow, error: insertError } = await supabase
+      .from("settings")
+      .insert({ id: userId, ...DEFAULT_SETTINGS })
+      .select("delivery_alerts, promotions, sms_updates")
+      .single();
+
+    if (insertError) {
+      console.error("❌ Error creating default settings:", insertError.message);
+      return { success: false, data: null, error: insertError };
+    }
+
+    return { success: true, data: newRow };
   } catch (err: any) {
     console.error("❌ Unexpected error fetching user settings:", err.message);
     return { success: false, data: null, error: err };

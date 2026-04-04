@@ -41,7 +41,7 @@ const normalizeParam = (value?: string | string[]): string | undefined => {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const { fetchUserSession, user } = useUserStore();
+  const { fetchUserSession, user, setIsResettingPassword } = useUserStore();
 
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -78,6 +78,7 @@ export default function RootLayout() {
           "🔐 Detected password recovery link, navigating to reset screen...",
         );
         setPasswordResetToken(fragment); // Store token if needed later
+        setIsResettingPassword(true);
       }
 
       // Existing logic: location links

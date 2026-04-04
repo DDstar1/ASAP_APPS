@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
-import { getCusUserById } from "@/lib/supabase-app-functions"; // 👈 import it
+import { getCusUserById } from "@/lib/supabase-app-functions";
 
 type AppUser = {
   id: string;
   email?: string;
-
   username?: string;
   profileImage?: string | null;
   custom_role?: string;
@@ -15,8 +14,10 @@ type AppUser = {
 type UserState = {
   user: AppUser | null;
   loading: boolean;
+  isResettingPassword: boolean;
 
   setUser: (user: AppUser | null) => void;
+  setIsResettingPassword: (val: boolean) => void;
   fetchUserSession: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -24,14 +25,16 @@ type UserState = {
 export const useUserStore = create<UserState>((set) => ({
   user: null,
   loading: true,
+  isResettingPassword: false,
 
   setUser: (user) => set({ user }),
+
+  setIsResettingPassword: (val) => set({ isResettingPassword: val }),
 
   fetchUserSession: async () => {
     set({ loading: true });
 
     try {
-      // 🔹 get auth session
       const { data: sessionData, error } = await supabase.auth.getSession();
 
       if (error) throw error;
@@ -43,14 +46,11 @@ export const useUserStore = create<UserState>((set) => ({
         return;
       }
 
-      // 🔥 use YOUR function here
       const customUser = await getCusUserById(authUser.id);
 
-      // 🔥 merge
       const mergedUser: AppUser = {
         id: authUser.id,
         email: authUser.email,
-
         username: customUser?.username,
         profileImage: customUser?.profileImage,
         custom_role: customUser?.custom_role,

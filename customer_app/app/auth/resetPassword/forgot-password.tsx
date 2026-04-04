@@ -144,7 +144,8 @@ export default function ForgotPasswordScreen() {
                 color={canSubmit ? "#000" : "#ff923e"}
               />
               <Text
-                className={`font-extrabold text-sm  uppercase ${
+                numberOfLines={1}
+                className={`font-extrabold text-sm uppercase ${
                   canSubmit ? "text-black" : "text-orange-400/50"
                 }`}
               >

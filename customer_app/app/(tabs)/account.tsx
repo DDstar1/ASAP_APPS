@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useUserStore } from "@/store/useUserStore";
+import { useSettingsStore } from "@/store/useUserSettingsStore";
 import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
 import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
 
@@ -23,16 +24,12 @@ export default function AccountScreen() {
   const router = useRouter();
 
   const { user, fetchUserSession, setUser } = useUserStore();
+  const { settings, fetchSettings, updateSettings } = useSettingsStore();
 
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  // Preferences
-  const [deliveryAlerts, setDeliveryAlerts] = useState(true);
-  const [promotions, setPromotions] = useState(false);
-  const [smsUpdates, setSmsUpdates] = useState(true);
 
   // Modals
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
@@ -45,11 +42,21 @@ export default function AccountScreen() {
     }
   }, [user]);
 
+  // Fetch settings on mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchSettings(user.id);
+    }
+  }, [user?.id]);
+
   // Pull to refresh
   const onRefresh = async () => {
     try {
       setRefreshing(true);
-      await fetchUserSession();
+      await Promise.all([
+        fetchUserSession(),
+        user?.id ? fetchSettings(user.id) : Promise.resolve(),
+      ]);
     } catch (err) {
       console.error("Refresh failed:", err);
     } finally {
@@ -97,17 +104,18 @@ export default function AccountScreen() {
       );
 
       setProfileImage(publicUrl);
-
-      setUser({
-        ...user,
-        profileImage: publicUrl,
-      });
+      setUser({ ...user, profileImage: publicUrl });
     } catch (err) {
       console.error("Image upload failed:", err);
       alert("Failed to update profile image.");
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleToggle = (key: keyof typeof settings, value: boolean) => {
+    if (!user?.id) return;
+    updateSettings(user.id, { [key]: value });
   };
 
   return (
@@ -177,20 +185,20 @@ export default function AccountScreen() {
           <ToggleItem
             title="Delivery Alerts"
             icon="notifications-active"
-            value={deliveryAlerts}
-            onValueChange={setDeliveryAlerts}
+            value={settings?.delivery_alerts ?? true}
+            onValueChange={(val) => handleToggle("delivery_alerts", val)}
           />
           <ToggleItem
             title="Promotions"
             icon="local-offer"
-            value={promotions}
-            onValueChange={setPromotions}
+            value={settings?.promotions ?? false}
+            onValueChange={(val) => handleToggle("promotions", val)}
           />
           <ToggleItem
             title="SMS Updates"
             icon="sms"
-            value={smsUpdates}
-            onValueChange={setSmsUpdates}
+            value={settings?.sms_updates ?? true}
+            onValueChange={(val) => handleToggle("sms_updates", val)}
           />
         </Section>
 
