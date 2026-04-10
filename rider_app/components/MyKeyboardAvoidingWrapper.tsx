@@ -35,6 +35,7 @@ export function MyKeyboardAvoidingWrapper({
       style={{
         flex: 1,
         justifyContent: "flex-end",
+        ...style,
       }}
     >
       {children}
