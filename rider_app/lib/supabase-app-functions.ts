@@ -82,13 +82,15 @@ export async function signUpUser(
   }
 
   // 2️⃣ Insert into custom_users
-  const { error: profileError } = await supabase.from("custom_users").insert([
-    {
-      id: user.id, // include the new auth user ID
-      username,
-      custom_role: "rider",
-    },
-  ]);
+  const { error: profileError } = await supabase
+    .from("app_custom_users")
+    .insert([
+      {
+        id: user.id, // include the new auth user ID
+        username,
+        custom_role: "rider",
+      },
+    ]);
 
   if (profileError) {
     console.error("Creating custom_users entry failed:", profileError);
@@ -145,7 +147,7 @@ export async function getCusUserById(userId: string) {
     if (!userId) throw new Error("User ID is required");
 
     const { data, error } = await supabase
-      .from("custom_users")
+      .from("app_custom_users")
       .select("*")
       .eq("id", userId)
       .single();
@@ -162,7 +164,7 @@ export async function updateRiderLocation(latitude: number, longitude: number) {
   try {
     const user = await requireUser();
 
-    const { error } = await supabase.from("riders_current_status").upsert({
+    const { error } = await supabase.from("app_riders_current_status").upsert({
       id: user.id,
       email: user.email,
       active_mode: "rider",
@@ -191,7 +193,7 @@ export async function updateRiderActiveMode(isOnline: boolean) {
     const riderId = user.id;
 
     const { data: updatedData, error } = await supabase
-      .from("riders_current_status")
+      .from("app_riders_current_status")
       .update({
         active_mode: isOnline ? "rider" : "client",
       })
@@ -256,7 +258,7 @@ export async function acceptDeliveryOrder(
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .update({
         driver_id: user.id,
         status: "arriving_pickup",
@@ -289,7 +291,7 @@ export async function getDeliveryOrderByCode(orderCode: string) {
     }
 
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .select("*")
       .eq("order_code", orderCode)
       .single(); // order_code is UNIQUE
@@ -332,7 +334,7 @@ export async function getRiderAcceptedDeliveries() {
     const driverId = user.id;
 
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .select("*")
       .eq("driver_id", driverId)
       .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]); // active deliveries
@@ -354,7 +356,7 @@ export async function getRiderAcceptedDeliveries() {
 
 export const getOrderClientInfo = async (orderId: number) => {
   const { data, error } = await supabase
-    .from("delivery_orders")
+    .from("app_delivery_orders")
     .select(
       `
       client_id,
@@ -389,7 +391,7 @@ export const getMessages = async (otherUserId: string) => {
 
     // 🔹 Fetch messages between the two users
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select("*")
       .or(
         `and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`,
@@ -412,7 +414,7 @@ export const getUnreadMessageCounts = async (): Promise<
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select("delivery_order_id")
       .eq("receiver_id", user.id)
       .eq("is_read", false);
@@ -442,7 +444,7 @@ export const markMessagesAsRead = async (orderId: number): Promise<void> => {
     if (!success || !userId) return;
 
     await supabase
-      .from("messages")
+      .from("app_messages")
       .update({ is_read: true })
       .eq("delivery_order_id", orderId)
       .eq("receiver_id", userId)
@@ -462,7 +464,7 @@ export const sendMessageToSupabase = async (messageData: {
 
   try {
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .insert([
         {
           message: messageData.message,
@@ -496,7 +498,7 @@ export const getMessagesList = async () => {
 
     // 🔹 Fetch messages involving this user
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select(
         `
         *,
@@ -594,7 +596,7 @@ export const verifyDeliveryCode = async (
 
     // Query the delivery and verify the code
     const { data, error } = await supabase
-      .from("delivery_orders") // or whatever your table name is
+      .from("app_delivery_orders") // or whatever your table name is
       .select(codeColumn)
       .eq("id", deliveryId)
       .single();
@@ -612,7 +614,7 @@ export const verifyDeliveryCode = async (
       const newStatus = type === "pickup" ? "in_transit" : "delivered";
 
       const { error: updateError } = await supabase
-        .from("delivery_orders")
+        .from("app_delivery_orders")
         .update({
           status: newStatus,
           ...(type === "pickup"
@@ -661,7 +663,7 @@ export async function getUserSettings(): Promise<{
     const userId = user.id;
 
     const { data, error } = await supabase
-      .from("settings")
+      .from("app_settings")
       .select("delivery_alerts, promotions, sms_updates")
       .eq("id", userId)
       .single();
@@ -677,7 +679,7 @@ export async function getUserSettings(): Promise<{
 
     // Row doesn't exist — create it with defaults
     const { data: newRow, error: insertError } = await supabase
-      .from("settings")
+      .from("app_settings")
       .insert({ id: userId, ...DEFAULT_SETTINGS })
       .select("delivery_alerts, promotions, sms_updates")
       .single();
@@ -704,7 +706,7 @@ export async function updateUserSetting(
 ): Promise<{ success: boolean; data?: any; error?: any }> {
   try {
     const { data, error } = await supabase
-      .from("settings")
+      .from("app_settings")
       .update(newSettings)
       .eq("id", userId)
       .select()
@@ -733,7 +735,7 @@ export const updateProfileImage = async (
 
   // Use signed upload URL + upload task (consistent with uploadDeliveryImage)
   const { data: signedData, error: signedError } = await supabase.storage
-    .from("profile_image_bucket")
+    .from("app_profile_image_bucket")
     .createSignedUploadUrl(fileName);
 
   if (signedError) throw signedError;
@@ -749,13 +751,13 @@ export const updateProfileImage = async (
   }
 
   const { data: urlData } = supabase.storage
-    .from("profile_image_bucket")
+    .from("app_profile_image_bucket")
     .getPublicUrl(fileName);
 
   const publicUrl = urlData.publicUrl;
 
   const { error: dbError } = await supabase
-    .from("custom_users")
+    .from("app_custom_users")
     .update({ profileImage: publicUrl })
     .eq("id", userId);
 

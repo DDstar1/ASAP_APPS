@@ -6,7 +6,7 @@ export async function deleteOldPendingDeliveries(
 ) {
   try {
     const { error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .delete()
       .eq("client_id", client_id)
       .eq("status", "pending")
@@ -37,7 +37,7 @@ export async function hasDriverAcceptedDelivery(
 ): Promise<{ accepted: boolean; driver_id: string | null }> {
   try {
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .select("driver_id, status")
       .eq("client_id", client_id)
       .eq("order_code", order_code)
@@ -55,7 +55,7 @@ export async function hasDriverAcceptedDelivery(
     // Auto-update status if driver accepted
     if (accepted && data.status === "pending") {
       const { error: updateError } = await supabase
-        .from("delivery_orders")
+        .from("app_delivery_orders")
         .update({ status: "accepted" })
         .eq("client_id", client_id)
         .eq("order_code", order_code);
@@ -75,7 +75,7 @@ export async function hasDriverAcceptedDelivery(
 // 1️⃣ Helper function to check if order exists
 export async function checkOrderExists(order_code: string) {
   const { data, error } = await supabase
-    .from("delivery_orders")
+    .from("app_delivery_orders")
     .select("order_code")
     .eq("order_code", order_code)
     .maybeSingle();

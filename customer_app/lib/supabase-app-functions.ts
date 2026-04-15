@@ -92,7 +92,7 @@ export async function signUpUser(
   if (!user) throw new Error("User creation failed");
 
   const { error: profileError } = await supabase
-    .from("custom_users")
+    .from("app_custom_users")
     .insert([{ id: user.id, username }]);
 
   if (profileError) {
@@ -133,7 +133,7 @@ export async function getCusUserById(userId: string) {
     if (!userId) throw new Error("User ID is required");
 
     const { data, error } = await supabase
-      .from("custom_users")
+      .from("app_custom_users")
       .select("*")
       .eq("id", userId)
       .single();
@@ -160,7 +160,7 @@ export const updateProfileImage = async (
 
   // Use signed upload URL + upload task (consistent with uploadDeliveryImage)
   const { data: signedData, error: signedError } = await supabase.storage
-    .from("profile_image_bucket")
+    .from("app_profile_image_bucket")
     .createSignedUploadUrl(fileName);
 
   if (signedError) throw signedError;
@@ -176,13 +176,13 @@ export const updateProfileImage = async (
   }
 
   const { data: urlData } = supabase.storage
-    .from("profile_image_bucket")
+    .from("app_profile_image_bucket")
     .getPublicUrl(fileName);
 
   const publicUrl = urlData.publicUrl;
 
   const { error: dbError } = await supabase
-    .from("custom_users")
+    .from("app_custom_users")
     .update({ profileImage: publicUrl })
     .eq("id", userId);
 
@@ -246,7 +246,7 @@ export async function addPackageImage(
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("package_images")
+      .from("app_package_images")
       .insert([{ url, user_id: user.id }])
       .select("*")
       .single();
@@ -272,7 +272,7 @@ export async function addSavedLocation({
     await requireUser();
 
     const { data, error } = await supabase
-      .from("saved_locations")
+      .from("app_saved_locations")
       .insert([{ name, latitude, longitude }])
       .select("*")
       .single();
@@ -294,7 +294,7 @@ export async function getSavedLocations(): Promise<{
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("saved_locations")
+      .from("app_saved_locations")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
@@ -314,7 +314,7 @@ export async function deleteSavedLocation(
     const user = await requireUser();
 
     const { error } = await supabase
-      .from("saved_locations")
+      .from("app_saved_locations")
       .delete()
       .eq("id", id)
       .eq("user_id", user.id);
@@ -336,7 +336,7 @@ export async function getActiveRiders(
   pickupCoords: Coordinates,
 ): Promise<RiderDistanceInfo[]> {
   const { data: riders, error: ridersError } = await supabase
-    .from("riders_current_status")
+    .from("app_riders_current_status")
     .select("id, latitude, longitude")
     .eq("active_mode", "rider");
 
@@ -347,7 +347,7 @@ export async function getActiveRiders(
   if (!riders || riders.length === 0) return [];
 
   const { data: users, error: usersError } = await supabase
-    .from("custom_users")
+    .from("app_custom_users")
     .select("id, username");
 
   if (usersError) {
@@ -417,7 +417,7 @@ export async function upsertDeliveryOrder(
 
       if (orderExists) {
         const { data: updatedData, error: updateError } = await supabase
-          .from("delivery_orders")
+          .from("app_delivery_orders")
           .update({ modified_at: new Date().toISOString() })
           .eq("order_code", order_code)
           .select()
@@ -428,7 +428,7 @@ export async function upsertDeliveryOrder(
         return { status: "updated", data: updatedData };
       } else {
         const { data: insertedData, error: insertError } = await supabase
-          .from("delivery_orders")
+          .from("app_delivery_orders")
           .insert([payload])
           .select()
           .maybeSingle();
@@ -449,7 +449,7 @@ export async function getDeliveryOrderById(
 ): Promise<{ data: DeliveryOrder | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .select("*")
       .eq("id", order_id)
       .maybeSingle<DeliveryOrder>();
@@ -471,7 +471,7 @@ export async function getAllClientDeliveries(): Promise<{
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .select("*")
       .eq("client_id", user.id)
       .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]);
@@ -496,7 +496,7 @@ export async function getAllDriverDeliveryWaypoints(
 ): Promise<{ success: boolean; data: any[]; error?: any }> {
   try {
     const { data, error } = await supabase
-      .from("delivery_orders_waypoints")
+      .from("app_delivery_orders_waypoints")
       .select("lat,long,created_at")
       .eq("order_id", order_id)
       .order("created_at", { ascending: true });
@@ -520,7 +520,7 @@ export async function deleteDeliveryByOrderCode(
     const user = await requireUser();
 
     const { error } = await supabase
-      .from("delivery_orders")
+      .from("app_delivery_orders")
       .delete()
       .eq("order_code", order_code)
       .eq("client_id", user.id);
@@ -536,7 +536,7 @@ export async function deleteDeliveryByOrderCode(
 
 export async function getPendingOrdersWithRider() {
   const { data, error } = await supabase
-    .from("delivery_orders")
+    .from("app_delivery_orders")
     .select(
       `
       id,
@@ -585,7 +585,7 @@ export async function getPendingOrdersWithRider() {
 
 export const getOrderRiderInfo = async (orderId: number) => {
   const { data, error } = await supabase
-    .from("delivery_orders")
+    .from("app_delivery_orders")
     .select(
       `
       driver_id,
@@ -619,7 +619,7 @@ export const getMessages = async (otherUserId: string) => {
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select("*")
       .or(
         `and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`,
@@ -646,7 +646,7 @@ export const sendMessageToSupabase = async (messageData: {
 }) => {
   try {
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .insert([
         {
           ...messageData,
@@ -672,7 +672,7 @@ export const getUnreadMessageCounts = async (): Promise<
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select("delivery_order_id")
       .eq("receiver_id", user.id)
       .eq("is_read", false);
@@ -700,7 +700,7 @@ export const markMessagesAsRead = async (orderId: number): Promise<void> => {
     const user = await requireUser();
 
     await supabase
-      .from("messages")
+      .from("app_messages")
       .update({ is_read: true })
       .eq("delivery_order_id", orderId)
       .eq("receiver_id", user.id)
@@ -715,7 +715,7 @@ export const getMessagesList = async () => {
     const user = await requireUser();
 
     const { data, error } = await supabase
-      .from("messages")
+      .from("app_messages")
       .select(
         `
         *,
@@ -822,7 +822,7 @@ export async function getUserSettings(): Promise<{
     const userId = user.id;
 
     const { data, error } = await supabase
-      .from("settings")
+      .from("app_settings")
       .select("delivery_alerts, promotions, sms_updates")
       .eq("id", userId)
       .single();
@@ -838,7 +838,7 @@ export async function getUserSettings(): Promise<{
 
     // Row doesn't exist — create it with defaults
     const { data: newRow, error: insertError } = await supabase
-      .from("settings")
+      .from("app_settings")
       .insert({ id: userId, ...DEFAULT_SETTINGS })
       .select("delivery_alerts, promotions, sms_updates")
       .single();
@@ -865,7 +865,7 @@ export async function updateUserSetting(
 ): Promise<{ success: boolean; data?: any; error?: any }> {
   try {
     const { data, error } = await supabase
-      .from("settings")
+      .from("app_settings")
       .update(newSettings)
       .eq("id", userId)
       .select()
