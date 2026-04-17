@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Trash2, Loader2, X, Tag, AlertCircle } from 'lucide-react'
 import { supabase, type MenuRow } from '@/lib/supabase'
-import { useVendor } from '../layout'
+import { useVendor } from '@/store/vendorStore'
 
 export default function CategoriesPage() {
   const { vendor } = useVendor()
@@ -71,16 +71,16 @@ export default function CategoriesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Categories</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-sm">Organise your menu into categories</p>
+        <h1 className="text-2xl font-bold text-[#e0e5f9]">Categories</h1>
+        <p className="text-[#a5abbd] mt-0.5 text-sm">Organise your menu into categories</p>
       </div>
 
       {/* Add category form */}
-      <div className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add New Category</h2>
+      <div className="bg-[#152035] rounded-2xl p-5 mb-6">
+        <h2 className="text-sm font-semibold text-[#e0e5f9] mb-3">Add New Category</h2>
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-xl mb-3">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-xl mb-3">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             {error}
           </div>
         )}
@@ -90,12 +90,12 @@ export default function CategoriesPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="e.g. Beverages, Snacks, Main Meals..."
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/50 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 text-sm transition"
           />
           <button
             type="submit"
             disabled={adding || !newName.trim()}
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium text-sm hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+            className="px-4 py-2.5 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-medium text-sm hover:shadow-[0_8px_20px_rgba(255,146,62,0.25)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
           >
             {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Add
@@ -107,34 +107,34 @@ export default function CategoriesPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-16 bg-white dark:bg-gray-800/50 rounded-2xl animate-pulse border border-gray-200 dark:border-gray-700" />
+            <div key={i} className="h-16 bg-[#152035] rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : categories.length === 0 ? (
         <div className="text-center py-16">
-          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Tag className="w-8 h-8 text-gray-400" />
+          <div className="w-16 h-16 bg-[#1c2a42] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Tag className="w-8 h-8 text-[#a5abbd]/40" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-medium">No categories yet</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Add your first category above</p>
+          <p className="text-[#a5abbd] font-medium">No categories yet</p>
+          <p className="text-sm text-[#a5abbd]/60 mt-1">Add your first category above</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="bg-[#152035] rounded-2xl overflow-hidden">
+          <div className="flex flex-col gap-0.5">
             {categories.map((cat) => (
-              <div key={cat.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+              <div key={cat.id} className="flex items-center justify-between px-5 py-4 bg-[#0d1525] hover:bg-[#111a2e] transition">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Tag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <div className="w-9 h-9 bg-[#ff923e]/10 rounded-xl flex items-center justify-center shrink-0">
+                    <Tag className="w-4 h-4 text-[#ff923e]" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{cat.category_name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{itemCounts[cat.id] || 0} item{(itemCounts[cat.id] || 0) !== 1 ? 's' : ''}</p>
+                    <p className="text-sm font-semibold text-[#e0e5f9]">{cat.category_name}</p>
+                    <p className="text-xs text-[#a5abbd]">{itemCounts[cat.id] || 0} item{(itemCounts[cat.id] || 0) !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setDeleteId(cat.id)}
-                  className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition"
+                  className="p-2 text-[#a5abbd]/50 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -146,24 +146,24 @@ export default function CategoriesPage() {
 
       {/* Delete confirm modal */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111a2e] rounded-2xl w-full max-w-sm p-6 shadow-[0_12px_32px_rgba(8,14,28,0.7)]">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center shrink-0">
+                <AlertCircle className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-white">Delete &ldquo;{deleteTarget?.category_name}&rdquo;?</h2>
+                <h2 className="text-base font-semibold text-[#e0e5f9]">Delete &ldquo;{deleteTarget?.category_name}&rdquo;?</h2>
                 {deleteItemCount > 0 && (
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                  <p className="text-sm text-yellow-400 mt-1">
                     {deleteItemCount} item{deleteItemCount !== 1 ? 's' : ''} will become uncategorized.
                   </p>
                 )}
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition">Cancel</button>
-              <button onClick={() => handleDelete(deleteId!)} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-medium text-sm hover:bg-red-700 transition">Delete</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-[#a5abbd]/20 text-[#a5abbd] rounded-full font-medium text-sm hover:bg-[#1c2a42] transition">Cancel</button>
+              <button onClick={() => handleDelete(deleteId!)} className="flex-1 py-2.5 bg-red-600 text-white rounded-full font-medium text-sm hover:bg-red-700 transition">Delete</button>
             </div>
           </div>
         </div>

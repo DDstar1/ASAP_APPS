@@ -3,18 +3,18 @@
 import { useEffect, useState } from 'react'
 import { ClipboardList, ChevronDown, Filter } from 'lucide-react'
 import { supabase, type OrderRow, type CustomerRow } from '@/lib/supabase'
-import { useVendor } from '../layout'
+import { useVendor } from '@/store/vendorStore'
 
 type OrderWithCustomer = OrderRow & { customer?: CustomerRow }
 
 const STATUS_OPTIONS: OrderRow['status'][] = ['pending', 'paid', 'in_progress', 'delivered', 'cancelled']
 
 const statusColors: Record<OrderRow['status'], string> = {
-  pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  paid: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  in_progress: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  delivered: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  pending: 'bg-yellow-500/15 text-yellow-400',
+  paid: 'bg-[#ff923e]/15 text-[#ff923e]',
+  in_progress: 'bg-violet-500/15 text-violet-400',
+  delivered: 'bg-emerald-500/15 text-emerald-400',
+  cancelled: 'bg-red-500/15 text-red-400',
 }
 
 function formatNaira(kobo: number) {
@@ -85,16 +85,18 @@ export default function OrdersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Orders</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-0.5 text-sm">{orders.length} total order{orders.length !== 1 ? 's' : ''}</p>
+        <h1 className="text-2xl font-bold text-[#e0e5f9]">Orders</h1>
+        <p className="text-[#a5abbd] mt-0.5 text-sm">{orders.length} total order{orders.length !== 1 ? 's' : ''}</p>
       </div>
 
       {/* Filter tabs */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
         <button
           onClick={() => setFilter('all')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition ${
-            filter === 'all' ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
+            filter === 'all'
+              ? 'bg-[#ff923e] text-white'
+              : 'bg-[#152035] text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]'
           }`}
         >
           <Filter className="w-3.5 h-3.5" />
@@ -104,8 +106,10 @@ export default function OrdersPage() {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition ${
-              filter === s ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
+              filter === s
+                ? 'bg-[#ff923e] text-white'
+                : 'bg-[#152035] text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]'
             }`}
           >
             {s.replace('_', ' ')} <span className="text-xs opacity-70">{counts[s]}</span>
@@ -116,69 +120,69 @@ export default function OrdersPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 bg-white dark:bg-gray-800/50 rounded-2xl animate-pulse border border-gray-200 dark:border-gray-700" />
+            <div key={i} className="h-20 bg-[#152035] rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ClipboardList className="w-8 h-8 text-gray-400" />
+          <div className="w-16 h-16 bg-[#1c2a42] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ClipboardList className="w-8 h-8 text-[#a5abbd]/40" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-medium">No {filter !== 'all' ? filter.replace('_', ' ') + ' ' : ''}orders</p>
+          <p className="text-[#a5abbd] font-medium">No {filter !== 'all' ? filter.replace('_', ' ') + ' ' : ''}orders</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-0.5">
           {filtered.map((order) => (
-            <div key={order.id} className="bg-white dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div key={order.id} className="bg-[#0d1525] rounded-2xl overflow-hidden">
               {/* Order header */}
               <button
                 onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
-                className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/20 transition"
+                className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#111a2e] transition"
               >
                 <div className="flex items-center gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Order #{order.id}</span>
+                      <span className="text-sm font-semibold text-[#e0e5f9]">Order #{order.id}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
                         {order.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-3 text-xs text-[#a5abbd]">
                       {order.customer && <span>{order.customer.name}</span>}
                       <span>{new Date(order.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">{formatNaira(order.total)}</span>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedId === order.id ? 'rotate-180' : ''}`} />
+                  <span className="text-sm font-bold text-[#e0e5f9]">{formatNaira(order.total)}</span>
+                  <ChevronDown className={`w-4 h-4 text-[#a5abbd] transition-transform ${expandedId === order.id ? 'rotate-180' : ''}`} />
                 </div>
               </button>
 
               {/* Expanded details */}
               {expandedId === order.id && (
-                <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+                <div className="bg-[#152035] px-5 py-4">
                   <div className="grid sm:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{formatNaira(order.subtotal)}</span>
+                        <span className="text-[#a5abbd]">Subtotal</span>
+                        <span className="text-[#e0e5f9] font-medium">{formatNaira(order.subtotal)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Delivery Fee</span>
-                        <span className="text-gray-900 dark:text-white font-medium">{formatNaira(order.delivery_fee)}</span>
+                        <span className="text-[#a5abbd]">Delivery Fee</span>
+                        <span className="text-[#e0e5f9] font-medium">{formatNaira(order.delivery_fee)}</span>
                       </div>
-                      <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
-                        <span className="font-semibold text-gray-900 dark:text-white">Total</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{formatNaira(order.total)}</span>
+                      <div className="flex justify-between pt-2 mt-2" style={{ borderTop: '1px solid rgba(165,171,189,0.1)' }}>
+                        <span className="font-semibold text-[#e0e5f9]">Total</span>
+                        <span className="font-bold text-[#e0e5f9]">{formatNaira(order.total)}</span>
                       </div>
                     </div>
 
                     {order.customer && (
-                      <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-3 text-sm">
-                        <p className="font-medium text-gray-700 dark:text-gray-300 mb-1">Customer</p>
-                        <p className="text-gray-900 dark:text-white">{order.customer.name}</p>
-                        <p className="text-gray-500 dark:text-gray-400">{order.customer.phone}</p>
+                      <div className="bg-[#1c2a42] rounded-xl p-3 text-sm">
+                        <p className="font-medium text-[#a5abbd] mb-1">Customer</p>
+                        <p className="text-[#e0e5f9]">{order.customer.name}</p>
+                        <p className="text-[#a5abbd]">{order.customer.phone}</p>
                       </div>
                     )}
                   </div>
@@ -186,14 +190,14 @@ export default function OrdersPage() {
                   {/* Status update */}
                   {order.status !== 'delivered' && order.status !== 'cancelled' && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Update Status</p>
+                      <p className="text-xs font-medium text-[#a5abbd] mb-2">Update Status</p>
                       <div className="flex flex-wrap gap-2">
                         {STATUS_OPTIONS.filter((s) => s !== order.status && s !== 'pending').map((s) => (
                           <button
                             key={s}
                             disabled={updatingId === order.id}
                             onClick={() => updateStatus(order.id, s)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${statusColors[s]} border-current opacity-80 hover:opacity-100 disabled:opacity-40`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${statusColors[s]} opacity-80 hover:opacity-100 disabled:opacity-40`}
                           >
                             Mark {s.replace('_', ' ')}
                           </button>
