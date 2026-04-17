@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ddhaven.asapcustomer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "permissions": [
@@ -18,7 +22,9 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "hardwareAccelerated": true,
       "adaptiveIcon": {
@@ -39,7 +45,9 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      ["expo-camera"],
+      [
+        "expo-camera"
+      ],
       [
         "expo-splash-screen",
         {

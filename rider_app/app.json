@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ddhaven.asaprider",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "permissions": [
@@ -21,7 +25,12 @@
         "android.permission.RECORD_AUDIO",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
       "hardwareAccelerated": true,
       "adaptiveIcon": {
@@ -31,7 +40,9 @@
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
       "config": {
-        "googleMaps": { "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y" }
+        "googleMaps": {
+          "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y"
+        }
       },
       "package": "com.ddhaven.asap_rider"
     },
@@ -41,7 +52,9 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      ["expo-camera"],
+      [
+        "expo-camera"
+      ],
       [
         "expo-location",
         {
@@ -67,7 +80,6 @@
         }
       ]
     ],
-
     "experiments": {
       "typedRoutes": true
     },

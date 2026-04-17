@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { Package, Truck, Clock, MapPin, CheckCircle, Zap } from "lucide-react";
 
 export default function Home() {
@@ -17,12 +18,12 @@ export default function Home() {
             </span>
           </div>
           <div className="flex gap-4">
-            <button className="px-5 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors">
-              Sign In
-            </button>
-            <button className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-medium hover:shadow-lg hover:scale-105 transition-all">
+            <Link href="/vendor/login" className="px-5 py-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors">
+              Vendor Sign In
+            </Link>
+            <Link href="/vendor/signup" className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-medium hover:shadow-lg hover:scale-105 transition-all">
               Get Started
-            </button>
+            </Link>
           </div>
         </header>
 
