@@ -3,6 +3,7 @@ import { makeRedirectUri } from "expo-auth-session";
 import { createUploadTask } from "expo-file-system/legacy";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
+import { apiGet, apiPost } from "./api-client";
 
 import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
 import type {
@@ -332,7 +333,7 @@ export async function deleteSavedLocation(
  * Riders
  * ------------------------------------------------- */
 
-export async function getActiveRiders(
+/* export async function getActiveRiders(
   pickupCoords: Coordinates,
 ): Promise<RiderDistanceInfo[]> {
   const { data: riders, error: ridersError } = await supabase
@@ -384,13 +385,25 @@ export async function getActiveRiders(
 
   console.log("Riders with distances:", ridersWithDistance);
   return ridersWithDistance;
+} */
+export async function getActiveRiders(
+  pickupCoords: Coordinates,
+): Promise<RiderDistanceInfo[]> {
+  try {
+    const data = await apiGet<RiderDistanceInfo[]>(
+      `/admin/get-drivers?pickup_lat=${pickupCoords.latitude}&pickup_long=${pickupCoords.longitude}`,
+    );
+    return data ?? [];
+  } catch (err) {
+    console.error("Error fetching active riders:", err);
+    return [];
+  }
 }
-
 /* -------------------------------------------------
  * Delivery Orders
  * ------------------------------------------------- */
 
-export async function upsertDeliveryOrder(
+/* export async function upsertDeliveryOrder(
   props: Partial<DeliveryOrder> & { order_code: string },
 ) {
   try {
@@ -442,8 +455,18 @@ export async function upsertDeliveryOrder(
     console.error("❌ Error upserting delivery order:", err);
     return null;
   }
+} */
+export async function upsertDeliveryOrder(
+  props: Partial<DeliveryOrder> & { order_code: string },
+) {
+  try {
+    const data = await apiPost("/riders/ride-request", props);
+    return data;
+  } catch (err) {
+    console.error("❌ Error upserting delivery order:", err);
+    return null;
+  }
 }
-
 export async function getDeliveryOrderById(
   order_id: number,
 ): Promise<{ data: DeliveryOrder | null; error: any }> {
@@ -534,7 +557,7 @@ export async function deleteDeliveryByOrderCode(
   }
 }
 
-export async function getPendingOrdersWithRider() {
+/* export async function getPendingOrdersWithRider() {
   const { data, error } = await supabase
     .from("app_delivery_orders")
     .select(
@@ -581,8 +604,16 @@ export async function getPendingOrdersWithRider() {
     lat: order.driver_package_current_lat,
     long: order.driver_package_current_long,
   }));
+} */
+export async function getPendingOrdersWithRider() {
+  try {
+    const data = await apiGet<any[]>("/riders/assign-driver");
+    return data ?? [];
+  } catch (err) {
+    console.error("Error fetching pending orders with rider:", err);
+    return [];
+  }
 }
-
 export const getOrderRiderInfo = async (orderId: number) => {
   const { data, error } = await supabase
     .from("app_delivery_orders")
