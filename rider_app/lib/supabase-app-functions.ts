@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
 import { createUploadTask } from "expo-file-system/legacy";
+import { apiGet, apiPost } from "./api-client";
 
 export async function getCurrentUserId() {
   try {
@@ -160,7 +161,7 @@ export async function getCusUserById(userId: string) {
   }
 }
 
-export async function updateRiderLocation(latitude: number, longitude: number) {
+/* export async function updateRiderLocation(latitude: number, longitude: number) {
   try {
     const user = await requireUser();
 
@@ -178,9 +179,22 @@ export async function updateRiderLocation(latitude: number, longitude: number) {
   } catch (err: any) {
     return { success: false, error: err.message };
   }
+} */
+
+export async function updateRiderLocation(latitude: number, longitude: number) {
+  try {
+    const user = await requireUser();
+    await apiPost(`/matching/process-geolocation/${user.id}`, {
+      latitude,
+      longitude,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 
-export async function updateRiderActiveMode(isOnline: boolean) {
+/* export async function updateRiderActiveMode(isOnline: boolean) {
   try {
     const { data, error: userError } = await supabase.auth.getUser();
     const user = data?.user; // <-- make sure we safely access user
@@ -216,14 +230,24 @@ export async function updateRiderActiveMode(isOnline: boolean) {
     console.error("🚨 Unexpected error while updating active mode:", err);
     return { success: false, error: err };
   }
+} */
+export async function updateRiderActiveMode(isOnline: boolean) {
+  try {
+    const data = await apiPost("/drivers/update-driver", {
+      active_mode: isOnline ? "rider" : "client",
+    });
+    return { success: true, data };
+  } catch (err) {
+    console.error("🚨 Unexpected error while updating active mode:", err);
+    return { success: false, error: err };
+  }
 }
-
 /**
  * Fetch available delivery orders:
  * - not accepted by any driver
  * - still pending
  */
-export async function fetchAvailableOrders(): Promise<{
+/* export async function fetchAvailableOrders(): Promise<{
   success: boolean;
   data?: RiderOrder[];
   error?: unknown;
@@ -247,9 +271,21 @@ export async function fetchAvailableOrders(): Promise<{
     console.error("🚨 Unexpected error fetching orders:", err);
     return { success: false, error: err };
   }
+} */
+export async function fetchAvailableOrders(): Promise<{
+  success: boolean;
+  data?: RiderOrder[];
+  error?: unknown;
+}> {
+  try {
+    const data = await apiGet<RiderOrder[]>("/riders/assign-driver");
+    return { success: true, data: data ?? [] };
+  } catch (err) {
+    console.error("🚨 Unexpected error fetching orders:", err);
+    return { success: false, error: err };
+  }
 }
-
-export async function acceptDeliveryOrder(
+/* export async function acceptDeliveryOrder(
   orderCode: string,
   driverLat: number,
   driverLong: number,
@@ -278,9 +314,25 @@ export async function acceptDeliveryOrder(
   } catch (err: any) {
     return { success: false, error: err.message };
   }
+} */
+export async function acceptDeliveryOrder(
+  orderCode: string,
+  driverLat: number,
+  driverLong: number,
+) {
+  try {
+    const data = await apiPost("/drivers/driver-response", {
+      order_code: orderCode,
+      accepted: true,
+      driver_lat: driverLat,
+      driver_long: driverLong,
+    });
+    return { success: true, data };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
-
-export async function getDeliveryOrderByCode(orderCode: string) {
+/* export async function getDeliveryOrderByCode(orderCode: string) {
   console.log("Fetching delivery order for code:", orderCode);
   try {
     if (!orderCode) {
@@ -314,6 +366,17 @@ export async function getDeliveryOrderByCode(orderCode: string) {
       success: false,
       error: err,
     };
+  }
+} */
+
+export async function getDeliveryOrderByCode(orderCode: string) {
+  try {
+    if (!orderCode) return { success: false, error: "orderCode is required" };
+    const data = await apiGet(`/trips/get-trip/${orderCode}`);
+    return { success: true, data };
+  } catch (err) {
+    console.error("🚨 Unexpected error fetching order:", err);
+    return { success: false, error: err };
   }
 }
 
@@ -585,7 +648,7 @@ export const getMessagesList = async () => {
  * @param type - Either "pickup" or "dropoff"
  * @returns Promise with success status and optional error message
  */
-export const verifyDeliveryCode = async (
+/* export const verifyDeliveryCode = async (
   deliveryId: number,
   code: string,
   type: "pickup" | "dropoff",
@@ -641,6 +704,27 @@ export const verifyDeliveryCode = async (
   } catch (err) {
     console.error("Unexpected error in verifyDeliveryCode:", err);
     return { success: false, error: "An unexpected error occurred" };
+  }
+};
+ */
+export const verifyDeliveryCode = async (
+  deliveryId: number,
+  code: string,
+  type: "pickup" | "dropoff",
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    await apiPost("/trips/update-trip", {
+      delivery_id: deliveryId,
+      code,
+      type,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Unexpected error in verifyDeliveryCode:", err);
+    return {
+      success: false,
+      error: err.message ?? "An unexpected error occurred",
+    };
   }
 };
 
