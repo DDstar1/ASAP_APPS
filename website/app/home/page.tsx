@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Package, LogOut, Loader2, Smartphone, Store, ClipboardList, Clock, CheckCircle, Truck } from 'lucide-react'
-import { getSession, signOut, getVendorIdByEmail, getUserDeliveryOrders } from '@/lib/supabase_queries'
+import { getSession, signOut, getVendorsByUserId, getUserDeliveryOrders } from '@/lib/supabase_queries'
 import type { User } from '@supabase/supabase-js'
 
 type Order = {
@@ -45,11 +45,11 @@ export default function Home() {
 
       const [{ data: ordersData }, { data: vendorData }] = await Promise.all([
         getUserDeliveryOrders(user.id),
-        getVendorIdByEmail(user.email!),
+        getVendorsByUserId(user.id),
       ])
 
       setOrders((ordersData as Order[]) ?? [])
-      setIsVendor(!!vendorData)
+      setIsVendor(!!vendorData && vendorData.length > 0)
       setLoading(false)
     }
     init()

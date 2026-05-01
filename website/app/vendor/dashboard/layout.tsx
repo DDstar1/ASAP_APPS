@@ -3,9 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Package, LayoutDashboard, ShoppingBag, Tag, ClipboardList, LogOut, Menu, X, Loader2, Store, User, Bot } from 'lucide-react'
-import { getSession, signOut, getVendorByEmail } from '@/lib/supabase_queries'
+import {
+  Package, LayoutDashboard, ShoppingBag, Tag, ClipboardList,
+  LogOut, Menu, X, Loader2, Store, User, Bot, ChevronDown, Plus,
+} from 'lucide-react'
+import { getSession, signOut, getVendorsByUserId } from '@/lib/supabase_queries'
 import { useVendorStore, useVendor } from '@/store/vendorStore'
+import type { VendorRow } from '@/lib/supabase'
 
 export { useVendor }
 
@@ -20,9 +24,10 @@ const navItems = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { vendor, setVendor, clearVendor } = useVendorStore()
+  const { vendor, vendors, setVendor, setVendors, clearVendor } = useVendorStore()
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [storeSwitcherOpen, setStoreSwitcherOpen] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -30,13 +35,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const user = session?.user
       if (!user) { router.replace('/login'); return }
 
-      const { data: v } = await getVendorByEmail(user.email!)
-      if (!v) { await signOut(); router.replace('/login'); return }
-      setVendor(v)
+      const { data: rows } = await getVendorsByUserId(user.id)
+      const list = (rows ?? []) as VendorRow[]
+      if (list.length === 0) { await signOut(); router.replace('/login'); return }
+
+      setVendors(list)
+      // Keep existing active store if still valid, otherwise default to first
+      const current = useVendorStore.getState().vendor
+      const stillValid = current && list.find((v) => v.id === current.id)
+      setVendor(stillValid ? current : list[0])
       setLoading(false)
     }
     init()
-  }, [router, setVendor])
+  }, [router, setVendor, setVendors])
 
   async function handleSignOut() {
     await signOut()
@@ -63,16 +74,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </Link>
       </div>
 
+      {/* Store switcher */}
       <div className="px-4 pb-4">
-        <div className="flex items-center gap-3 px-2 py-3 bg-[#1c2a42] rounded-2xl">
+        <button
+          onClick={() => setStoreSwitcherOpen((o) => !o)}
+          className="w-full flex items-center gap-3 px-2 py-3 bg-[#1c2a42] rounded-2xl hover:bg-[#253350] transition"
+        >
           <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#ff923e] to-[#c46018] flex items-center justify-center shrink-0">
             <Store className="w-4 h-4 text-white" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 text-left">
             <p className="text-sm font-semibold text-[#e0e5f9] truncate">{vendor?.name}</p>
             <p className="text-xs text-[#a5abbd] capitalize">{vendor?.acct_type}</p>
           </div>
-        </div>
+          <ChevronDown className={`w-4 h-4 text-[#a5abbd] shrink-0 transition-transform ${storeSwitcherOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {storeSwitcherOpen && (
+          <div className="mt-2 bg-[#1c2a42] rounded-xl overflow-hidden border border-[#a5abbd]/10">
+            {vendors.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => { setVendor(v); setStoreSwitcherOpen(false) }}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm transition ${
+                  vendor?.id === v.id
+                    ? 'bg-[#ff923e]/10 text-[#ff923e]'
+                    : 'text-[#a5abbd] hover:bg-[#253350] hover:text-[#e0e5f9]'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate font-medium">{v.name}</span>
+                {vendor?.id === v.id && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ff923e]" />}
+              </button>
+            ))}
+            <Link
+              href="/become-vendor"
+              onClick={() => setStoreSwitcherOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm text-[#a5abbd] hover:bg-[#253350] hover:text-[#e0e5f9] transition border-t border-[#a5abbd]/10"
+            >
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              Add new store
+            </Link>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 p-4 space-y-1">

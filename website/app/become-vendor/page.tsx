@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Loader2, ChevronRight } from 'lucide-react'
-import { getSession, checkVendorNameExists, getVendorIdByEmail, insertVendor } from '@/lib/supabase_queries'
+import { getSession, checkVendorNameExists, insertVendor } from '@/lib/supabase_queries'
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false })
 
@@ -31,12 +31,8 @@ export default function BecomeVendor() {
     getSession().then(({ data: { session } }) => {
       const user = session?.user
       if (!user) { router.replace('/login?next=/become-vendor'); return }
-
-      getVendorIdByEmail(user.email!).then(({ data }) => {
-        if (data) { router.replace('/vendor/dashboard'); return }
-        setUserEmail(user.email ?? '')
-        setChecking(false)
-      })
+      setUserEmail(user.email ?? '')
+      setChecking(false)
     })
   }, [router])
 
@@ -92,8 +88,8 @@ export default function BecomeVendor() {
               ASAP.
             </span>
           </Link>
-          <h1 className="text-3xl font-bold text-[#e0e5f9]">Create Vendor Account</h1>
-          <p className="text-[#a5abbd] mt-2">Set up your store on ASAP</p>
+          <h1 className="text-3xl font-bold text-[#e0e5f9]">Add a Store</h1>
+          <p className="text-[#a5abbd] mt-2">Set up another store on ASAP</p>
         </div>
 
         <div className="bg-[#1c2a42] rounded-3xl p-8 shadow-[0_12px_32px_rgba(8,14,28,0.5)]">

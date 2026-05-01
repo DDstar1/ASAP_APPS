@@ -35,6 +35,14 @@ export function getVendorIdByEmail(email: string) {
   return supabase.from('telegram_vendor').select('id').eq('email', email).single()
 }
 
+export function getVendorsByUserId(userId: string) {
+  return supabase
+    .from('telegram_vendor')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+}
+
 export function checkVendorNameExists(name: string) {
   return supabase.from('telegram_vendor').select('id').eq('name', name).single()
 }
@@ -136,6 +144,24 @@ export function getCustomersByTelegramIds(userIds: number[]) {
     .from('telegram_custom_users')
     .select('id, telegram_user_id, name, phone')
     .in('telegram_user_id', userIds)
+}
+
+// ─── Telegram bots ────────────────────────────────────────────────────────────
+
+export function getVendorBot(vendorId: number) {
+  return supabase.from('telegram_bots').select('*').eq('vendor_id', vendorId).single()
+}
+
+export function insertBot(payload: { bot_id: number; bot_username: string; bot_token: string; vendor_id: number }) {
+  return supabase.from('telegram_bots').insert(payload)
+}
+
+export function updateBotActive(id: number, is_active: boolean) {
+  return supabase.from('telegram_bots').update({ is_active }).eq('id', id)
+}
+
+export function deleteBot(id: number) {
+  return supabase.from('telegram_bots').delete().eq('id', id)
 }
 
 // ─── Delivery orders (app) ────────────────────────────────────────────────────

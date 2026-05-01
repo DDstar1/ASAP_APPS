@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { signInWithPassword, getVendorIdByEmail } from '@/lib/supabase_queries'
+import { signInWithPassword, getVendorsByUserId } from '@/lib/supabase_queries'
 
 function LoginForm() {
   const router = useRouter()
@@ -30,8 +30,8 @@ function LoginForm() {
     const next = searchParams.get('next')
     if (next) { router.push(next); return }
 
-    const { data: vendor } = await getVendorIdByEmail(authData.user.email!)
-    router.push(vendor ? '/vendor/dashboard' : '/home')
+    const { data: stores } = await getVendorsByUserId(authData.user.id)
+    router.push(stores && stores.length > 0 ? '/vendor/dashboard' : '/home')
   }
 
   return (

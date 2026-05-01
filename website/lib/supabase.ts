@@ -7,6 +7,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type VendorRow = {
   id: number
+  user_id: string | null
   name: string
   address: string
   open_time: string
