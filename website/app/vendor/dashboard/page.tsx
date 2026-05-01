@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { ShoppingBag, ClipboardList, DollarSign, TrendingUp, Clock, CheckCircle, PackageCheck } from 'lucide-react'
-import { supabase, type OrderRow } from '@/lib/supabase'
+import { getVendorOrders, getVendorItemIds } from '@/lib/supabase_queries'
 import { useVendor } from '@/store/vendorStore'
+import type { OrderRow } from '@/lib/supabase'
 
 type Stats = {
   totalOrders: number
@@ -36,8 +37,8 @@ export default function DashboardPage() {
     if (!vendor) return
     async function load() {
       const [ordersRes, itemsRes] = await Promise.all([
-        supabase.from('telegram_orders').select('*').eq('vendor_id', vendor!.id).order('created_at', { ascending: false }),
-        supabase.from('telegram_vendor_item').select('id').eq('vendor_id', vendor!.id),
+        getVendorOrders(vendor!.id),
+        getVendorItemIds(vendor!.id),
       ])
 
       const orders: OrderRow[] = ordersRes.data || []
@@ -93,7 +94,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Recent orders */}
           <div className="bg-[#152035] rounded-2xl overflow-hidden">
             <div className="px-6 py-4 flex items-center gap-2">
               <PackageCheck className="w-5 h-5 text-[#a5abbd]" />

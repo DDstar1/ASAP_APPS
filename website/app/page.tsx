@@ -18,13 +18,13 @@ export default function Home() {
           </div>
           <div className="flex gap-4">
             <Link
-              href="/vendor/login"
+              href="/login"
               className="px-5 py-2 text-[#a5abbd] hover:text-[#e0e5f9] font-medium transition-colors"
             >
-              Vendor Sign In
+              Sign In
             </Link>
             <Link
-              href="/vendor/signup"
+              href="/signup"
               className="px-6 py-2 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-medium hover:shadow-[0_0_20px_rgba(255,146,62,0.3)] hover:scale-105 transition-all"
             >
               Get Started

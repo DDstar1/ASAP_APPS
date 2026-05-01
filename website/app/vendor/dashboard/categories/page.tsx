@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Loader2, X, Tag, AlertCircle } from 'lucide-react'
-import { supabase, type MenuRow } from '@/lib/supabase'
+import { Plus, Trash2, Loader2, Tag, AlertCircle } from 'lucide-react'
+import { getVendorCategories, getVendorItemIdAndMenu, insertCategory, deleteCategory } from '@/lib/supabase_queries'
 import { useVendor } from '@/store/vendorStore'
+import type { MenuRow } from '@/lib/supabase'
 
 export default function CategoriesPage() {
   const { vendor } = useVendor()
@@ -18,17 +19,16 @@ export default function CategoriesPage() {
   useEffect(() => {
     if (!vendor) return
     load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendor])
 
   async function load() {
     const [catRes, itemsRes] = await Promise.all([
-      supabase.from('telegram_vendor_menu').select('*').eq('vendor_id', vendor!.id).order('category_name'),
-      supabase.from('telegram_vendor_item').select('id, menu_id').eq('vendor_id', vendor!.id),
+      getVendorCategories(vendor!.id),
+      getVendorItemIdAndMenu(vendor!.id),
     ])
-
     const cats: MenuRow[] = catRes.data || []
     setCategories(cats)
-
     const counts: Record<number, number> = {}
     for (const item of (itemsRes.data || [])) {
       if (item.menu_id) counts[item.menu_id] = (counts[item.menu_id] || 0) + 1
@@ -37,30 +37,20 @@ export default function CategoriesPage() {
     setLoading(false)
   }
 
-  async function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.SyntheticEvent) {
     e.preventDefault()
     if (!newName.trim()) return
     setAdding(true)
     setError('')
-
-    const { error: err } = await supabase.from('telegram_vendor_menu').insert({
-      vendor_id: vendor!.id,
-      category_name: newName.trim(),
-    })
-
-    if (err) {
-      setError(err.code === '23505' ? 'Category already exists.' : err.message)
-      setAdding(false)
-      return
-    }
-
+    const { error: err } = await insertCategory(vendor!.id, newName.trim())
+    if (err) { setError(err.code === '23505' ? 'Category already exists.' : err.message); setAdding(false); return }
     setNewName('')
     setAdding(false)
     await load()
   }
 
   async function handleDelete(id: number) {
-    await supabase.from('telegram_vendor_menu').delete().eq('id', id)
+    await deleteCategory(id)
     setCategories((prev) => prev.filter((c) => c.id !== id))
     setDeleteId(null)
   }
@@ -75,40 +65,27 @@ export default function CategoriesPage() {
         <p className="text-[#a5abbd] mt-0.5 text-sm">Organise your menu into categories</p>
       </div>
 
-      {/* Add category form */}
       <div className="bg-[#152035] rounded-2xl p-5 mb-6">
         <h2 className="text-sm font-semibold text-[#e0e5f9] mb-3">Add New Category</h2>
         {error && (
           <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-xl mb-3">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
+            <AlertCircle className="w-4 h-4 shrink-0" />{error}
           </div>
         )}
         <form onSubmit={handleAdd} className="flex gap-3">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+          <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
             placeholder="e.g. Beverages, Snacks, Main Meals..."
-            className="flex-1 px-4 py-2.5 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/50 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 text-sm transition"
-          />
-          <button
-            type="submit"
-            disabled={adding || !newName.trim()}
-            className="px-4 py-2.5 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-medium text-sm hover:shadow-[0_8px_20px_rgba(255,146,62,0.25)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-          >
-            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Add
+            className="flex-1 px-4 py-2.5 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/50 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 text-sm transition" />
+          <button type="submit" disabled={adding || !newName.trim()}
+            className="px-4 py-2.5 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-medium text-sm hover:shadow-[0_8px_20px_rgba(255,146,62,0.25)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap">
+            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add
           </button>
         </form>
       </div>
 
-      {/* Categories list */}
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-16 bg-[#152035] rounded-2xl animate-pulse" />
-          ))}
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 bg-[#152035] rounded-2xl animate-pulse" />)}
         </div>
       ) : categories.length === 0 ? (
         <div className="text-center py-16">
@@ -132,10 +109,7 @@ export default function CategoriesPage() {
                     <p className="text-xs text-[#a5abbd]">{itemCounts[cat.id] || 0} item{(itemCounts[cat.id] || 0) !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDeleteId(cat.id)}
-                  className="p-2 text-[#a5abbd]/50 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                >
+                <button onClick={() => setDeleteId(cat.id)} className="p-2 text-[#a5abbd]/50 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -144,7 +118,6 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* Delete confirm modal */}
       {deleteId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#111a2e] rounded-2xl w-full max-w-sm p-6 shadow-[0_12px_32px_rgba(8,14,28,0.7)]">
@@ -155,9 +128,7 @@ export default function CategoriesPage() {
               <div>
                 <h2 className="text-base font-semibold text-[#e0e5f9]">Delete &ldquo;{deleteTarget?.category_name}&rdquo;?</h2>
                 {deleteItemCount > 0 && (
-                  <p className="text-sm text-yellow-400 mt-1">
-                    {deleteItemCount} item{deleteItemCount !== 1 ? 's' : ''} will become uncategorized.
-                  </p>
+                  <p className="text-sm text-yellow-400 mt-1">{deleteItemCount} item{deleteItemCount !== 1 ? 's' : ''} will become uncategorized.</p>
                 )}
               </div>
             </div>
