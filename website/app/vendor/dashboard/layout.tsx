@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Package, LayoutDashboard, ShoppingBag, Tag, ClipboardList, LogOut, Menu, X, Loader2, Store, User } from 'lucide-react'
+import { Package, LayoutDashboard, ShoppingBag, Tag, ClipboardList, LogOut, Menu, X, Loader2, Store, User, Bot } from 'lucide-react'
 import { getSession, signOut, getVendorByEmail } from '@/lib/supabase_queries'
 import { useVendorStore, useVendor } from '@/store/vendorStore'
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/vendor/dashboard/items', label: 'Items', icon: ShoppingBag },
   { href: '/vendor/dashboard/categories', label: 'Categories', icon: Tag },
   { href: '/vendor/dashboard/orders', label: 'Orders', icon: ClipboardList },
+  { href: '/vendor/dashboard/bot', label: 'Bot', icon: Bot },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
