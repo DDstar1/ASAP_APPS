@@ -9,6 +9,33 @@ import { signUp, insertAppUser, checkVendorNameExists, insertVendor } from '@/li
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false })
 
+const NIGERIAN_BANKS = [
+  { name: 'Access Bank', code: '044' },
+  { name: 'Citibank', code: '023' },
+  { name: 'Ecobank', code: '050' },
+  { name: 'Fidelity Bank', code: '070' },
+  { name: 'First Bank of Nigeria', code: '011' },
+  { name: 'First City Monument Bank (FCMB)', code: '214' },
+  { name: 'Guaranty Trust Bank (GTBank)', code: '058' },
+  { name: 'Heritage Bank', code: '030' },
+  { name: 'Jaiz Bank', code: '301' },
+  { name: 'Keystone Bank', code: '082' },
+  { name: 'Kuda Bank', code: '090267' },
+  { name: 'Moniepoint', code: '50515' },
+  { name: 'OPay', code: '100004' },
+  { name: 'PalmPay', code: '100033' },
+  { name: 'Polaris Bank', code: '076' },
+  { name: 'Providus Bank', code: '101' },
+  { name: 'Stanbic IBTC Bank', code: '221' },
+  { name: 'Standard Chartered', code: '068' },
+  { name: 'Sterling Bank', code: '232' },
+  { name: 'Union Bank', code: '032' },
+  { name: 'United Bank for Africa (UBA)', code: '033' },
+  { name: 'Unity Bank', code: '215' },
+  { name: 'Wema Bank', code: '035' },
+  { name: 'Zenith Bank', code: '057' },
+]
+
 type Step = 'account' | 'store'
 
 export default function VendorSignup() {
@@ -28,6 +55,8 @@ export default function VendorSignup() {
     open_time: '08:00',
     close_time: '20:00',
     acct_type: 'vendor' as 'vendor' | 'Handy-man' | 'service-provider',
+    bank_account_number: '',
+    bank_code: '',
   })
 
   function updateAccount(field: keyof typeof account, value: string) {
@@ -61,6 +90,7 @@ export default function VendorSignup() {
       lat,
       lng,
       acct_type: store.acct_type,
+      acct_details: { bank_account_number: store.bank_account_number, bank_code: store.bank_code },
     })
 
     if (vendorError) { setError('Could not create vendor profile: ' + vendorError.message); setLoading(false); return }
@@ -169,6 +199,19 @@ export default function VendorSignup() {
                 <div>
                   <label className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Closes at</label>
                   <input type="time" required value={store.close_time} onChange={(e) => updateStore('close_time', e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Bank Account Number</label>
+                  <input type="text" required value={store.bank_account_number} onChange={(e) => updateStore('bank_account_number', e.target.value)} placeholder="0123456789" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Bank</label>
+                  <select required value={store.bank_code} onChange={(e) => updateStore('bank_code', e.target.value)} className={inputClass}>
+                    <option value="">Select your bank</option>
+                    {NIGERIAN_BANKS.map((b) => (
+                      <option key={b.code} value={b.code}>{b.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

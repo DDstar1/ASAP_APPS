@@ -57,6 +57,7 @@ export function insertVendor(payload: {
   lat: number
   lng: number
   acct_type: 'vendor' | 'Handy-man' | 'service-provider'
+  acct_details: { bank_account_number: string; bank_code: string }
 }) {
   return supabase.from('telegram_vendor').insert(payload)
 }
