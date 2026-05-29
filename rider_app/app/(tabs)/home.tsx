@@ -1,6 +1,7 @@
 import { IMAGES } from "@/assets/assetsData";
 import CodeInputComponent from "@/components/CodeInputComponent";
 import AvailableOrdersDropdown from "@/components/AvailableOrdersDropdown";
+import PickupConfirmOTP from "@/components/PickupConfirmOTP";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { PulseDot } from "@/components/PulseDot";
@@ -12,8 +13,10 @@ import {
   ScrollView,
   StatusBar,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -33,6 +36,9 @@ const RiderHomeScreen = () => {
   const [showOrders, setShowOrders] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hasOngoingDeliveries, setHasOngoingDeliveries] = useState(false);
+  const [driverLat, setDriverLat] = useState<number | null>(null);
+  const [driverLng, setDriverLng] = useState<number | null>(null);
+  const [showOTPModal, setShowOTPModal] = useState(false);
 
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null,
@@ -71,6 +77,26 @@ const RiderHomeScreen = () => {
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
 
+  const distanceToDropoff =
+    driverLat != null &&
+    driverLng != null &&
+    activeDelivery?.dropoff_lat != null &&
+    activeDelivery?.dropoff_long != null
+      ? (() => {
+          const R = 6371000;
+          const dLat = ((activeDelivery.dropoff_lat! - driverLat) * Math.PI) / 180;
+          const dLon = ((activeDelivery.dropoff_long! - driverLng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((driverLat * Math.PI) / 180) *
+              Math.cos((activeDelivery.dropoff_lat! * Math.PI) / 180) *
+              Math.sin(dLon / 2) ** 2;
+          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        })()
+      : Infinity;
+
+  const canConfirmTrip = distanceToDropoff <= 100;
+
   const startRealtimeLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
@@ -88,6 +114,8 @@ const RiderHomeScreen = () => {
       async (location) => {
         try {
           const { latitude, longitude } = location.coords;
+          setDriverLat(latitude);
+          setDriverLng(longitude);
           await updateRiderLocation(latitude, longitude);
         } catch (err) {
           console.error("Failed to update rider location:", err);
@@ -246,7 +274,70 @@ const RiderHomeScreen = () => {
             onToggle={toggleDropdown}
           />
         )}
+
+        {/* Confirm Trip button — always present, unlocks within 100m of dropoff */}
+        <View
+          style={{
+            marginTop: 16,
+            borderRadius: 20,
+            overflow: "hidden",
+            opacity: canConfirmTrip ? 1 : 0.45,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setShowOTPModal(true)}
+            disabled={!canConfirmTrip}
+            activeOpacity={0.85}
+            style={{
+              backgroundColor: canConfirmTrip ? "#ff923e" : "#1c2a42",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              paddingVertical: 16,
+              borderRadius: 20,
+              borderWidth: canConfirmTrip ? 0 : 1,
+              borderColor: "#2a3a55",
+            }}
+          >
+            <MaterialIcons
+              name="verified"
+              size={20}
+              color={canConfirmTrip ? "#000" : "#a5abbd"}
+            />
+            <Text
+              style={{
+                fontWeight: "700",
+                fontSize: 14,
+                color: canConfirmTrip ? "#000" : "#a5abbd",
+              }}
+            >
+              {canConfirmTrip ? "CONFIRM TRIP" : "CONFIRM TRIP  ·  Move to dropoff"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {activeDelivery && (
+        <PickupConfirmOTP
+          visible={showOTPModal}
+          onClose={() => setShowOTPModal(false)}
+          orderRef={activeDelivery.order_code}
+          driverId={user?.id ?? ""}
+          dropoffLat={activeDelivery.dropoff_lat ?? 0}
+          dropoffLng={activeDelivery.dropoff_long ?? 0}
+          driverLat={driverLat}
+          driverLng={driverLng}
+          onSuccess={() => {
+            setShowOTPModal(false);
+            useAcceptedDeliveryStore
+              .getState()
+              .removeAcceptedDelivery(activeDelivery.id);
+            setHasOngoingDeliveries(false);
+            stopTracking();
+          }}
+        />
+      )}
     </View>
   );
 };

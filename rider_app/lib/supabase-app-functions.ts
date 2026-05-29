@@ -849,3 +849,37 @@ export const updateProfileImage = async (
 
   return publicUrl;
 };
+
+export async function updateBankDetails(
+  driverId: string,
+  accountNumber: string,
+  bankCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost("/drivers/update-bank-details", {
+      driver_id: driverId,
+      account_number: accountNumber,
+      bank_code: bankCode,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? "Failed to update bank details" };
+  }
+}
+
+export async function confirmRidePickup(
+  orderRef: string,
+  driverId: string,
+  pickupCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost("/drivers/confirm-pickup", {
+      order_ref: orderRef,
+      driver_id: driverId,
+      pickup_code: pickupCode,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? "Confirmation failed" };
+  }
+}

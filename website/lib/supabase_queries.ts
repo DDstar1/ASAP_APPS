@@ -62,6 +62,32 @@ export function insertVendor(payload: {
   return supabase.from('telegram_vendor').insert(payload)
 }
 
+// ─── Driver ───────────────────────────────────────────────────────────────────
+
+export function checkDriverEmailExists(email: string) {
+  return supabase.from('back_drivers').select('driver_id').eq('email', email).single()
+}
+
+export function insertDriver(payload: {
+  driver_id: string
+  name: string
+  email: string
+  phone: string
+  license_number: string
+  vehicle_type: string
+  vehicle: string
+  account_number: string
+  bank_code: string
+}) {
+  return supabase.from('back_drivers').insert({
+    ...payload,
+    status: 'available',
+    driver_pubkey: {},
+    driver_location: {},
+    driver_response: {},
+  })
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export function getVendorCategories(vendorId: number) {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Package, Eye, EyeOff, Loader2, Store } from 'lucide-react'
+import { Package, Eye, EyeOff, Loader2, Store, Car } from 'lucide-react'
 import { signUp, insertAppUser } from '@/lib/supabase_queries'
 
 export default function Signup() {
@@ -96,6 +96,14 @@ export default function Signup() {
               className="flex items-center justify-center gap-3 w-full py-3 px-6 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-semibold hover:bg-[#ff923e]/10 transition">
               <Store className="w-4 h-4" />
               Want to sell on ASAP? Create a vendor account
+            </Link>
+          </div>
+
+          <div className="mt-3">
+            <Link href="/signup/driver"
+              className="flex items-center justify-center gap-3 w-full py-3 px-6 rounded-full border border-[#a5abbd]/20 text-[#a5abbd] text-sm font-semibold hover:bg-[#a5abbd]/10 hover:text-[#e0e5f9] transition">
+              <Car className="w-4 h-4" />
+              Become a Driver
             </Link>
           </div>
         </div>

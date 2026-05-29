@@ -19,6 +19,7 @@ import { useUserStore } from "@/store/useUserStore";
 import { useSettingsStore } from "@/store/useUserSettingsStore";
 import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
 import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
+import { UpdateBankDetailsModal } from "@/components/UpdateBankDetailsModal";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function AccountScreen() {
   // Modals
   const [phoneModalVisible, setPhoneModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [bankModalVisible, setBankModalVisible] = useState(false);
 
   // Sync profile image
   useEffect(() => {
@@ -187,6 +189,13 @@ export default function AccountScreen() {
             icon="lock-outline"
             onPress={() => setPasswordModalVisible(true)}
           />
+          <View className="h-px bg-[#1e2a40] mx-1" />
+          <EditItem
+            title="Bank Details"
+            subtitle="Account number & bank"
+            icon="account-balance"
+            onPress={() => setBankModalVisible(true)}
+          />
         </Section>
 
         {/* PREFERENCES */}
@@ -260,6 +269,12 @@ export default function AccountScreen() {
         onForgotPassword={() =>
           router.push("/auth/resetPassword/forgot-password")
         }
+      />
+      <UpdateBankDetailsModal
+        visible={bankModalVisible}
+        driverId={user?.id ?? ""}
+        onClose={() => setBankModalVisible(false)}
+        onSaved={() => setBankModalVisible(false)}
       />
     </SafeAreaView>
   );
