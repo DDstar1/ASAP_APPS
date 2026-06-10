@@ -92,8 +92,8 @@ export default function DriverSignup() {
   const inputClass =
     'w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#152035] text-[#e0e5f9] placeholder:text-[#a5abbd]/50 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition'
 
-  const steps: Step[] = ['account', 'driver']
-  const stepLabels = { account: 'Account', driver: 'Driver Info' }
+  const steps = ['account', 'driver'] as const
+  const stepLabels: Record<typeof steps[number], string> = { account: 'Account', driver: 'Driver Info' }
 
   return (
     <div className="min-h-screen bg-[#080e1c] flex items-center justify-center px-4 py-12">
