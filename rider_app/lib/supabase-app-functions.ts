@@ -5,7 +5,10 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
 import { createUploadTask } from "expo-file-system/legacy";
-import { apiGet, apiPost } from "./api-client";
+import { apiGet, apiPost, apiPostIgnoringBody } from "./api-client";
+import { normalizePhone } from "./phone";
+import { stopTracking } from "@/utils/utils_orderLocationTracking";
+import { unregisterPushToken } from "./push-notifications";
 
 export async function getCurrentUserId() {
   try {
@@ -32,6 +35,9 @@ export async function getCurrentUserId() {
 
 export const handleLogout = async () => {
   try {
+    // Needs the session, so it has to run before signOut.
+    await unregisterPushToken();
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
 
@@ -44,6 +50,22 @@ export const handleLogout = async () => {
     console.error("Logout error:", err.message);
   }
 };
+
+// Permanently deletes the signed-in rider and all their data
+// (see supabase/migrations/*_delete_own_account.sql). The server refuses
+// with "ACTIVE_DELIVERY" while the rider has an undelivered order.
+export const deleteOwnAccount = async () => {
+  const { error } = await supabase.rpc("delete_own_account");
+  if (error) throw error;
+
+  // Make sure no background location task outlives the account.
+  await stopTracking();
+
+  // The server session is gone with the user, so only clear it locally.
+  await supabase.auth.signOut({ scope: "local" });
+  useUserStore.getState().setUser(null);
+  router.replace("/auth/login");
+};
 /**
  * Sign up a new user with email, password, and username.
  * Checks if the email already exists, creates the auth user, and inserts a row into cus_users table.
@@ -53,14 +75,21 @@ export async function signUpUser(
   email: string,
   password: string,
   username: string,
+  phone: string,
 ) {
   const redirectTo = makeRedirectUri({
-    scheme: "com.asapCustomer",
-    path: "auth-callback",
+    scheme: "asaprider",
+    path: "auth/auth-callback",
   });
 
-  if (!email || !password || !username) {
+  if (!email || !password || !username || !phone) {
     throw new Error("All fields are required");
+  }
+
+  // Customers call riders on this number, so it's required and stored E.164
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) {
+    throw new Error("Enter a valid phone number, e.g. 08012345678");
   }
 
   // 1️⃣ Create auth user
@@ -89,6 +118,7 @@ export async function signUpUser(
       {
         id: user.id, // include the new auth user ID
         username,
+        phone: normalizedPhone,
         custom_role: "rider",
       },
     ]);
@@ -184,12 +214,16 @@ export async function getCusUserById(userId: string) {
 export async function updateRiderLocation(latitude: number, longitude: number) {
   try {
     const user = await requireUser();
+    // Body must match Rust's GeoPointRequest; kind is GeoPointKind in snake_case
     await apiPost(`/matching/process-geolocation/${user.id}`, {
-      latitude,
-      longitude,
+      lat: latitude,
+      lng: longitude,
+      name: "Driver location",
+      kind: "driver_location",
     });
     return { success: true };
   } catch (err: any) {
+    console.error("Failed to send driver location:", err.message);
     return { success: false, error: err.message };
   }
 }
@@ -231,15 +265,41 @@ export async function updateRiderLocation(latitude: number, longitude: number) {
     return { success: false, error: err };
   }
 } */
+
+// back_drivers.status. Rust sets "busy" on assignment; the app only ever
+// sends "available" or "offline".
+export type DriverStatus = "available" | "busy" | "offline";
+
+/** The signed-in driver's saved status, or null if it can't be read. */
+export async function getDriverStatus(): Promise<DriverStatus | null> {
+  try {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("back_drivers")
+      .select("status")
+      .eq("driver_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    const status = data?.status;
+    return status === "available" || status === "busy" || status === "offline"
+      ? status
+      : null;
+  } catch (err: any) {
+    console.error("Failed to load driver status:", err.message);
+    return null;
+  }
+}
+
 export async function updateRiderActiveMode(isOnline: boolean) {
   try {
-    const data = await apiPost("/drivers/update-driver", {
-      active_mode: isOnline ? "rider" : "client",
+    // Driver id comes from the auth token on the Rust side
+    await apiPostIgnoringBody("/drivers/update-status", {
+      status: isOnline ? "available" : "offline",
     });
-    return { success: true, data };
-  } catch (err) {
-    console.error("🚨 Unexpected error while updating active mode:", err);
-    return { success: false, error: err };
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to update driver status:", err.message);
+    return { success: false, error: err.message };
   }
 }
 /**
@@ -373,6 +433,7 @@ export async function getDeliveryOrderByCode(orderCode: string) {
   try {
     if (!orderCode) return { success: false, error: "orderCode is required" };
     const data = await apiGet(`/trips/get-trip/${orderCode}`);
+    if (!data) return { success: false, error: "Trip not found" };
     return { success: true, data };
   } catch (err) {
     console.error("🚨 Unexpected error fetching order:", err);
@@ -396,11 +457,22 @@ export async function getRiderAcceptedDeliveries() {
 
     const driverId = user.id;
 
+    // The rider shows the pickup code (the sender enters it); the dropoff code
+    // stays out — the rider enters it and Rust checks it
     const { data, error } = await supabase
       .from("app_delivery_orders")
-      .select("*")
+      .select(
+        "id,order_code,status,created_at,pickup_lat,pickup_long,pickup_name,dropoff_lat,dropoff_long,dropoff_name,image_url,package_type,delivery_accepted_time,dropoff_time,cancelled_at,payment_reference,customer_phone,pickup_code",
+      )
       .eq("driver_id", driverId)
-      .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]); // active deliveries
+      .in("status", [
+        "pending",
+        "arriving_pickup",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ])
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("❌ Error fetching rider deliveries:", error.message);
@@ -522,6 +594,7 @@ export const sendMessageToSupabase = async (messageData: {
   sender_id: string;
   receiver_id: string;
   delivery_order_id: number;
+  image_url?: string | null; // chat_images object path
 }) => {
   console.log("Sending message:", messageData);
 
@@ -534,6 +607,7 @@ export const sendMessageToSupabase = async (messageData: {
           sender_id: messageData.sender_id,
           receiver_id: messageData.receiver_id,
           delivery_order_id: messageData.delivery_order_id,
+          image_url: messageData.image_url ?? null,
           created_at: new Date().toISOString(),
         },
       ])
@@ -612,7 +686,7 @@ export const getMessagesList = async () => {
         key: otherUser.id,
         id: otherUser.id,
         clientName: otherUser.username,
-        lastMessage: msg.message,
+        lastMessage: msg.message || (msg.image_url ? "📷 Photo" : ""),
         time: formatMessageTime(msg.created_at),
         unreadCount: 0,
         deliveryOrderId: msg.delivery_order_id,
@@ -805,6 +879,35 @@ export async function updateUserSetting(
   }
 }
 
+export async function updateUserPassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  // Step 1: Get current user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) throw new Error("No authenticated user found.");
+  if (!user.email) throw new Error("This account has no email password.");
+
+  // Step 2: Verify current password by re-signing in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+
+  if (signInError) throw new Error("Current password is incorrect.");
+
+  // Step 3: Update to new password
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) throw updateError;
+}
+
 /* -------------------------------------------------
  * Profile Image
  * ------------------------------------------------- */
@@ -830,8 +933,10 @@ export const updateProfileImage = async (
   });
 
   const result = await uploadTask.uploadAsync();
-  if (result.status !== 200) {
-    throw new Error(`Profile image upload failed with status ${result.status}`);
+  if (!result || result.status !== 200) {
+    throw new Error(
+      `Profile image upload failed with status ${result?.status ?? "unknown"}`,
+    );
   }
 
   const { data: urlData } = supabase.storage
@@ -867,16 +972,53 @@ export async function updateBankDetails(
   }
 }
 
-export async function confirmRidePickup(
+// Completes the delivery for app and Zazu orders (Rust checks the code by the
+// order's source); for Zazu orders this also releases the payout
+/**
+ * Cancelled-after-pickup orders whose package the rider still has to take
+ * back (app_returned.status = 'returning'). RLS limits rows to this rider.
+ */
+export async function fetchOpenReturnOrderIds(): Promise<number[]> {
+  const { data, error } = await supabase
+    .from("app_returned")
+    .select("order_id")
+    .eq("status", "returning");
+
+  if (error) {
+    console.error("❌ Failed to load open returns:", error.message);
+    return [];
+  }
+  return (data ?? []).map((row: { order_id: number }) => Number(row.order_id));
+}
+
+/** The rider enters the customer's return code at the pickup point. */
+export async function confirmReturn(
   orderRef: string,
   driverId: string,
-  pickupCode: string,
+  returnCode: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiPost("/drivers/confirm-pickup", {
+    await apiPost("/drivers/confirm-return", {
       order_ref: orderRef,
       driver_id: driverId,
-      pickup_code: pickupCode,
+      return_code: returnCode,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? "Confirmation failed" };
+  }
+}
+
+export async function confirmRideDropoff(
+  orderRef: string,
+  driverId: string,
+  dropoffCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost("/drivers/confirm-dropoff", {
+      order_ref: orderRef,
+      driver_id: driverId,
+      dropoff_code: dropoffCode,
     });
     return { success: true };
   } catch (err: any) {

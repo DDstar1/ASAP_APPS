@@ -56,13 +56,13 @@ export async function hasDriverAcceptedDelivery(
     if (accepted && data.status === "pending") {
       const { error: updateError } = await supabase
         .from("app_delivery_orders")
-        .update({ status: "accepted" })
+        .update({ status: "arriving_pickup" })
         .eq("client_id", client_id)
         .eq("order_code", order_code);
 
       if (updateError)
         console.warn("⚠️ Failed to update delivery status:", updateError);
-      else console.log(`✅ Delivery ${order_code} marked as accepted.`);
+      else console.log(`✅ Delivery ${order_code} marked as accepted and on the way to pickup.`);
     }
 
     return { accepted, driver_id };

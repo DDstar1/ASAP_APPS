@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as Linking from "expo-linking";
 import { signUpUser } from "@/lib/supabase-app-functions";
+import { normalizePhone } from "@/lib/phone";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
 
 const createSessionFromUrl = async (url: string) => {
@@ -40,6 +41,7 @@ export default function SignUpScreen() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,14 +57,19 @@ export default function SignUpScreen() {
   }, [url]);
 
   const handleSignUp = async () => {
-    if (!username || !email || !password || !confirmPassword)
+    if (!username || !email || !phone || !password || !confirmPassword)
       return Alert.alert("Error", "All fields are required");
+    if (!normalizePhone(phone))
+      return Alert.alert(
+        "Error",
+        "Enter a valid phone number, e.g. 08012345678",
+      );
     if (password !== confirmPassword)
       return Alert.alert("Error", "Passwords do not match");
 
     setLoading(true);
     try {
-      await signUpUser(email, password, username);
+      await signUpUser(email, password, username, phone);
       Alert.alert(
         "Verify Your Email",
         "A verification link has been sent to your inbox.",
@@ -132,6 +139,28 @@ export default function SignUpScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           left={<TextInput.Icon icon="email-outline" color="#a5abbd" />}
+          textColor="#e0e5f9"
+          outlineColor="rgba(255,255,255,0.08)"
+          activeOutlineColor="#ff923e"
+          style={{
+            backgroundColor: "#131a2e",
+            marginBottom: 16,
+            borderRadius: 12,
+          }}
+          theme={inputTheme}
+        />
+
+        {/* Phone */}
+        <TextInput
+          label="Phone Number"
+          mode="outlined"
+          placeholder="08012345678"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
+          left={<TextInput.Icon icon="phone-outline" color="#a5abbd" />}
           textColor="#e0e5f9"
           outlineColor="rgba(255,255,255,0.08)"
           activeOutlineColor="#ff923e"

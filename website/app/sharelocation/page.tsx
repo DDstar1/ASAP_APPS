@@ -5,20 +5,28 @@ import { useSearchParams } from "next/navigation";
 
 function LocationPageInner() {
   const params = useSearchParams();
-  const lat = params.get("lat");
-  const lng = params.get("lng");
-  const app = params.get("app") || "customer";
+  const latNum = Number(params.get("lat"));
+  const lngNum = Number(params.get("lng"));
+  const valid =
+    params.get("lat") !== null &&
+    params.get("lng") !== null &&
+    Number.isFinite(latNum) &&
+    Number.isFinite(lngNum) &&
+    Math.abs(latNum) <= 90 &&
+    Math.abs(lngNum) <= 180;
+  const lat = String(latNum);
+  const lng = String(lngNum);
 
-  const [fallbackVisible, setFallbackVisible] = useState(false);
+  // Only the rider app has a view-location screen; everyone else goes
+  // straight to Google Maps.
+  const isRider = params.get("app") === "rider";
+  const deepLink = `asaprider://view-location?lat=${lat}&lng=${lng}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+  const [fallbackVisible, setFallbackVisible] = useState(!isRider);
 
   useEffect(() => {
-    if (!lat || !lng) return;
-
-    // Deep link to your mobile app
-    const deepLink =
-      app === "rider"
-        ? `asaprider://view-location?lat=${lat}&lng=${lng}`
-        : `asapcustomer://view-location?lat=${lat}&lng=${lng}`;
+    if (!valid || !isRider) return;
 
     // Try opening the app
     window.location.href = deepLink;
@@ -29,9 +37,9 @@ function LocationPageInner() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [lat, lng, app]);
+  }, [valid, isRider, deepLink]);
 
-  if (!lat || !lng) {
+  if (!valid) {
     return (
       <div className="flex items-center justify-center min-h-screen text-center">
         <p className="text-gray-700 text-lg">Invalid location link.</p>
@@ -62,20 +70,18 @@ function LocationPageInner() {
 
           <div className="flex flex-col space-y-3">
             {/* Open app button */}
-            <a
-              href={
-                app === "rider"
-                  ? `asaprider://view-location?lat=${lat}&lng=${lng}`
-                  : `asapcustomer://view-location?lat=${lat}&lng=${lng}`
-              }
-              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-            >
-              Open in App
-            </a>
+            {isRider && (
+              <a
+                href={deepLink}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
+              >
+                Open in App
+              </a>
+            )}
 
-            {/* Google Maps fallback */}
+            {/* Google Maps fallback (opens the Google Maps app on iOS and Android when installed) */}
             <a
-              href={`https://www.google.com/maps?q=${lat},${lng}`}
+              href={mapsUrl}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition"
               target="_blank"
               rel="noopener noreferrer"

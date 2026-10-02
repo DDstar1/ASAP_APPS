@@ -34,7 +34,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   fetchSettings: async (userId: string) => {
     set({ loading: true });
     try {
-      const { success, data } = await getUserSettings(userId);
+      // getUserSettings reads the signed-in user itself
+      const { success, data } = await getUserSettings();
       set({
         settings: success && data ? data : DEFAULT_SETTINGS,
         loading: false,

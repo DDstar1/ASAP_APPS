@@ -9,9 +9,14 @@ import {
   ActivityIndicator,
   Switch,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { handleLogout, updateProfileImage } from "@/lib/supabase-app-functions";
+import {
+  deleteOwnAccount,
+  handleLogout,
+  updateProfileImage,
+} from "@/lib/supabase-app-functions";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -19,6 +24,20 @@ import { useUserStore } from "@/store/useUserStore";
 import { useSettingsStore } from "@/store/useUserSettingsStore";
 import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
 import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
+import * as WebBrowser from "expo-web-browser";
+import Constants from "expo-constants";
+
+const WEBSITE_URL = Constants.expoConfig?.extra?.websiteUrl as
+  | string
+  | undefined;
+
+const openWebsite = (path: string) => {
+  if (!WEBSITE_URL) {
+    Alert.alert("Unavailable", "This page isn't available right now.");
+    return;
+  }
+  WebBrowser.openBrowserAsync(`${WEBSITE_URL}${path}`);
+};
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -27,6 +46,7 @@ export default function AccountScreen() {
   const { settings, fetchSettings, updateSettings } = useSettingsStore();
 
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -75,6 +95,41 @@ export default function AccountScreen() {
     }
   };
 
+  const onDeleteAccountPress = () => {
+    Alert.alert(
+      "Delete account?",
+      "This permanently deletes your account, saved locations and delivery history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteOwnAccount();
+            } catch (err: any) {
+              console.error("Account deletion failed:", err);
+              if (err?.message === "ACTIVE_DELIVERY") {
+                Alert.alert(
+                  "Delivery in progress",
+                  "A rider is currently handling one of your deliveries. You can delete your account once it's delivered.",
+                );
+              } else {
+                Alert.alert(
+                  "Couldn't delete account",
+                  "Please try again or contact support.",
+                );
+              }
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const onEditProfileImage = async () => {
     try {
       const permission =
@@ -104,7 +159,7 @@ export default function AccountScreen() {
       );
 
       setProfileImage(publicUrl);
-      setUser({ ...user, profileImage: publicUrl });
+      if (user) setUser({ ...user, profileImage: publicUrl });
     } catch (err) {
       console.error("Image upload failed:", err);
       alert("Failed to update profile image.");
@@ -113,7 +168,10 @@ export default function AccountScreen() {
     }
   };
 
-  const handleToggle = (key: keyof typeof settings, value: boolean) => {
+  const handleToggle = (
+    key: keyof NonNullable<typeof settings>,
+    value: boolean,
+  ) => {
     if (!user?.id) return;
     updateSettings(user.id, { [key]: value });
   };
@@ -180,6 +238,23 @@ export default function AccountScreen() {
           />
         </Section>
 
+        {/* GROW WITH ASAP */}
+        <Section title="GROW WITH ASAP" icon="trending-up">
+          <EditItem
+            title="Become a Vendor"
+            subtitle="Sell and deliver with ASAP"
+            icon="storefront"
+            onPress={() => openWebsite("/become-vendor")}
+          />
+          <View className="h-px bg-[#1e2a40] mx-1" />
+          <EditItem
+            title="Invest"
+            subtitle="Invest in ASAP"
+            icon="show-chart"
+            onPress={() => openWebsite("/invest")}
+          />
+        </Section>
+
         {/* PREFERENCES */}
         <Section title="PREFERENCES" icon="tune">
           <ToggleItem
@@ -206,7 +281,7 @@ export default function AccountScreen() {
         <TouchableOpacity
           onPress={onLogoutPress}
           disabled={loading}
-          className="mx-4 mt-8 mb-6 py-5 rounded-full items-center justify-center flex-row gap-2"
+          className="mx-4 mt-8 mb-4 py-5 rounded-full items-center justify-center flex-row gap-2"
           style={{ backgroundColor: "#ff923e" }}
         >
           {loading ? (
@@ -216,6 +291,24 @@ export default function AccountScreen() {
               <MaterialIcons name="logout" size={20} color="#000" />
               <Text className="text-black font-bold text-base">
                 LOGOUT ACCOUNT
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* DELETE ACCOUNT */}
+        <TouchableOpacity
+          onPress={onDeleteAccountPress}
+          disabled={deleting}
+          className="mx-4 mb-6 py-4 rounded-full items-center justify-center flex-row gap-2 border border-[#ef4444]/40"
+        >
+          {deleting ? (
+            <ActivityIndicator color="#ef4444" />
+          ) : (
+            <>
+              <MaterialIcons name="delete-forever" size={20} color="#ef4444" />
+              <Text className="text-[#ef4444] font-semibold text-base">
+                Delete Account
               </Text>
             </>
           )}
@@ -239,7 +332,17 @@ export default function AccountScreen() {
 
 // ---------- COMPONENTS ----------
 
-function Section({ title, icon, children }) {
+type IconName = React.ComponentProps<typeof MaterialIcons>["name"];
+
+function Section({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: IconName;
+  children: React.ReactNode;
+}) {
   return (
     <View className="mx-4 mt-8">
       <View className="flex-row items-center gap-2 mb-4">
@@ -251,7 +354,17 @@ function Section({ title, icon, children }) {
   );
 }
 
-function EditItem({ title, subtitle, icon, onPress }) {
+function EditItem({
+  title,
+  subtitle,
+  icon,
+  onPress,
+}: {
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -271,7 +384,17 @@ function EditItem({ title, subtitle, icon, onPress }) {
   );
 }
 
-function ToggleItem({ title, icon, value, onValueChange }) {
+function ToggleItem({
+  title,
+  icon,
+  value,
+  onValueChange,
+}: {
+  title: string;
+  icon: IconName;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
   return (
     <View className="flex-row justify-between items-center py-3">
       <View className="flex-row items-center gap-3">

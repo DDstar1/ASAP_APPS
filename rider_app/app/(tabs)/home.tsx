@@ -2,12 +2,16 @@ import { IMAGES } from "@/assets/assetsData";
 import CodeInputComponent from "@/components/CodeInputComponent";
 import AvailableOrdersDropdown from "@/components/AvailableOrdersDropdown";
 import PickupConfirmOTP from "@/components/PickupConfirmOTP";
+import { RideOfferModal } from "@/components/RideOfferModal";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { PulseDot } from "@/components/PulseDot";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRiderEarnings } from "@/hooks/use-rider-earnings";
+import { formatNaira } from "@/lib/earnings";
 import {
   Alert,
+  AppState,
   Image,
   RefreshControl,
   ScrollView,
@@ -21,18 +25,28 @@ import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  getDriverStatus,
   updateRiderActiveMode,
   updateRiderLocation,
-  verifyDeliveryCode,
+  confirmRideDropoff,
 } from "@/lib/supabase-app-functions";
 
+import { supabaseEvents } from "@/lib/supabase";
 import { useRiderOrdersStore } from "@/store/useDeliveryOrdersStore";
-import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
+import { RiderOrder } from "@/utils/my_types";
+import {
+  isActiveStatus,
+  useAcceptedDeliveryStore,
+} from "@/store/useAcceptedDeliveriesStore";
 import { stopTracking } from "@/utils/utils_orderLocationTracking";
 import { useUserStore } from "@/store/useUserStore";
 
 const RiderHomeScreen = () => {
-  const [isOnline, setIsOnline] = useState(true);
+  // Follows back_drivers.status (available/busy = online); starts offline
+  // until the saved status has loaded
+  const [isOnline, setIsOnline] = useState(false);
+  const isOnlineRef = useRef(isOnline);
+  isOnlineRef.current = isOnline;
   const [showOrders, setShowOrders] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hasOngoingDeliveries, setHasOngoingDeliveries] = useState(false);
@@ -56,8 +70,38 @@ const RiderHomeScreen = () => {
     fetchUserSession();
   }, []);
 
+  // Customer cancelled an order this rider is on. Before pickup it's simply
+  // dropped; after pickup the rider takes the package back to the pickup point
+  // and completes the return from the cancelled card in Deliveries.
   useEffect(() => {
-    const hasOngoing = AcceptedDeliveries.some((d) => d.status !== "delivered");
+    const onUpdate = (row: RiderOrder) => {
+      if (row.status !== "cancelled" || row.driver_id !== user?.id) return;
+      const { AcceptedDeliveries, removeAcceptedDelivery } =
+        useAcceptedDeliveryStore.getState();
+      if (!AcceptedDeliveries.some((d) => d.id === row.id)) return;
+
+      if (row.is_pickup_code_authenticated) {
+        // Move it to Completed and load the return so AT RETURN POINT shows
+        useAcceptedDeliveryStore.getState().refreshAfterCancel();
+        Alert.alert(
+          "Order cancelled",
+          `The customer cancelled #${row.order_code}. Please return the package to the pickup point, then tap AT RETURN POINT on the order in Deliveries and enter the sender's return code.`,
+        );
+        return;
+      }
+
+      removeAcceptedDelivery(row.id);
+      Alert.alert(
+        "Order cancelled",
+        `The customer cancelled #${row.order_code}. You don't need to pick it up.`,
+      );
+    };
+    supabaseEvents.on("delivery_update", onUpdate);
+    return () => supabaseEvents.off("delivery_update", onUpdate);
+  }, [user?.id]);
+
+  useEffect(() => {
+    const hasOngoing = AcceptedDeliveries.some((d) => isActiveStatus(d.status));
     setHasOngoingDeliveries(hasOngoing);
     if (!hasOngoing) stopTracking();
   }, [AcceptedDeliveries]);
@@ -68,12 +112,28 @@ const RiderHomeScreen = () => {
       fetchAvailableOrders(),
       fetchAcceptedDeliveries(),
       fetchUserSession(),
+      earnings.reload(), // tier or fees may have changed
     ]);
     setRefreshing(false);
   };
 
   const activeDelivery =
-    AcceptedDeliveries.find((d) => d.status !== "delivered") || null;
+    AcceptedDeliveries.find((d) => isActiveStatus(d.status)) || null;
+
+  const deliveredDeliveries = useMemo(
+    () => AcceptedDeliveries.filter((d) => d.status === "delivered"),
+    [AcceptedDeliveries],
+  );
+  const earnings = useRiderEarnings(deliveredDeliveries);
+
+  // Delivered orders stay in the store (they feed the earnings and the
+  // completed list); refetch to pick up dropoff_time
+  const finishDelivery = (orderId: number) => {
+    updateDeliveryStatus(orderId, "delivered");
+    setHasOngoingDeliveries(false);
+    stopTracking();
+    fetchAcceptedDeliveries();
+  };
 
   const toggleDropdown = () => setShowOrders((prev) => !prev);
 
@@ -97,31 +157,40 @@ const RiderHomeScreen = () => {
 
   const canConfirmTrip = distanceToDropoff <= 100;
 
-  const startRealtimeLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission Required", "Location permission is required.");
-      setIsOnline(false);
-      return;
-    }
+  const hasLocationPermission = async (ask: boolean) => {
+    const { status } = ask
+      ? await Location.requestForegroundPermissionsAsync()
+      : await Location.getForegroundPermissionsAsync();
+    return status === "granted";
+  };
 
-    locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.Highest,
-        distanceInterval: 5,
-        timeInterval: 5000,
-      },
-      async (location) => {
-        try {
+  // Goes offline in the app and in Rust (e.g. location access was removed)
+  const forceOffline = (message: string) => {
+    setIsOnline(false);
+    updateRiderActiveMode(false);
+    Alert.alert("You're offline", message);
+  };
+
+  const startRealtimeLocation = async () => {
+    try {
+      locationSubscription.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Highest,
+          distanceInterval: 5,
+          timeInterval: 5000,
+        },
+        async (location) => {
           const { latitude, longitude } = location.coords;
           setDriverLat(latitude);
           setDriverLng(longitude);
           await updateRiderLocation(latitude, longitude);
-        } catch (err) {
-          console.error("Failed to update rider location:", err);
-        }
-      },
-    );
+        },
+      );
+    } catch (err) {
+      // Location services switched off on the device
+      console.error("Failed to start location updates:", err);
+      forceOffline("Turn on location services to go online.");
+    }
   };
 
   const stopRealtimeLocation = () => {
@@ -131,37 +200,79 @@ const RiderHomeScreen = () => {
     }
   };
 
+  // Location is only sent while online
   useEffect(() => {
     if (isOnline) startRealtimeLocation();
     else stopRealtimeLocation();
-    updateRiderActiveMode(isOnline);
     return () => stopRealtimeLocation();
   }, [isOnline]);
 
-  const handleSubmitCode = async (code: string, type: "pickup" | "dropoff") => {
+  // On launch, pick up the saved status instead of forcing online. A driver
+  // saved as online without location access is switched offline.
+  useEffect(() => {
+    (async () => {
+      const status = await getDriverStatus();
+      if (!status || status === "offline") return;
+      if (await hasLocationPermission(false)) setIsOnline(true);
+      else forceOffline("Location access is off, so you've been set offline.");
+    })();
+  }, []);
+
+  // Location access can be removed in Settings while the app is in the
+  // background; check again whenever the rider comes back
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", async (state) => {
+      if (state !== "active" || !isOnlineRef.current) return;
+      if (!(await hasLocationPermission(false))) {
+        forceOffline("Location access was turned off, so you've been set offline.");
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleToggleOnline = async (online: boolean) => {
+    if (online) {
+      if (!(await hasLocationPermission(true))) {
+        Alert.alert(
+          "Location required",
+          "Allow location access to go online and receive deliveries.",
+        );
+        return;
+      }
+    } else if (hasOngoingDeliveries) {
+      Alert.alert(
+        "Delivery in progress",
+        "Finish your current delivery before going offline.",
+      );
+      return;
+    }
+
+    setIsOnline(online);
+    const result = await updateRiderActiveMode(online);
+    if (!result.success) {
+      setIsOnline(!online);
+      Alert.alert(
+        "Couldn't update status",
+        `You're still ${online ? "offline" : "online"}. Please try again.`,
+      );
+    }
+  };
+
+  // Dropoff only: the pickup code is entered by the sender in their app
+  const handleSubmitCode = async (code: string) => {
     if (!activeDelivery) return;
     try {
-      const result = await verifyDeliveryCode(activeDelivery.id, code, type);
+      const result = await confirmRideDropoff(
+        activeDelivery.order_code,
+        user?.id ?? "",
+        code,
+      );
       if (result.success) {
-        const newStatus = type === "pickup" ? "in_transit" : "delivered";
-        const verificationUpdate =
-          type === "pickup"
-            ? { pickup_code_verified: true }
-            : { dropoff_code_verified: true };
-
-        updateDeliveryStatus(activeDelivery.id, newStatus, verificationUpdate);
-
-        if (type === "dropoff") {
-          useAcceptedDeliveryStore
-            .getState()
-            .removeAcceptedDelivery(activeDelivery.id);
-          setHasOngoingDeliveries(false);
-          stopTracking();
-        }
+        finishDelivery(activeDelivery.id);
 
         Alert.alert(
           "Code Authenticated ✓",
-          `${type === "pickup" ? "Pickup" : "Dropoff"} verified successfully!`,
+          "Dropoff verified successfully!",
           [{ text: "OK", onPress: () => router.replace("/(tabs)/home") }],
         );
       } else {
@@ -192,7 +303,7 @@ const RiderHomeScreen = () => {
           </Text>
 
           <Text className="text-[#ff923e] text-5xl font-bold mb-2">
-            ₦157.34
+            {earnings.loading ? "—" : formatNaira(earnings.totals.all)}
           </Text>
         </SafeAreaView>
 
@@ -206,9 +317,21 @@ const RiderHomeScreen = () => {
       {/* Stats Card */}
       <View className="mx-4 mt-8 p-5 rounded-3xl bg-[#121a2b]">
         <View className="flex-row justify-between gap-2">
-          <Stat label="Orders" value="142" />
-          <Stat label="Level" value="1" highlight />
-          <Stat label="Online" value="38h" />
+          <Stat
+            label="Total trips"
+            value={String(deliveredDeliveries.length)}
+          />
+          <Stat
+            label="Today"
+            value={earnings.loading ? "—" : formatNaira(earnings.totals.today)}
+            highlight
+          />
+          <Stat
+            label="This week"
+            value={
+              earnings.loading ? "—" : formatNaira(earnings.totals.thisWeek)
+            }
+          />
         </View>
       </View>
 
@@ -250,7 +373,7 @@ const RiderHomeScreen = () => {
 
             <Switch
               value={isOnline}
-              onValueChange={setIsOnline}
+              onValueChange={handleToggleOnline}
               thumbColor="#e0e5f9"
               trackColor={{ false: "#2a3245", true: "#ff923e" }}
               style={{
@@ -275,7 +398,7 @@ const RiderHomeScreen = () => {
           />
         )}
 
-        {/* Confirm Trip button — always present, unlocks within 100m of dropoff */}
+        {/* Confirm drop-off button — always present, unlocks within 100m of dropoff */}
         <View
           style={{
             marginTop: 16,
@@ -312,7 +435,9 @@ const RiderHomeScreen = () => {
                 color: canConfirmTrip ? "#000" : "#a5abbd",
               }}
             >
-              {canConfirmTrip ? "CONFIRM TRIP" : "CONFIRM TRIP  ·  Move to dropoff"}
+              {canConfirmTrip
+                ? "CONFIRM DROP-OFF"
+                : "CONFIRM DROP-OFF  ·  Move to dropoff"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -330,14 +455,12 @@ const RiderHomeScreen = () => {
           driverLng={driverLng}
           onSuccess={() => {
             setShowOTPModal(false);
-            useAcceptedDeliveryStore
-              .getState()
-              .removeAcceptedDelivery(activeDelivery.id);
-            setHasOngoingDeliveries(false);
-            stopTracking();
+            finishDelivery(activeDelivery.id);
           }}
         />
       )}
+
+      <RideOfferModal />
     </View>
   );
 };

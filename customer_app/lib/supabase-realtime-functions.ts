@@ -1,6 +1,7 @@
 // lib/supabaseListeners.ts
 import { supabase, supabaseEvents } from "./supabase";
 import { getCurrentUserId } from "./supabase-app-functions";
+import type { DeliveryOrder } from "@/utils/my_types";
 
 // Separate channels
 let DeliveryEventChannel: any = null;
@@ -28,22 +29,23 @@ export function startDeliveryEvents() {
       {
         event: "*",
         schema: "public",
-        table: "delivery_orders",
+        table: "app_delivery_orders",
       },
       (payload) => {
         console.log("Delivery order event received:", payload);
         switch (payload.eventType) {
           case "INSERT":
-            supabaseEvents.emit("delivery_insert", payload.new);
+            supabaseEvents.emit("delivery_insert", payload.new as DeliveryOrder);
             break;
 
           case "UPDATE":
-            supabaseEvents.emit("delivery_update", payload.new);
+            supabaseEvents.emit("delivery_update", payload.new as DeliveryOrder);
             console.log("Emitted delivery_update event");
             break;
 
           case "DELETE":
-            supabaseEvents.emit("delivery_delete", payload.old);
+            // Only the primary key is guaranteed on a delete
+            supabaseEvents.emit("delivery_delete", payload.old as DeliveryOrder);
             break;
         }
       },
@@ -88,7 +90,7 @@ export function startWaypointEvents(orderId: string | number) {
       {
         event: "INSERT",
         schema: "public",
-        table: "delivery_orders_waypoints",
+        table: "app_delivery_orders_waypoints",
         filter: `order_id=eq.${orderId}`,
       },
       (payload) => {
@@ -127,7 +129,7 @@ export function startMessageEvents(userId: string) {
       {
         event: "INSERT",
         schema: "public",
-        table: "messages",
+        table: "app_messages",
         filter: `receiver_id=eq.${userId}`,
       },
       (payload) => {
@@ -140,7 +142,7 @@ export function startMessageEvents(userId: string) {
       {
         event: "UPDATE",
         schema: "public",
-        table: "messages",
+        table: "app_messages",
         filter: `receiver_id=eq.${userId}`,
       },
       (payload) => {

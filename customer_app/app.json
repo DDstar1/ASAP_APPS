@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.ddhaven.asapcustomer",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,26 +17,19 @@
     },
     "android": {
       "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
       ],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "hardwareAccelerated": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y"
-        }
-      },
       "package": "com.ddhaven.asap_customer"
     },
     "web": {
@@ -46,7 +39,26 @@
     },
     "plugins": [
       [
-        "expo-camera"
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to take photos of the package you are sending, so your rider can identify it at pickup.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can choose a profile picture and send package photos in chat.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to take photos of the package you are sending, so your rider can identify it at pickup.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to set your pickup point, find nearby riders and share your location with your rider."
+        }
       ],
       [
         "expo-splash-screen",
@@ -57,14 +69,13 @@
           "backgroundColor": "#ffffff"
         }
       ],
+      "expo-web-browser",
       [
-        "expo-maps",
+        "expo-notifications",
         {
-          "requestLocationPermission": true,
-          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
+          "color": "#F59E0B"
         }
-      ],
-      "expo-web-browser"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -72,10 +83,7 @@
     "extra": {
       "eas": {
         "projectId": "691b63ab-2d6e-4a89-9cf4-72fe45aff10d"
-      },
-      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y",
-      "SUPABASE_URL": "https://edtsmqjnkakaaujmmhip.supabase.co",
-      "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkdHNtcWpua2FrYWF1am1taGlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQzNDk0MSwiZXhwIjoyMDc3MDEwOTQxfQ.vRZZE1pZ5koj3cxoRPtxgUPlO7I1ZrOP-Mk_2dMfKx8"
+      }
     },
     "owner": "ddhaven"
   }

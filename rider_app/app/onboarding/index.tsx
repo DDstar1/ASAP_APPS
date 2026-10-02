@@ -21,16 +21,16 @@ const { width, height } = Dimensions.get("window");
 const slides = [
   {
     id: "1",
-    title: "Send Packages with Ease, Anywhere in India",
+    title: "Send Packages with Ease, Anywhere in Nigeria",
     description:
-      "Select your package, choose pickup and drop locations, and we’ll handle the rest—all with minimal steps.",
+      "Select your package, choose pickup and drop locations, and we’ll handle the rest all with minimal steps.",
     image: IMAGES.riderBikePizza,
   },
   {
     id: "2",
     title: "Personal or Business, We’ve Got You Covered",
     description:
-      "Send packages from home or manage bulk shipments with business discounts—all in one app.",
+      "Send packages from home or manage bulk shipments with business discounts all in one app.",
     image: IMAGES.riderManTransit,
   },
   {

@@ -31,10 +31,11 @@ export function MyKeyboardAvoidingWrapper({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "android" ? behaviour : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : behaviour}
       style={{
         flex: 1,
         justifyContent: "flex-end",
+        ...style,
       }}
     >
       {children}

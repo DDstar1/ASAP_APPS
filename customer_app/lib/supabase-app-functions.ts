@@ -4,20 +4,16 @@ import { createUploadTask } from "expo-file-system/legacy";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { apiGet, apiPost } from "./api-client";
+import { normalizePhone } from "./phone";
+import { unregisterPushToken } from "./push-notifications";
 
-import { getDistanceAndETAByRoad } from "@/utils/mapUtils";
 import type {
   Coordinates,
   DeliveryOrder,
   RiderDistanceInfo,
   SavedLocationInput,
 } from "@/utils/my_types";
-import { formatMessageTime } from "@/utils/my_utils";
-import {
-  checkOrderExists,
-  deleteOldPendingDeliveries,
-  hasDriverAcceptedDelivery,
-} from "./supabase-utils";
+import { formatMessageTime } from "./supabase-utils";
 
 /* -------------------------------------------------
  * Auth Helpers
@@ -52,6 +48,9 @@ export async function getCurrentUserId(): Promise<{
 
 export const handleLogout = async (): Promise<void> => {
   try {
+    // Needs the session, so it has to run before signOut.
+    await unregisterPushToken();
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
 
@@ -62,18 +61,38 @@ export const handleLogout = async (): Promise<void> => {
   }
 };
 
+// Permanently deletes the signed-in user and all their data
+// (see supabase/migrations/*_delete_own_account.sql). The server refuses
+// with "ACTIVE_DELIVERY" while a rider is assigned to an undelivered order.
+export const deleteOwnAccount = async (): Promise<void> => {
+  const { error } = await supabase.rpc("delete_own_account");
+  if (error) throw error;
+
+  // The server session is gone with the user, so only clear it locally.
+  await supabase.auth.signOut({ scope: "local" });
+  useUserStore.getState().setUser(null);
+  router.replace("/auth/login");
+};
+
 export async function signUpUser(
   email: string,
   password: string,
   username: string,
+  phone: string,
 ) {
   const redirectTo = makeRedirectUri({
-    scheme: "com.asapCustomer",
-    path: "auth-callback",
+    scheme: "asapcustomer",
+    path: "auth/auth-callback",
   });
 
-  if (!email || !password || !username) {
+  if (!email || !password || !username || !phone) {
     throw new Error("All fields are required");
+  }
+
+  // Sent with every ride request so the assigned rider can call; stored E.164
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) {
+    throw new Error("Enter a valid phone number, e.g. 08012345678");
   }
 
   const { data, error } = await supabase.auth.signUp({
@@ -94,7 +113,7 @@ export async function signUpUser(
 
   const { error: profileError } = await supabase
     .from("app_custom_users")
-    .insert([{ id: user.id, username }]);
+    .insert([{ id: user.id, username, phone: normalizedPhone }]);
 
   if (profileError) {
     console.error("Creating custom_users entry failed:", profileError);
@@ -172,8 +191,8 @@ export const updateProfileImage = async (
   });
 
   const result = await uploadTask.uploadAsync();
-  if (result.status !== 200) {
-    throw new Error(`Profile image upload failed with status ${result.status}`);
+  if (!result || result.status !== 200) {
+    throw new Error(`Profile image upload failed with status ${result?.status}`);
   }
 
   const { data: urlData } = supabase.storage
@@ -227,9 +246,10 @@ export async function uploadDeliveryImage(
     },
   );
 
+  // Resolves undefined when the upload is cancelled
   const result = await uploadTask.uploadAsync();
-  if (result.status !== 200) {
-    throw new Error(`Upload failed with status ${result.status}`);
+  if (!result || result.status !== 200) {
+    throw new Error(`Upload failed with status ${result?.status}`);
   }
 
   const { data: publicData } = supabase.storage
@@ -317,7 +337,7 @@ export async function deleteSavedLocation(
     const { error } = await supabase
       .from("app_saved_locations")
       .delete()
-      .eq("id", id)
+      .eq("id", Number(id))
       .eq("user_id", user.id);
 
     if (error) throw error;
@@ -456,17 +476,7 @@ export async function getActiveRiders(
     return null;
   }
 } */
-export async function upsertDeliveryOrder(
-  props: Partial<DeliveryOrder> & { order_code: string },
-) {
-  try {
-    const data = await apiPost("/riders/ride-request", props);
-    return data;
-  } catch (err) {
-    console.error("❌ Error upserting delivery order:", err);
-    return null;
-  }
-}
+// Ride requests go through requestRide in lib/ride-request.ts
 export async function getDeliveryOrderById(
   order_id: number,
 ): Promise<{ data: DeliveryOrder | null; error: any }> {
@@ -485,6 +495,51 @@ export async function getDeliveryOrderById(
   }
 }
 
+// App orders are created at Korapay initialize, so the payment reference
+// finds the row before ride-request has done anything
+export async function getDeliveryOrderByReference(
+  payment_reference: string,
+): Promise<{ data: DeliveryOrder | null; error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from("app_delivery_orders")
+      .select("*")
+      .eq("payment_reference", payment_reference)
+      .maybeSingle<DeliveryOrder>();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err: any) {
+    console.error("❌ Error fetching delivery order:", err.message);
+    return { data: null, error: err };
+  }
+}
+
+// Columns the deliveries list, its cards and trackPackage read. The codes
+// stay: the customer passes them on to the pickup/dropoff contacts.
+const CLIENT_DELIVERY_COLUMNS = [
+  "id",
+  "order_code",
+  "status",
+  "created_at",
+  "pickup_lat",
+  "pickup_long",
+  "pickup_name",
+  "dropoff_lat",
+  "dropoff_long",
+  "dropoff_name",
+  "image_url",
+  "package_type",
+  "delivery_accepted_time",
+  "dropoff_time",
+  "cancelled_at",
+  "driver_id",
+  // No pickup_code: the rider shows it and the customer enters it
+  "dropoff_code",
+  "is_pickup_code_authenticated",
+  "payment_reference",
+].join(",");
+
 export async function getAllClientDeliveries(): Promise<{
   success: boolean;
   data: any[];
@@ -495,9 +550,16 @@ export async function getAllClientDeliveries(): Promise<{
 
     const { data, error } = await supabase
       .from("app_delivery_orders")
-      .select("*")
+      .select(CLIENT_DELIVERY_COLUMNS)
       .eq("client_id", user.id)
-      .in("status", ["pending", "arriving_pickup", "in_transit", "delivered"]);
+      .in("status", [
+        "pending",
+        "arriving_pickup",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ])
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("❌ Error fetching client deliveries:", error.message);
@@ -511,6 +573,23 @@ export async function getAllClientDeliveries(): Promise<{
       err.message,
     );
     return { success: false, data: [], error: err };
+  }
+}
+
+// The sender enters the code the rider shows at pickup; Rust checks it and
+// moves the order to in_transit
+export async function confirmPickup(
+  orderRef: string,
+  pickupCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost("/drivers/confirm-pickup", {
+      order_ref: orderRef,
+      pickup_code: pickupCode,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? "Confirmation failed" };
   }
 }
 
@@ -614,15 +693,46 @@ export async function getPendingOrdersWithRider() {
     return [];
   }
 }
+// Delivered orders for a driver, across all customers. RLS only shows the
+// customer their own orders, so the count comes from the
+// driver_rides_completed SQL function, which returns just the number.
+// The return code for a cancelled order whose package is on its way back.
+// Rust generates it; get_return_code only answers the order's own customer
+// (client_id = auth.uid()) while the return is open, else null.
+export const getReturnCode = async (orderId: number): Promise<string | null> => {
+  const { data, error } = await supabase.rpc("get_return_code", {
+    p_order_id: orderId,
+  });
+  if (error) {
+    console.error("❌ Failed to load return code:", error.message);
+    return null;
+  }
+  return data ?? null;
+};
+
+export const ridesCompleted = async (
+  driverId: string,
+): Promise<number | null> => {
+  const { data, error } = await supabase.rpc("driver_rides_completed", {
+    p_driver_id: driverId,
+  });
+  if (error) {
+    console.error("Error fetching rides completed:", error);
+    return null;
+  }
+  return typeof data === "number" ? data : Number(data ?? 0);
+};
+
 export const getOrderRiderInfo = async (orderId: number) => {
   const { data, error } = await supabase
     .from("app_delivery_orders")
     .select(
       `
       driver_id,
-      rider:custom_users!driver_id (
+      rider:app_custom_users!driver_id (
         username,
-        phone
+        phone,
+        profileImage
       )
     `,
     )
@@ -634,10 +744,31 @@ export const getOrderRiderInfo = async (orderId: number) => {
     return null;
   }
 
+  // Vehicle details and the driver's phone (from signup) live in Rust's
+  // back_drivers; optional if unreadable
+  let vehicle: { vehicle: string | null; vehicle_type: string | null; license_number: string | null; phone: string } | null = null;
+  let rides: number | null = null;
+  if (data?.driver_id) {
+    const [{ data: driver }, completed] = await Promise.all([
+      supabase
+        .from("back_drivers")
+        .select("vehicle, vehicle_type, license_number, phone")
+        .eq("driver_id", data.driver_id)
+        .maybeSingle(),
+      ridesCompleted(data.driver_id),
+    ]);
+    vehicle = driver ?? null;
+    rides = completed;
+  }
+
   return {
     name: (data?.rider as any)?.username ?? "Unknown",
-    phone: (data?.rider as any)?.phone ?? null,
+    phone: vehicle?.phone || ((data?.rider as any)?.phone as string | null) || null,
+    profileImage: ((data?.rider as any)?.profileImage as string | null) ?? null,
     id: data?.driver_id ?? null,
+    vehicle: vehicle?.vehicle ?? vehicle?.vehicle_type ?? null,
+    licenseNumber: vehicle?.license_number ?? null,
+    ridesCompleted: rides, // null when the count couldn't be read
   };
 };
 
@@ -674,6 +805,7 @@ export const sendMessageToSupabase = async (messageData: {
   sender_id: string;
   receiver_id: string;
   delivery_order_id: number;
+  image_url?: string | null; // chat_images object path
 }) => {
   try {
     const { data, error } = await supabase
@@ -800,7 +932,8 @@ export const getMessagesList = async () => {
           key: conversationKey,
           id: otherUser.id,
           riderName: otherUser.username,
-          lastMessage: message.message,
+          lastMessage:
+            message.message || (message.image_url ? "📷 Photo" : ""),
           time: formatMessageTime(message.created_at),
           unreadCount: 0,
           deliveryOrderId: message.delivery_order_id,
@@ -848,6 +981,16 @@ export async function getUserSettings(): Promise<{
     promotions: false,
     sms_updates: true,
   };
+  // The columns are nullable; fall back to the defaults for any null
+  const withDefaults = (row: {
+    delivery_alerts: boolean | null;
+    promotions: boolean | null;
+    sms_updates: boolean | null;
+  }) => ({
+    delivery_alerts: row.delivery_alerts ?? DEFAULT_SETTINGS.delivery_alerts,
+    promotions: row.promotions ?? DEFAULT_SETTINGS.promotions,
+    sms_updates: row.sms_updates ?? DEFAULT_SETTINGS.sms_updates,
+  });
   try {
     const user = await requireUser();
     const userId = user.id;
@@ -859,7 +1002,7 @@ export async function getUserSettings(): Promise<{
       .single();
 
     // Row exists — return it
-    if (!error) return { success: true, data };
+    if (!error) return { success: true, data: withDefaults(data) };
 
     // Unexpected error (not "row not found")
     if (error.code !== "PGRST116") {
@@ -879,7 +1022,7 @@ export async function getUserSettings(): Promise<{
       return { success: false, data: null, error: insertError };
     }
 
-    return { success: true, data: newRow };
+    return { success: true, data: withDefaults(newRow) };
   } catch (err: any) {
     console.error("❌ Unexpected error fetching user settings:", err.message);
     return { success: false, data: null, error: err };
@@ -922,6 +1065,7 @@ export async function updateUserPassword(
   } = await supabase.auth.getUser();
 
   if (userError || !user) throw new Error("No authenticated user found.");
+  if (!user.email) throw new Error("This account has no email password.");
 
   // Step 2: Verify current password by re-signing in
   const { error: signInError } = await supabase.auth.signInWithPassword({

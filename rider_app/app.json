@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.ddhaven.asaprider",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,21 +17,16 @@
     },
     "android": {
       "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION"
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.CAMERA"
       ],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "hardwareAccelerated": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -39,11 +34,6 @@
       },
       "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y"
-        }
-      },
       "package": "com.ddhaven.asap_rider"
     },
     "web": {
@@ -53,12 +43,27 @@
     },
     "plugins": [
       [
-        "expo-camera"
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to photograph packages at pickup and delivery as proof of handover.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos so you can choose a profile picture and send package photos in chat.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to photograph packages at pickup and delivery as proof of handover.",
+          "microphonePermission": false
+        }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to track deliveries.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to show nearby delivery requests and guide you to pickup and drop-off points.",
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location in the background during an active delivery, so the customer can track their package in real time. Tracking stops when the delivery ends.",
+          "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
@@ -73,10 +78,9 @@
         }
       ],
       [
-        "expo-maps",
+        "expo-notifications",
         {
-          "requestLocationPermission": true,
-          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
+          "color": "#F59E0B"
         }
       ]
     ],
@@ -86,10 +90,7 @@
     "extra": {
       "eas": {
         "projectId": "a5920a6b-2597-44b3-a63b-f3dda41504cb"
-      },
-      "googleMapsApiKey": "AIzaSyD3qJ3L8xuAsQpecgM9BxQq-3zaKe31W5Y",
-      "SUPABASE_URL": "https://edtsmqjnkakaaujmmhip.supabase.co",
-      "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkdHNtcWpua2FrYWF1am1taGlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTQzNDk0MSwiZXhwIjoyMDc3MDEwOTQxfQ.vRZZE1pZ5koj3cxoRPtxgUPlO7I1ZrOP-Mk_2dMfKx8"
+      }
     },
     "owner": "ddhaven"
   }

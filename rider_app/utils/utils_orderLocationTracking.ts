@@ -128,8 +128,8 @@ const syncToDatabase = async () => {
 const checkAndSync = async () => {
   const lastSync = await AsyncStorage.getItem(LAST_SYNC_TIME_KEY);
 
-  // 30 seconds sync interval
-  if (!lastSync || Date.now() - Number(lastSync) >= 30000) {
+  // 5 second sync interval so the customer's map stays close to live
+  if (!lastSync || Date.now() - Number(lastSync) >= 5000) {
     await syncToDatabase();
   }
 };
@@ -197,7 +197,15 @@ export const startTracking = async (orderId: number) => {
 
     timeInterval: 3000,
 
-    distanceInterval: 0,
+    // iOS ignores timeInterval; 10m keeps updates flowing while moving
+    // without waking the app for GPS jitter while parked.
+    distanceInterval: 10,
+
+    // iOS: blue status-bar pill while tracking (expected by App Review),
+    // and don't let iOS pause updates when the rider stops at a pickup.
+    showsBackgroundLocationIndicator: true,
+    pausesUpdatesAutomatically: false,
+    activityType: Location.ActivityType.AutomotiveNavigation,
 
     foregroundService: {
       notificationTitle: "Delivery in Progress",

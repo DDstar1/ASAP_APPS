@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { confirmRidePickup } from "@/lib/supabase-app-functions";
+import { confirmRideDropoff } from "@/lib/supabase-app-functions";
 
 interface Props {
   visible: boolean;
@@ -86,7 +86,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
   const handleConfirm = async () => {
     if (code.length !== 6 || !inRange) return;
     setSubmitting(true);
-    const result = await confirmRidePickup(orderRef, driverId, code);
+    const result = await confirmRideDropoff(orderRef, driverId, code);
     setSubmitting(false);
     if (result.success) {
       setCode("");
@@ -142,7 +142,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: "#e0e5f9", fontSize: 16, fontWeight: "700" }}>
-              Confirm Trip Completion
+              Confirm Drop-off
             </Text>
             <Text style={{ color: "#a5abbd", fontSize: 12, marginTop: 2 }}>
               Enter the 6-digit code from your passenger
@@ -262,7 +262,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
                     color: code.length === 6 && inRange ? "#000" : "#555",
                   }}
                 >
-                  CONFIRM TRIP
+                  CONFIRM DROP-OFF
                 </Text>
               </>
             )}

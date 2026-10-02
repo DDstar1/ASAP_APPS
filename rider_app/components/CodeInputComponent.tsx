@@ -1,17 +1,26 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Linking,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface CodeInputComponentProps {
   currentDelivery: {
-    id: string;
+    id: number;
     order_code: string;
     status: string;
     pickup_name: string;
     dropoff_name: string;
+    customer_phone?: string | null;
+    pickup_code?: string | null;
   } | null;
-  onSubmitCode: (code: string, type: "pickup" | "dropoff") => Promise<void>;
+  onSubmitCode: (code: string) => Promise<void>;
   hasOngoingDeliveries: boolean;
 }
 
@@ -58,7 +67,7 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onSubmitCode(code.trim(), codeType);
+      await onSubmitCode(code.trim());
       setCode(""); // Clear input after success
     } catch (error) {
       console.error("Error submitting code:", error);
@@ -98,6 +107,19 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
             Order: {currentDelivery.order_code}
           </Text>
         </View>
+
+        {currentDelivery.customer_phone && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() =>
+              Linking.openURL(`tel:${currentDelivery.customer_phone}`)
+            }
+            className="w-11 h-11 bg-white/20 rounded-full justify-center items-center"
+            accessibilityLabel="Call customer"
+          >
+            <Ionicons name="call" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Location */}
@@ -114,67 +136,101 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
         </Text>
       </View>
 
-      {/* Instruction */}
-      <Text className="text-white text-sm mb-3">
-        Enter the {codeType} code provided by the customer:
-      </Text>
-
-      {/* Input */}
-      <View className="bg-white rounded-xl overflow-hidden mb-3">
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder={`Enter ${codeType} code`}
-          placeholderTextColor="#9CA3AF"
-          className="px-4 py-4 text-gray-900 text-base font-semibold"
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={15}
-          editable={!isSubmitting}
-        />
-      </View>
-
-      {/* Button */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={handleSubmit}
-        disabled={isSubmitting || code.trim().length < 4}
-      >
-        <LinearGradient
-          colors={
-            isSubmitting || code.trim().length < 4
-              ? ["#D1D5DB", "#9CA3AF"]
-              : needsPickupCode
-                ? ["#F59E0B", "#EA580C"]
-                : ["#10B981", "#059669"]
-          }
-          style={{ borderRadius: 12, padding: 16 }}
-        >
-          <Text className="text-white text-center text-base font-bold">
-            {isSubmitting
-              ? "Verifying..."
-              : `Confirm ${needsPickupCode ? "Pickup" : "Dropoff"}`}
+      {needsPickupCode ? (
+        // At pickup the sender enters this code in their app; the card moves
+        // to the dropoff step when Rust marks the order in_transit
+        <>
+          <Text className="text-white text-sm mb-3">
+            Give this code to the sender:
           </Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <View className="bg-white rounded-xl py-4 mb-3">
+            <Text
+              selectable
+              className="text-gray-900 text-3xl font-bold text-center tracking-[8px]"
+            >
+              {currentDelivery.pickup_code ?? "—"}
+            </Text>
+          </View>
+          <View className="bg-white/20 rounded-xl p-3">
+            <View className="flex-row items-center">
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color="#FED7AA"
+              />
+              <Text className="text-orange-100 text-xs ml-2 flex-1">
+                {currentDelivery.pickup_code
+                  ? "This updates automatically once the sender confirms the code."
+                  : "Code not ready yet — pull down to refresh."}
+              </Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Instruction */}
+          <Text className="text-white text-sm mb-3">
+            Enter the {codeType} code provided by the customer:
+          </Text>
 
-      {/* Info */}
-      <View className="bg-white/20 rounded-xl p-3 mt-4">
-        <View className="flex-row items-center">
-          <Ionicons
-            name="information-circle-outline"
-            size={20}
-            color={needsPickupCode ? "#FED7AA" : "#D1FAE5"}
-          />
-          <Text
-            className={`${
-              needsPickupCode ? "text-orange-100" : "text-green-100"
-            } text-xs ml-2 flex-1`}
+          {/* Input */}
+          <View className="bg-white rounded-xl overflow-hidden mb-3">
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              placeholder={`Enter ${codeType} code`}
+              placeholderTextColor="#9CA3AF"
+              className="px-4 py-4 text-gray-900 text-base font-semibold"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={15}
+              editable={!isSubmitting}
+            />
+          </View>
+
+          {/* Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleSubmit}
+            disabled={isSubmitting || code.trim().length < 4}
           >
-            The customer will provide you with this code when you arrive.
-          </Text>
-        </View>
-      </View>
+            <LinearGradient
+              colors={
+                isSubmitting || code.trim().length < 4
+                  ? ["#D1D5DB", "#9CA3AF"]
+                  : needsPickupCode
+                    ? ["#F59E0B", "#EA580C"]
+                    : ["#10B981", "#059669"]
+              }
+              style={{ borderRadius: 12, padding: 16 }}
+            >
+              <Text className="text-white text-center text-base font-bold">
+                {isSubmitting
+                  ? "Verifying..."
+                  : `Confirm ${needsPickupCode ? "Pickup" : "Dropoff"}`}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Info */}
+          <View className="bg-white/20 rounded-xl p-3 mt-4">
+            <View className="flex-row items-center">
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color={needsPickupCode ? "#FED7AA" : "#D1FAE5"}
+              />
+              <Text
+                className={`${
+                  needsPickupCode ? "text-orange-100" : "text-green-100"
+                } text-xs ml-2 flex-1`}
+              >
+                The customer will provide you with this code when you arrive.
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
     </LinearGradient>
   );
 };

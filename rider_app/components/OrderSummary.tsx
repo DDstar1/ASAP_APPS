@@ -29,7 +29,7 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary = ({ order }: OrderSummaryProps) => {
-  const { addAcceptedDelivery } = useAcceptedDeliveryStore();
+  const { fetchAcceptedDeliveries } = useAcceptedDeliveryStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAcceptOrder = async (orderCode: string) => {
@@ -53,11 +53,10 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
 
       const result = await acceptDeliveryOrder(orderCode, latitude, longitude);
 
-      if (result.success && result.data) {
-        const acceptedOrder = result.data;
-
-        addAcceptedDelivery(result.data);
-        startTracking(acceptedOrder.id);
+      if (result.success) {
+        // Rust's reply isn't the order row; reload accepted orders from the DB
+        await fetchAcceptedDeliveries();
+        startTracking(order.id);
 
         Alert.alert("Order Accepted", "You have accepted this delivery!", [
           {
@@ -66,7 +65,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
               router.push({
                 pathname: "/(tabs)/deliveries",
                 params: {
-                  newlyAcceptedId: acceptedOrder.id,
+                  newlyAcceptedId: order.id,
                   time_added: Date.now(),
                 },
               });
@@ -94,7 +93,6 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
             Posted {timeAgo(order.created_at)}
           </Text>
         </View>
-        <Text className="text-lg font-bold text-green-600">{order.price}</Text>
       </View>
 
       <View className="flex-row items-center justify-between">

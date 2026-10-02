@@ -1,10 +1,12 @@
 // lib/supabaseListeners.ts
 import { supabase } from "./supabase";
 import { supabaseEvents } from "./supabase";
+import type { RiderOrder } from "@/utils/my_types";
 
 // Separate channels
 let DeliveryEventChannel: any = null;
 let MessageEventChannel: any = null;
+let RideOfferEventChannel: any = null;
 
 /**
  * 🟢 LISTEN FOR DELIVERY ORDERS
@@ -24,22 +26,22 @@ export function startDeliveryEvents() {
       {
         event: "*",
         schema: "public",
-        table: "delivery_orders",
+        table: "app_delivery_orders",
       },
       (payload) => {
         console.log("Delivery order event received:", payload);
         switch (payload.eventType) {
           case "INSERT":
-            supabaseEvents.emit("delivery_insert", payload.new);
+            supabaseEvents.emit("delivery_insert", payload.new as RiderOrder);
             break;
 
           case "UPDATE":
-            supabaseEvents.emit("delivery_update", payload.new);
+            supabaseEvents.emit("delivery_update", payload.new as RiderOrder);
             console.log("Emitted delivery_update event");
             break;
 
           case "DELETE":
-            supabaseEvents.emit("delivery_delete", payload.old);
+            supabaseEvents.emit("delivery_delete", payload.old as RiderOrder);
             break;
         }
       },
@@ -67,7 +69,7 @@ export function startMessageEvents(userId: string) {
       {
         event: "INSERT",
         schema: "public",
-        table: "messages",
+        table: "app_messages",
         filter: `receiver_id=eq.${userId}`,
       },
       (payload) => {
@@ -80,7 +82,7 @@ export function startMessageEvents(userId: string) {
       {
         event: "UPDATE",
         schema: "public",
-        table: "messages",
+        table: "app_messages",
         filter: `receiver_id=eq.${userId}`,
       },
       (payload) => {
@@ -91,6 +93,59 @@ export function startMessageEvents(userId: string) {
     .subscribe();
 
   return MessageEventChannel;
+}
+
+/**
+ * 🟢 LISTEN FOR RIDE OFFERS sent to this rider
+ *
+ * Emits:
+ *   "ride_offer_insert" → new offer (show it)
+ *   "ride_offer_update" → offer answered/expired (hide it)
+ */
+export function startRideOfferEvents(userId: string) {
+  if (RideOfferEventChannel) {
+    console.log("Ride offer channel already running");
+    return;
+  }
+
+  RideOfferEventChannel = supabase
+    .channel(`ride-offers-${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "app_ride_offers",
+        filter: `driver_id=eq.${userId}`,
+      },
+      (payload) => {
+        supabaseEvents.emit("ride_offer_insert", payload.new as any);
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "app_ride_offers",
+        filter: `driver_id=eq.${userId}`,
+      },
+      (payload) => {
+        supabaseEvents.emit("ride_offer_update", payload.new as any);
+      },
+    )
+    .subscribe();
+
+  return RideOfferEventChannel;
+}
+
+/**
+ * 🔴 STOP ONLY ride offer LISTENER
+ */
+export function stopRideOfferEvents() {
+  if (!RideOfferEventChannel) return;
+  RideOfferEventChannel.unsubscribe();
+  RideOfferEventChannel = null;
 }
 
 /**
@@ -117,4 +172,5 @@ export function stopMessageEvents() {
 export function stopAllListeners() {
   stopDeliveryEvents();
   stopMessageEvents();
+  stopRideOfferEvents();
 }

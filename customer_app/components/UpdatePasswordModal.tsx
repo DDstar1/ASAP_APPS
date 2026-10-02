@@ -13,7 +13,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 import { updateUserPassword } from "@/lib/supabase-app-functions"; // adjust path
 
-export function UpdatePasswordModal({ visible, onClose, onForgotPassword }) {
+export function UpdatePasswordModal({
+  visible,
+  onClose,
+  onForgotPassword,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onForgotPassword?: () => void;
+}) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -56,7 +64,10 @@ export function UpdatePasswordModal({ visible, onClose, onForgotPassword }) {
       setSuccess(true);
       setTimeout(() => handleClose(), 1500); // close after showing success
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(
+        (err instanceof Error && err.message) ||
+          "Something went wrong. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -220,6 +231,15 @@ function PasswordField({
   show,
   onToggleShow,
   hasError = false,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof MaterialIcons>["name"];
+  placeholder: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  show: boolean;
+  onToggleShow: () => void;
+  hasError?: boolean;
 }) {
   return (
     <>

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { unregisterPushToken } from "@/lib/push-notifications";
 import { getCusUserById } from "@/lib/supabase-app-functions";
 
 type AppUser = {
@@ -54,7 +55,7 @@ export const useUserStore = create<UserState>((set) => ({
         username: customUser?.username,
         profileImage: customUser?.profileImage,
         custom_role: customUser?.custom_role,
-        phone: customUser?.phone,
+        phone: customUser?.phone ?? null,
       };
 
       set({ user: mergedUser, loading: false });
@@ -65,6 +66,7 @@ export const useUserStore = create<UserState>((set) => ({
   },
 
   logout: async () => {
+    await unregisterPushToken();
     await supabase.auth.signOut();
     set({ user: null });
   },

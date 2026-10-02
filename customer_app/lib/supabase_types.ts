@@ -19,7 +19,7 @@ export type Database = {
           created_at: string
           custom_role: Database["public"]["Enums"]["custom_roles"]
           id: string
-          phone: number | null
+          phone: string | null
           profileImage: string | null
           username: string
         }
@@ -27,7 +27,7 @@ export type Database = {
           created_at?: string
           custom_role?: Database["public"]["Enums"]["custom_roles"]
           id: string
-          phone?: number | null
+          phone?: string | null
           profileImage?: string | null
           username: string
         }
@@ -35,7 +35,7 @@ export type Database = {
           created_at?: string
           custom_role?: Database["public"]["Enums"]["custom_roles"]
           id?: string
-          phone?: number | null
+          phone?: string | null
           profileImage?: string | null
           username?: string
         }
@@ -69,6 +69,13 @@ export type Database = {
           pickup_name: string | null
           pickup_time: string | null
           status: Database["public"]["Enums"]["delivery_status"]
+          source: string
+          customer_phone: string | null
+          pickup_contact_name: string | null
+          pickup_contact_phone: string | null
+          payment_reference: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
         }
         Insert: {
           client_id?: string
@@ -97,6 +104,13 @@ export type Database = {
           pickup_name?: string | null
           pickup_time?: string | null
           status?: Database["public"]["Enums"]["delivery_status"]
+          source?: string
+          customer_phone?: string | null
+          pickup_contact_name?: string | null
+          pickup_contact_phone?: string | null
+          payment_reference?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
         }
         Update: {
           client_id?: string
@@ -125,6 +139,13 @@ export type Database = {
           pickup_name?: string | null
           pickup_time?: string | null
           status?: Database["public"]["Enums"]["delivery_status"]
+          source?: string
+          customer_phone?: string | null
+          pickup_contact_name?: string | null
+          pickup_contact_phone?: string | null
+          payment_reference?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
         }
         Relationships: [
           {
@@ -204,6 +225,7 @@ export type Database = {
           created_at: string
           delivery_order_id: number
           id: number
+          image_url: string | null
           is_read: boolean
           message: string
           receiver_id: string
@@ -213,6 +235,7 @@ export type Database = {
           created_at?: string
           delivery_order_id: number
           id?: number
+          image_url?: string | null
           is_read?: boolean
           message?: string
           receiver_id?: string
@@ -222,6 +245,7 @@ export type Database = {
           created_at?: string
           delivery_order_id?: number
           id?: number
+          image_url?: string | null
           is_read?: boolean
           message?: string
           receiver_id?: string
@@ -396,6 +420,7 @@ export type Database = {
           name: string
           phone: string
           status: string
+          tier: string | null
           vehicle: string | null
           vehicle_type: string
         }
@@ -409,6 +434,7 @@ export type Database = {
           name: string
           phone: string
           status: string
+          tier?: string | null
           vehicle?: string | null
           vehicle_type: string
         }
@@ -422,6 +448,7 @@ export type Database = {
           name?: string
           phone?: string
           status?: string
+          tier?: string | null
           vehicle?: string | null
           vehicle_type?: string
         }
@@ -434,7 +461,7 @@ export type Database = {
           estimated_price: number
           estimated_time_min: number
           items: Json
-          order_id: string | null
+          order_ref: string | null
           payment_method: string
           pick_up: Json
           request_id: string
@@ -450,7 +477,7 @@ export type Database = {
           estimated_price: number
           estimated_time_min: number
           items: Json
-          order_id?: string | null
+          order_ref?: string | null
           payment_method: string
           pick_up: Json
           request_id: string
@@ -466,7 +493,7 @@ export type Database = {
           estimated_price?: number
           estimated_time_min?: number
           items?: Json
-          order_id?: string | null
+          order_ref?: string | null
           payment_method?: string
           pick_up?: Json
           request_id?: string
@@ -923,6 +950,20 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_own_account: { Args: never; Returns: undefined }
+      driver_rides_completed: {
+        Args: { p_driver_id: string }
+        Returns: number
+      }
+      get_return_code: {
+        Args: { p_order_id: number }
+        Returns: string | null
+      }
+      register_push_token: {
+        Args: { p_token: string; p_app: string; p_platform: string }
+        Returns: undefined
+      }
+      unregister_push_token: { Args: { p_token: string }; Returns: undefined }
       diesel_manage_updated_at: { Args: { _tbl: unknown }; Returns: undefined }
       telegram_get_nearby_riders: {
         Args: { radius_km?: number; user_lat: number; user_lng: number }
@@ -941,6 +982,9 @@ export type Database = {
         | "arriving_pickup"
         | "in_transit"
         | "delivered"
+        | "no_driver"
+        | "awaiting_payment"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1074,6 +1118,9 @@ export const Constants = {
         "arriving_pickup",
         "in_transit",
         "delivered",
+        "no_driver",
+        "awaiting_payment",
+        "cancelled",
       ],
     },
   },

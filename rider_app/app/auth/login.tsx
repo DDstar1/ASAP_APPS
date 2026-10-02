@@ -12,26 +12,21 @@ import { TextInput } from "react-native-paper";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
-import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import { signInUser } from "@/lib/supabase-app-functions";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
 
-const redirectTo = makeRedirectUri({
-  scheme: "com.asapCustomer",
-  path: "auth-callback",
-});
-
+// Returns true only when the URL carried tokens and a session was created.
 const createSessionFromUrl = async (url: string) => {
   const { params } = QueryParams.getQueryParams(url);
   const { access_token, refresh_token } = params;
-  if (access_token) {
-    const { error } = await supabase.auth.setSession({
-      access_token,
-      refresh_token,
-    });
-    if (error) console.error("Session creation failed:", error);
-  }
+  if (!access_token) return false;
+  const { error } = await supabase.auth.setSession({
+    access_token,
+    refresh_token,
+  });
+  if (error) console.error("Session creation failed:", error);
+  return !error;
 };
 
 const inputTheme = {
@@ -55,10 +50,10 @@ export default function AuthScreen() {
 
   const url = Linking.useURL();
   useEffect(() => {
-    if (url) {
-      createSessionFromUrl(url);
-      router.replace("/(tabs)/home");
-    }
+    if (!url) return;
+    createSessionFromUrl(url).then((signedIn) => {
+      if (signedIn) router.replace("/(tabs)/home");
+    });
   }, [url]);
 
   const handleSignIn = async () => {

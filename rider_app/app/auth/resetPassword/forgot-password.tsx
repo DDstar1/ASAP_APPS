@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "asapcustomer://auth/resetPassword/set-new-password",
+        redirectTo: "asaprider://auth/resetPassword/set-new-password",
       });
 
       if (error) {

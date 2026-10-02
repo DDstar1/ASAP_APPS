@@ -1,5 +1,6 @@
 import { RefObject } from "react";
 import MapView from "react-native-maps";
+import type { Database } from "@/lib/supabase_types";
 
 type SavedLocationInput = {
   name: string;
@@ -28,33 +29,8 @@ type FitAllParams = {
   selectedRider?: Coordinates;
 };
 
-type DeliveryOrder = {
-  id: number;
-  created_at: string; // ISO timestamp
-  client_id: string; // UUID
-  driver_id: string | null; // UUID
-  status: "pending" | "in_transit" | "completed" | "cancelled"; // depending on your delivery_status enum
-  order_code: string;
-  dropoff_code: string;
-  pickup_code: string;
-  image_url?: string | null;
-  modified_at: string;
-
-  pickup_lat?: number | null;
-  pickup_long?: number | null;
-  pickup_name?: string | null;
-  dropoff_lat?: number | null;
-  dropoff_long?: number | null;
-  dropoff_name?: string | null;
-
-  driver_initial_lat?: number | null;
-  driver_initial_long?: number | null;
-  driver_package_current_lat?: number | null;
-  driver_package_current_long?: number | null;
-
-  package_type: string;
-  package_description?: string | null;
-};
+// The app_delivery_orders row as the database returns it
+type DeliveryOrder = Database["public"]["Tables"]["app_delivery_orders"]["Row"];
 
 type MessageRow = {
   id: number;

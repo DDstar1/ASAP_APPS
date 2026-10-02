@@ -26,7 +26,9 @@ export default function SetNewPassword() {
   const params = useLocalSearchParams(); // Get query params from router
 
   const { setIsResettingPassword } = useUserStore();
-  const tokenFragment = params.token;
+  const tokenFragment = Array.isArray(params.token)
+    ? params.token[0]
+    : params.token;
 
   useEffect(() => {
     if (!tokenFragment) return;

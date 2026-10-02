@@ -1,5 +1,8 @@
 //New Chst screen
 
+import ChatCameraModal from "@/components/ChatCameraModal";
+import { getChatImageUrls, uploadChatImage } from "@/lib/chat-images";
+import { supabaseEvents } from "@/lib/supabase";
 import {
   getMessages,
   markMessagesAsRead,
@@ -15,8 +18,10 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Text,
   TextInput,
@@ -33,6 +38,10 @@ export default function ChatDetailScreen() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cameraVisible, setCameraVisible] = useState(false);
+  // Signed URLs for chat_images paths, and the photo open full screen
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
   const orderId = Number(order_id);
@@ -41,12 +50,45 @@ export default function ChatDetailScreen() {
     fetchUserSession();
   }, []);
 
+  // Customer's messages arrive while the chat is open
+  useEffect(() => {
+    const onMessage = (row: any) => {
+      if (
+        Number(row?.delivery_order_id) !== orderId ||
+        row.sender_id !== String(clientId)
+      )
+        return;
+      setMessages((prev) =>
+        prev.some((m) => m.id === row.id) ? prev : [...prev, row],
+      );
+      markMessagesAsRead(orderId);
+      clearCount(orderId);
+    };
+    supabaseEvents.on("message_insert", onMessage);
+    return () => supabaseEvents.off("message_insert", onMessage);
+  }, [orderId, clientId]);
+
+  // Sign any photo paths we haven't resolved yet
+  useEffect(() => {
+    const missing = messages
+      .map((m) => m.image_url)
+      .filter((p): p is string => !!p && !imageUrls[p]);
+    if (!missing.length) return;
+    getChatImageUrls(missing).then((urls) =>
+      setImageUrls((prev) => ({ ...prev, ...urls })),
+    );
+  }, [messages]);
+
   // Load messages + mark as read on open
   useEffect(() => {
     const loadMessages = async () => {
       setLoading(true);
       const msgs = await getMessages(String(clientId));
-      setMessages(msgs);
+      // Keep anything sent or received while the history was loading
+      setMessages((prev) => [
+        ...msgs,
+        ...prev.filter((m) => !msgs.some((saved) => saved.id === m.id)),
+      ]);
       setLoading(false);
       setTimeout(
         () => flatListRef.current?.scrollToEnd({ animated: true }),
@@ -61,37 +103,65 @@ export default function ChatDetailScreen() {
     loadMessages();
   }, [order_id]);
 
-  const sendMessage = async () => {
-    if (!message.trim()) return;
-
+  // Shows the message straight away, then swaps in the saved row, or marks
+  // it failed. getContent runs after it's shown (e.g. the photo upload).
+  const postMessage = async (
+    preview: { message: string; local_uri?: string; uploading?: boolean },
+    getContent: () => Promise<{ message: string; image_url?: string | null }>,
+  ) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const newMsg = {
-      id: Date.now().toString(),
-      message: message,
-      sender_id: user?.id,
-      receiver_id: clientId as string,
-      delivery_order_id: orderId,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-    setMessage("");
-    Keyboard.dismiss();
+    const tempId = `local-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        ...preview,
+        id: tempId,
+        sender_id: user?.id,
+        receiver_id: clientId as string,
+        delivery_order_id: orderId,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      await sendMessageToSupabase({
-        message: newMsg.message,
+      const saved = await sendMessageToSupabase({
+        ...(await getContent()),
         sender_id: user?.id!,
         receiver_id: clientId as string,
         delivery_order_id: orderId,
       });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...saved, local_uri: preview.local_uri } : m,
+        ),
+      );
     } catch (error) {
       console.error("Failed to send message:", error);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, uploading: false, failed: true } : m,
+        ),
+      );
     }
-
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
+
+  const sendMessage = async () => {
+    const text = message;
+    if (!text.trim()) return;
+
+    setMessage("");
+    Keyboard.dismiss();
+    await postMessage({ message: text }, async () => ({ message: text }));
+  };
+
+  // Show the photo straight away from the phone, then upload and send
+  const sendPhoto = (localUri: string) =>
+    postMessage({ message: "", local_uri: localUri, uploading: true }, async () => ({
+      message: "",
+      image_url: await uploadChatImage(orderId, localUri),
+    }));
 
   // Find the index of the first unread message
   const firstUnreadIndex = messages.findIndex(
@@ -182,9 +252,46 @@ export default function ChatDetailScreen() {
                             : "bg-gray-700 rounded-bl-none"
                         }`}
                       >
-                        <Text selectable className="text-white text-base">
-                          {item.message}
-                        </Text>
+                        {(item.local_uri || item.image_url) && (
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            onPress={() =>
+                              setViewerUri(
+                                item.local_uri ?? imageUrls[item.image_url],
+                              )
+                            }
+                            className="w-56 h-56 rounded-xl overflow-hidden bg-gray-800 mb-1 justify-center items-center"
+                          >
+                            {(item.local_uri || imageUrls[item.image_url]) && (
+                              <Image
+                                source={{
+                                  uri:
+                                    item.local_uri ?? imageUrls[item.image_url],
+                                }}
+                                style={{ width: "100%", height: "100%" }}
+                                resizeMode="cover"
+                              />
+                            )}
+                            {item.uploading && (
+                              <View className="absolute inset-0 bg-black/40 justify-center items-center">
+                                <ActivityIndicator color="white" />
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        )}
+
+                        {!!item.message && (
+                          <Text selectable className="text-white text-base">
+                            {item.message}
+                          </Text>
+                        )}
+
+                        {item.failed && (
+                          <Text className="text-red-300 text-xs">
+                            Not sent
+                          </Text>
+                        )}
+
                         <Text
                           className={`text-xs mt-1 ${
                             isMyMessage ? "text-blue-100" : "text-gray-400"
@@ -210,6 +317,13 @@ export default function ChatDetailScreen() {
 
         {/* Input bar */}
         <View className="flex-row items-center px-4 py-3 border-t border-gray-800">
+          <TouchableOpacity
+            onPress={() => setCameraVisible(true)}
+            activeOpacity={0.8}
+            className="p-3 rounded-full bg-gray-800 mr-2"
+          >
+            <Ionicons name="camera" size={20} color="white" />
+          </TouchableOpacity>
           <TextInput
             className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-2xl mr-2"
             placeholder="Type a message..."
@@ -232,6 +346,36 @@ export default function ChatDetailScreen() {
             <Ionicons name="send" size={20} color="white" />
           </TouchableOpacity>
         </View>
+
+        <ChatCameraModal
+          visible={cameraVisible}
+          onClose={() => setCameraVisible(false)}
+          onSend={sendPhoto}
+        />
+
+        {/* Full-screen photo */}
+        <Modal
+          visible={!!viewerUri}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setViewerUri(null)}
+        >
+          <View className="flex-1 bg-black">
+            {viewerUri && (
+              <Image
+                source={{ uri: viewerUri }}
+                style={{ flex: 1 }}
+                resizeMode="contain"
+              />
+            )}
+            <TouchableOpacity
+              onPress={() => setViewerUri(null)}
+              className="absolute top-14 right-5 p-2 bg-black/60 rounded-full"
+            >
+              <Ionicons name="close" size={26} color="white" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );

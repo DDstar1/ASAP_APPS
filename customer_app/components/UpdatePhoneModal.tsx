@@ -16,7 +16,13 @@ import { useState, useRef, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 
-export function UpdatePhoneModal({ visible, onClose }) {
+export function UpdatePhoneModal({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
   const [newPhone, setNewPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");

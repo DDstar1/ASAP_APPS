@@ -1,5 +1,5 @@
 {
-  "name": "rider_app",
+  "name": "customer_app",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -25,6 +25,7 @@
     "expo-constants": "~18.0.9",
     "expo-crypto": "~15.0.7",
     "expo-dev-client": "~6.0.16",
+    "expo-device": "~8.0.10",
     "expo-file-system": "~19.0.17",
     "expo-font": "~14.0.9",
     "expo-haptics": "~15.0.7",
@@ -32,8 +33,9 @@
     "expo-image-picker": "~17.0.10",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.8",
-    "expo-location": "^19.0.7",
+    "expo-location": "~19.0.7",
     "expo-maps": "~0.12.8",
+    "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.11",
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",

@@ -1,5 +1,5 @@
 import * as React from "react";
-import Svg, { G, Path, Circle } from "react-native-svg";
+import Svg, { G, Path, Circle, SvgProps } from "react-native-svg";
 
 // ─── Kinetic Noir — Color Tokens ────────────────────────────────────────────
 const C = {
@@ -11,9 +11,8 @@ const C = {
 };
 // ────────────────────────────────────────────────────────────────────────────
 
-const ForgotPasswordIllustration = (props) => (
+const ForgotPasswordIllustration = (props: SvgProps) => (
   <Svg
-    xmlns="http://www.w3.org/2000/svg"
     width={250}
     height={250}
     viewBox="0 0 800.314 644.708"

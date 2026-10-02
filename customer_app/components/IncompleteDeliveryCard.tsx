@@ -5,7 +5,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -18,13 +20,16 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { IMAGES, MY_ICONS } from "@/assets/assetsData";
-import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
-import { DeliveryOrder } from "@/utils/my_types";
+import {
+  CustomerDelivery,
+  useCustomerDeliveryStore,
+} from "@/store/useCustomerDeliveriesStore";
 import { openOrderChat } from "@/utils/my_utils";
+import { confirmPickup } from "@/lib/supabase-app-functions";
 import { router } from "expo-router";
 
 type Props = {
-  item: DeliveryOrder;
+  item: CustomerDelivery;
   width: number;
 };
 
@@ -32,9 +37,13 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
   const rawStatus = item.status;
   const normalizedStatus = rawStatus?.trim().toLowerCase();
   const [cancelling, setCancelling] = useState(false);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [pickupCode, setPickupCode] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   const pulseProgress = useSharedValue(0);
-  const { removeDelivery, unreadCounts } = useCustomerDeliveryStore();
+  const { removeDelivery, unreadCounts, fetchAllDeliveries } =
+    useCustomerDeliveryStore();
 
   const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
 
@@ -60,6 +69,30 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
         ? [{ scale: interpolate(pulseProgress.value, [0, 1], [0.6, 20]) }]
         : [{ scale: 1 }],
   }));
+
+  const pickedUp =
+    !!item.is_pickup_code_authenticated || normalizedStatus === "in_transit";
+
+  const closePickupModal = () => {
+    setPickupCode("");
+    setShowPickupModal(false);
+  };
+
+  // Rust moves the order to in_transit; realtime updates the status and the
+  // refetch picks up is_pickup_code_authenticated
+  const handleConfirmPickup = async () => {
+    setConfirming(true);
+    const result = await confirmPickup(item.order_code, pickupCode.trim());
+    setConfirming(false);
+    if (result.success) {
+      closePickupModal();
+      fetchAllDeliveries();
+      Alert.alert("Pickup confirmed ✓", "Your package is on its way.");
+    } else {
+      setPickupCode("");
+      Alert.alert("Invalid code", result.error || "The code is incorrect.");
+    }
+  };
 
   const handleCancel = () => {
     Alert.alert(
@@ -226,13 +259,23 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
 
           {/* Code Section */}
           <View>
-            <Text className="text-gray-400 text-xs">Pickup Code</Text>
-            <Text
-              selectable
-              className="text-white text-xs font-semibold tracking-wider mb-1"
-            >
-              {item.pickup_code}
-            </Text>
+            <Text className="text-gray-400 text-xs">Pickup</Text>
+            {pickedUp ? (
+              <Text className="text-white text-xs font-semibold mb-1">
+                Confirmed ✓
+              </Text>
+            ) : normalizedStatus === "arriving_pickup" ? (
+              <TouchableOpacity
+                onPress={() => setShowPickupModal(true)}
+                className="bg-[#ff923e] rounded-full px-2 py-1 mb-1 self-start"
+              >
+                <Text className="text-black text-xs font-semibold">
+                  Enter code
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text className="text-white text-xs font-semibold mb-1">—</Text>
+            )}
             <Text className="text-gray-400 text-xs">Dropoff Code</Text>
             <Text
               selectable
@@ -269,6 +312,64 @@ const IncompleteDeliveryCard = ({ item, width }: Props) => {
           resizeMode="cover"
         />
       </MaskedView>
+
+      {/* Pickup code entry — the rider shows the code at pickup */}
+      <Modal
+        visible={showPickupModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closePickupModal}
+      >
+        <View className="flex-1 bg-black/70 justify-center px-6">
+          <View className="bg-[#131a2e] rounded-3xl p-6">
+            <Text className="text-[#e0e5f9] text-xl font-bold mb-1">
+              Confirm pickup
+            </Text>
+            <Text className="text-[#a5abbd] text-sm mb-5">
+              Enter the pickup code
+            </Text>
+
+            <TextInput
+              value={pickupCode}
+              onChangeText={setPickupCode}
+              placeholder="Pickup code"
+              placeholderTextColor="#3d4560"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoFocus
+              maxLength={10}
+              editable={!confirming}
+              className="bg-[#080e1c] text-[#e0e5f9] text-2xl font-bold text-center tracking-[6px] rounded-2xl py-4 mb-5"
+            />
+
+            <TouchableOpacity
+              onPress={handleConfirmPickup}
+              disabled={confirming || pickupCode.trim().length < 4}
+              className={`py-4 rounded-full items-center mb-3 ${
+                confirming || pickupCode.trim().length < 4
+                  ? "bg-[#1c2a42]"
+                  : "bg-[#ff923e]"
+              }`}
+            >
+              {confirming ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-black text-base font-semibold">
+                  Confirm Pickup
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={closePickupModal}
+              disabled={confirming}
+              className="py-3 items-center"
+            >
+              <Text className="text-[#a5abbd] text-sm">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

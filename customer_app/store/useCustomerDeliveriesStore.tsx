@@ -5,10 +5,15 @@ import {
   getAllClientDeliveries,
   getUnreadMessageCounts,
 } from "@/lib/supabase-app-functions";
+import { DeliveryOrder } from "@/utils/my_types";
 import { create } from "zustand";
 
-interface CustomerDelivery {
-  id: string;
+// Rows arrive with a numeric id; callers often have it as a route string
+type OrderId = number | string;
+const sameId = (a: OrderId, b: OrderId) => String(a) === String(b);
+
+export interface CustomerDelivery {
+  id: number;
   order_code: string;
   status: string;
   pickup_lat: number;
@@ -20,10 +25,16 @@ interface CustomerDelivery {
   image_url?: string;
   statusColor?: string;
   delivery_accepted_time: number;
+  dropoff_time?: string | null;
+  cancelled_at?: string | null;
+  created_at?: string;
+  package_type?: string | null;
+  is_pickup_code_authenticated?: boolean | null;
   initial_waypoints?: { latitude: number; longitude: number }[];
   driver_id?: string;
   pickup_code?: string;
   dropoff_code?: string;
+  payment_reference?: string | null; // Korapay; null on Telegram and older orders
 }
 
 interface CustomerDeliveryStore {
@@ -33,11 +44,11 @@ interface CustomerDeliveryStore {
   unreadCounts: Record<string, number>;
 
   fetchAllDeliveries: () => Promise<void>;
-  fetchUnreadCounts: (orderIds: string[]) => Promise<void>;
-  setUnreadCount: (orderId: string, count: number) => void;
-  incrementUnreadCount: (orderId: string) => void;
-  addNewDelivery: (delivery: CustomerDelivery) => void;
-  updateDeliveryStatus: (orderId: string, newStatus: string) => void;
+  fetchUnreadCounts: (orderIds: OrderId[]) => Promise<void>;
+  setUnreadCount: (orderId: OrderId, count: number) => void;
+  incrementUnreadCount: (orderId: OrderId) => void;
+  addNewDelivery: (delivery: CustomerDelivery | DeliveryOrder) => void;
+  updateDeliveryStatus: (orderId: OrderId, newStatus: string) => void;
   removeDelivery: (orderId: string) => void;
   clearDeliveries: () => void;
 }
@@ -56,7 +67,16 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
         try {
           const response = await getAllClientDeliveries();
           if (response.success) {
-            set({ AllDeliveries: response.data, loading: false });
+            // Rows carry delivery_accepted_time as an ISO string (or null);
+            // the store keeps it as epoch ms
+            const deliveries = response.data.map((d: any) => ({
+              ...d,
+              delivery_accepted_time:
+                typeof d.delivery_accepted_time === "string"
+                  ? new Date(d.delivery_accepted_time).getTime()
+                  : (d.delivery_accepted_time ?? 0),
+            })) as CustomerDelivery[];
+            set({ AllDeliveries: deliveries, loading: false });
 
             // Auto-fetch unread counts after deliveries load
             const orderIds = response.data.map((d: CustomerDelivery) => d.id);
@@ -75,17 +95,13 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
         }
       },
 
-      fetchUnreadCounts: async (orderIds: string[]) => {
+      fetchUnreadCounts: async (orderIds: OrderId[]) => {
         try {
-          const counts = await Promise.all(
-            orderIds.map(async (id) => ({
-              id,
-              count: await getUnreadMessageCounts(),
-            })),
-          );
+          // One query returns every unread count keyed by order id
+          const counts = await getUnreadMessageCounts();
 
           const map: Record<string, number> = {};
-          counts.forEach(({ id, count }) => (map[id] = count));
+          orderIds.forEach((id) => (map[String(id)] = counts[Number(id)] ?? 0));
 
           set({ unreadCounts: map });
         } catch (err) {
@@ -94,38 +110,42 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
       },
 
       // Set a specific order's unread count (e.g. zero it out when chat opens)
-      setUnreadCount: (orderId: string, count: number) => {
+      setUnreadCount: (orderId: OrderId, count: number) => {
         set((state) => ({
-          unreadCounts: { ...state.unreadCounts, [orderId]: count },
+          unreadCounts: { ...state.unreadCounts, [String(orderId)]: count },
         }));
       },
 
       // Increment a specific order's unread count by 1 (called by realtime)
-      incrementUnreadCount: (orderId: string) => {
+      incrementUnreadCount: (orderId: OrderId) => {
+        const key = String(orderId);
         set((state) => ({
           unreadCounts: {
             ...state.unreadCounts,
-            [orderId]: (state.unreadCounts[orderId] ?? 0) + 1,
+            [key]: (state.unreadCounts[key] ?? 0) + 1,
           },
         }));
       },
 
       addNewDelivery: (delivery) =>
         set((state) => {
+          const accepted = delivery.delivery_accepted_time;
+          // DB rows carry nulls where CustomerDelivery has optionals
           const normalized = {
             ...delivery,
+            id: Number(delivery.id),
             delivery_accepted_time:
-              typeof delivery.delivery_accepted_time === "string"
-                ? new Date(delivery.delivery_accepted_time).getTime()
-                : (delivery.delivery_accepted_time ?? Date.now()),
-          };
+              typeof accepted === "string"
+                ? new Date(accepted).getTime()
+                : (accepted ?? Date.now()),
+          } as CustomerDelivery;
 
           return {
-            AllDeliveries: state.AllDeliveries.some(
-              (d) => d.id === normalized.id,
+            AllDeliveries: state.AllDeliveries.some((d) =>
+              sameId(d.id, normalized.id),
             )
               ? state.AllDeliveries.map((d) =>
-                  d.id === normalized.id ? { ...d, ...normalized } : d,
+                  sameId(d.id, normalized.id) ? { ...d, ...normalized } : d,
                 )
               : [normalized, ...state.AllDeliveries],
           };
@@ -134,7 +154,7 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
       updateDeliveryStatus: (orderId, newStatus) => {
         set((state) => ({
           AllDeliveries: state.AllDeliveries.map((delivery) =>
-            delivery.id === orderId
+            sameId(delivery.id, orderId)
               ? { ...delivery, status: newStatus }
               : delivery,
           ),
@@ -190,13 +210,10 @@ export const useCustomerDeliveryStore = create<CustomerDeliveryStore>(
         get().addNewDelivery(order);
       });
 
-      supabaseEvents.on(
-        "unread_count_increment",
-        ({ order_id }: { order_id: string }) => {
-          console.log(`📩 Incrementing unread count for order ${order_id}`);
-          get().incrementUnreadCount(order_id);
-        },
-      );
+      supabaseEvents.on("unread_count_increment", ({ order_id }) => {
+        console.log(`📩 Incrementing unread count for order ${order_id}`);
+        get().incrementUnreadCount(order_id);
+      });
 
       (state as any)._realtimeSubscribed = true;
     }

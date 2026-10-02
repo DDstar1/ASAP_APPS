@@ -21,6 +21,10 @@ type RiderOrder = {
 
   image_url: string | null;
   waypoints: any[] | null;
+
+  // Present on realtime rows (the whole app_delivery_orders row)
+  driver_id?: string | null;
+  is_pickup_code_authenticated?: boolean;
 };
 
 type OpenGoogleMapsParams = {

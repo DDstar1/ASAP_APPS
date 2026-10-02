@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Eye, EyeOff, Loader2, ChevronRight, ChevronLeft, Smartphone, Download } from 'lucide-react'
 import { signUp, insertAppUser, checkDriverEmailExists, insertDriver } from '@/lib/supabase_queries'
+import { RIDER_APP_STORE_URL, RIDER_PLAY_STORE_URL } from '@/lib/app-links'
 
 const NIGERIAN_BANKS = [
   { name: 'Access Bank', code: '044' },
@@ -231,11 +232,13 @@ export default function DriverSignup() {
                 </p>
               </div>
               <div className="space-y-3">
-                <a href="#" className="flex items-center justify-center gap-3 w-full py-3 px-6 bg-black text-white rounded-2xl font-semibold hover:bg-[#111] transition">
-                  <Download className="w-5 h-5" />
-                  Download on the App Store
-                </a>
-                <a href="#" className="flex items-center justify-center gap-3 w-full py-3 px-6 bg-[#0f1626] border border-[#a5abbd]/15 text-[#e0e5f9] rounded-2xl font-semibold hover:bg-[#1c2a42] transition">
+                {RIDER_APP_STORE_URL && (
+                  <a href={RIDER_APP_STORE_URL} className="flex items-center justify-center gap-3 w-full py-3 px-6 bg-black text-white rounded-2xl font-semibold hover:bg-[#111] transition">
+                    <Download className="w-5 h-5" />
+                    Download on the App Store
+                  </a>
+                )}
+                <a href={RIDER_PLAY_STORE_URL} className="flex items-center justify-center gap-3 w-full py-3 px-6 bg-[#0f1626] border border-[#a5abbd]/15 text-[#e0e5f9] rounded-2xl font-semibold hover:bg-[#1c2a42] transition">
                   <Download className="w-5 h-5" />
                   Get it on Google Play
                 </a>

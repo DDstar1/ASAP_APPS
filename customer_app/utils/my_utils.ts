@@ -1,7 +1,6 @@
 import { getOrderRiderInfo } from "@/lib/supabase-app-functions";
-import * as Location from "expo-location";
 import { router } from "expo-router";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
 
 function timeAgo(timestamp: string | Date) {
   const now = new Date();
@@ -36,40 +35,16 @@ function cleanAddress(address: string) {
   return cleaned;
 }
 
-const openOrderTrackPage = async (orderId: number) => {
-  console.log("Opening Google Maps for directions...");
-
-  try {
-    // 1️⃣ Request location permission
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Location permission is required to get directions.",
-      );
-      return;
-    }
-
-    // 4️⃣ Open Google Maps
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
-    } else {
-      Alert.alert("Error", "Unable to open Google Maps");
-    }
-  } catch (err) {
-    console.error("Error opening Google Maps:", err);
-    Alert.alert("Error", "Failed to get directions. Try again.");
-  }
-};
-
 const openOrderChat = async (orderId: number) => {
   try {
     const riderInfo = await getOrderRiderInfo(orderId);
 
     console.log("Rider Info for order", orderId, ":", riderInfo);
 
-    if (!riderInfo) return;
+    if (!riderInfo?.id) {
+      Alert.alert("Chat unavailable", "Couldn't reach your rider. Please try again.");
+      return;
+    }
 
     router.push({
       pathname: "/chat_details/[order_id]",
@@ -110,7 +85,6 @@ const generateConfirmationCodes = (type: "pickup" | "delivery") => {
 
 export {
   cleanAddress,
-  openOrderTrackPage,
   openOrderChat,
   timeAgo,
   generateOrderCode,

@@ -13,7 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MY_ICONS } from "@/assets/assetsData";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
-import CompletedOrderCards from "@/components/CompletedOrderCards";
+import CompletedOrderCards, {
+  finishedAt,
+} from "@/components/CompletedOrderCards";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
 import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
 import ActiveDeliveriesEmptyState from "@/components/ActiveDeliveriesEmptyState";
@@ -54,10 +56,32 @@ const OrdersPage = () => {
   );
 
   const completedDeliveries = useMemo(
-    () => AllDeliveries.filter((item) => item.status === "delivered"),
+    // Delivered and cancelled, most recently finished first
+    () =>
+      AllDeliveries.filter(
+        (item) => item.status === "delivered" || item.status === "cancelled",
+      ).sort((a, b) => finishedAt(b) - finishedAt(a)),
 
     [AllDeliveries],
   );
+
+  // "May 2025" groups, by when each order finished
+  const completedSections = useMemo(() => {
+    const groups: { title: string; data: typeof completedDeliveries }[] = [];
+    for (const item of completedDeliveries) {
+      const at = finishedAt(item);
+      const title = at
+        ? new Date(at).toLocaleDateString("en-GB", {
+            month: "long",
+            year: "numeric",
+          })
+        : "Earlier";
+      const last = groups[groups.length - 1];
+      if (last?.title === title) last.data.push(item);
+      else groups.push({ title, data: [item] });
+    }
+    return groups;
+  }, [completedDeliveries]);
 
   console.log("Active Deliveries:", activeDeliveries?.length);
   console.log("Completed Deliveries:", completedDeliveries?.length);
@@ -184,13 +208,19 @@ const OrdersPage = () => {
         </View>
       ) : (
         <SectionList
-          sections={
-            completedDeliveries?.length
-              ? [{ title: "Completed", data: completedDeliveries }]
-              : []
-          }
+          sections={completedSections}
           keyExtractor={(item, index) => `${String(item.id)}-${index}`}
-          renderItem={({ item }) => <CompletedOrderCards item={item} />}
+          renderItem={({ item }) => (
+            <CompletedOrderCards
+              item={item}
+              onRebook={() => setItemTypeVisible(true)}
+            />
+          )}
+          renderSectionHeader={({ section }) => (
+            <Text className="text-sm font-bold text-[#e0e5f9] bg-[#080e1c] pt-4 pb-1">
+              {section.title}
+            </Text>
+          )}
           stickySectionHeadersEnabled
           className=" px-6 "
           showsVerticalScrollIndicator={false}
@@ -198,10 +228,6 @@ const OrdersPage = () => {
             paddingBottom: 32,
             flexGrow: 1, // 👈 THIS IS KEY
           }}
-          // Separator: ghost divider, very low opacity — never a hard 1px line
-          ItemSeparatorComponent={() => (
-            <View className="h-px bg-[#e0e5f9]/[0.06]" />
-          )}
           ListEmptyComponent={() => (
             <CompletedOrdersEmptyState
               activeDeliveriesCount={activeDeliveries.length}

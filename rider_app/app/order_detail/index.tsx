@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MY_ICONS } from "@/assets/assetsData";
@@ -120,6 +120,7 @@ export default function DeliveryTrackingScreen() {
     <SafeAreaView edges={["bottom"]} className="flex-1">
       <MapView
         ref={mapRef}
+        provider={PROVIDER_GOOGLE}
         style={{ flex: 1, marginBottom: -40 }}
         showsUserLocation
         followsUserLocation

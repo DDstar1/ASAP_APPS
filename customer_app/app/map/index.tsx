@@ -1,50 +1,59 @@
-import { IMAGES } from "@/assets/assetsData";
-import DeliveryButton from "@/components/DeliveryButton";
+import BookingSheet from "@/components/BookingSheet";
 import DestinationSearchModal from "@/components/DestinationSearchModal";
 import RiderAwaitingModal from "@/components/RiderAwaitingModal";
-import { getActiveRiders } from "@/lib/supabase-app-functions";
-import { calculateFare, fitAll } from "@/utils/mapUtils";
-import { Coordinates, RiderDistanceInfo } from "@/utils/my_types";
+import { payWithKorapay } from "@/lib/payments";
+import { getRideQuotes, RideQuote } from "@/lib/ride-request";
+import { useRideDraftStore } from "@/store/useRideDraftStore";
+import { useUserStore } from "@/store/useUserStore";
+import { fitAll, reverseGeocode } from "@/utils/mapUtils";
+import { Coordinates } from "@/utils/my_types";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MY_ICONS } from "@/assets/assetsData";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
+// "Current location" / saved entries have no usable address; look one up
+async function resolvePlaceName(place: any) {
+  const name = `${place?.name ?? ""}, ${place?.address ?? ""}`;
+  const check = name.toLowerCase();
+  if (!place?.name || check.includes("current location") || check.includes("(saved)")) {
+    return reverseGeocode(place.coordinates.latitude, place.coordinates.longitude);
+  }
+  return name;
+}
+
 export default function MapScreen() {
   const [pickup, setPickup] = useState<any>(null);
   const [destination, setDestination] = useState<any>(null);
   const [activeField, setActiveField] = useState<"from" | "to" | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [price, setPrice] = useState<number | null>(null);
-  const [activeRiders, setRiders] = useState<RiderDistanceInfo[]>([]);
-  const [showAwaitingModal, setShowAwaitingModal] = useState(false);
-  const [closestRider, setClosestRider] = useState<any>(null);
-  const [selectedRider, setSelectedRider] = useState<RiderDistanceInfo | null>(
-    null,
-  );
-  const [hasMultipleRiders, setHasMultipleRiders] = useState(false);
-  const [currentRiderIndex, setCurrentRiderIndex] = useState(0);
-  const [distance, setDistance] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
   const [waypoints, setWaypoints] = useState<Coordinates[] | null>(null);
 
-  // ✅ NEW: store coordinates for the driver→pickup segment
-  const [driverToPickupCoords, setDriverToPickupCoords] = useState<
-    Coordinates[]
-  >([]);
+  const [quotes, setQuotes] = useState<RideQuote[]>([]);
+  const [quotesLoading, setQuotesLoading] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [paymentReference, setPaymentReference] = useState<string | null>(null);
+  const [placeNames, setPlaceNames] = useState<{
+    pickup: string | null;
+    dropoff: string | null;
+  }>({ pickup: null, dropoff: null });
 
   const mapRef = useRef<MapView>(null);
-  const { packageImage, packageType, packageDescription } =
-    useLocalSearchParams();
+  const { itemType, items, rideType, setRideType, reset } = useRideDraftStore();
+  const hasItem = items.length > 0;
 
-  // Auto-zoom when pickup/destination change (before rider is selected)
+  // Each visit to the map starts a fresh booking
+  useEffect(() => {
+    reset();
+  }, []);
+
+  // Auto-zoom when pickup/destination change
   useEffect(() => {
     const coords = [];
     if (pickup?.coordinates) coords.push(pickup.coordinates);
@@ -58,91 +67,63 @@ export default function MapScreen() {
     }
   }, [pickup, destination]);
 
+  // Rust prices both ride types once the locations are set
   useEffect(() => {
-    setHasMultipleRiders(activeRiders.length > 1);
-  }, [activeRiders]);
-
-  // ✅ NEW: When both segments are ready, fit the map to the full combined route
-  useEffect(() => {
-    if (
-      selectedRider &&
-      driverToPickupCoords.length > 0 &&
-      waypoints &&
-      waypoints.length > 0 &&
-      mapRef.current
-    ) {
-      const allCoords = [...driverToPickupCoords, ...waypoints];
-      mapRef.current.fitToCoordinates(allCoords, {
-        edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
-        animated: true,
-      });
+    if (!pickup?.coordinates || !destination?.coordinates) {
+      setQuotes([]);
+      return;
     }
-  }, [driverToPickupCoords, waypoints, selectedRider]);
+    let cancelled = false;
+    setQuotesLoading(true);
+    getRideQuotes(pickup.coordinates, destination.coordinates).then((q) => {
+      if (cancelled) return;
+      setQuotes(q);
+      setQuotesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pickup?.coordinates, destination?.coordinates]);
 
-  // ----------------- BUTTON HANDLERS -----------------
-  const handleConfirmLocations = () => {
+  const handleContinue = () => {
     if (!pickup || !destination) {
       Alert.alert("Missing Info", "Please select both pickup and destination.");
       return;
     }
-    Alert.alert("Locations Confirmed", "Now searching for nearby riders...");
+    router.push("/map/item-type");
   };
 
-  const handleSearchRider = async () => {
-    if (!pickup || !destination) return;
-    setLoading(true);
-    setPrice(null);
+  // Book → Korapay → awaiting rider
+  const handleBook = async () => {
+    const user = useUserStore.getState().user;
+    if (!user || !rideType || !hasItem) return;
+    setBooking(true);
 
-    try {
-      const allAvailableRiders = await getActiveRiders(pickup.coordinates);
+    const [pickupName, dropoffName] = await Promise.all([
+      resolvePlaceName(pickup),
+      resolvePlaceName(destination),
+    ]);
+    setPlaceNames({ pickup: pickupName, dropoff: dropoffName });
 
-      if (!allAvailableRiders || allAvailableRiders.length === 0) {
-        Alert.alert("No active riders nearby", "Please try again later.");
-        setLoading(false);
-        return;
-      }
+    const payment = await payWithKorapay({
+      source: "app",
+      rider_id: user.id,
+      pick_up: pickup.coordinates,
+      drop_off: destination.coordinates,
+      ride_type: rideType,
+      payment_method: "korapay",
+      items,
+      order_ref: null,
+      user_id: null,
+      user_phone_number: user.phone ?? null,
+      vendor_phone_number: null,
+      pickup_name: pickupName,
+      dropoff_name: dropoffName,
+    });
+    setBooking(false);
 
-      setRiders(allAvailableRiders);
-
-      const closest = allAvailableRiders[0];
-      setClosestRider(closest);
-      setSelectedRider(closest);
-      setCurrentRiderIndex(0);
-
-      // ✅ Reset segment coords so the useEffect re-fires cleanly
-      setDriverToPickupCoords([]);
-      setWaypoints(null);
-
-      const fare = await calculateFare();
-      setPrice(fare);
-    } catch (err) {
-      console.error("Error searching rider:", err);
-      Alert.alert("Error", "Failed to search for riders.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCycleRider = () => {
-    if (activeRiders.length <= 1) return;
-
-    const nextIndex = (currentRiderIndex + 1) % activeRiders.length;
-    const newRider = activeRiders[nextIndex];
-
-    setCurrentRiderIndex(nextIndex);
-    setClosestRider(newRider);
-    setSelectedRider(newRider);
-
-    // ✅ Reset so map re-fits when new rider's segment loads
-    setDriverToPickupCoords([]);
-  };
-
-  const handleConfirmDelivery = () => {
-    if (!closestRider) {
-      Alert.alert("No rider selected", "Please choose a rider first.");
-      return;
-    }
-    setShowAwaitingModal(true);
+    if (payment.status === "paid") setPaymentReference(payment.reference);
+    else if (payment.status === "error") Alert.alert("Payment failed", payment.error);
   };
 
   // ----------------- RENDER -----------------
@@ -150,6 +131,7 @@ export default function MapScreen() {
     <View className="flex-1 bg-gray-900">
       <MapView
         ref={mapRef}
+        provider={PROVIDER_GOOGLE}
         style={{ flex: 1 }}
         initialRegion={{
           latitude: 6.5244,
@@ -158,7 +140,6 @@ export default function MapScreen() {
           longitudeDelta: 0.2,
         }}
       >
-        {/* Pickup Marker */}
         {pickup?.coordinates && (
           <Marker
             coordinate={pickup.coordinates}
@@ -167,7 +148,6 @@ export default function MapScreen() {
           />
         )}
 
-        {/* Destination Marker */}
         {destination?.coordinates && (
           <Marker
             coordinate={destination.coordinates}
@@ -176,64 +156,14 @@ export default function MapScreen() {
           />
         )}
 
-        {/* Rider Marker */}
-        {selectedRider && (
-          <Marker.Animated
-            key={selectedRider.id}
-            coordinate={{
-              latitude: selectedRider.latitude,
-              longitude: selectedRider.longitude,
-            }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            title={selectedRider.username}
-          >
-            <Image
-              source={IMAGES.map_rider}
-              style={{ width: 40, height: 40 }}
-              resizeMode="contain"
-            />
-          </Marker.Animated>
-        )}
-
-        {/* ─────────────────────────────────────────────
-            SEGMENT 1: Driver → Pickup  (blue)
-            Only rendered when a rider is selected.
-        ───────────────────────────────────────────── */}
-        {selectedRider && pickup?.coordinates && (
-          <MapViewDirections
-            origin={{
-              latitude: selectedRider.latitude,
-              longitude: selectedRider.longitude,
-            }}
-            destination={pickup.coordinates}
-            apikey={GOOGLE_MAPS_API_KEY}
-            strokeWidth={5}
-            strokeColor="#3B82F6" // 🔵 blue
-            onReady={(result) => {
-              setDriverToPickupCoords(result.coordinates);
-            }}
-            onError={(err) =>
-              console.warn("Directions error (driver→pickup):", err)
-            }
-          />
-        )}
-
-        {/* ─────────────────────────────────────────────
-            SEGMENT 2: Pickup → Destination  (orange)
-            Always rendered when both locations are set.
-        ───────────────────────────────────────────── */}
         {pickup?.coordinates && destination?.coordinates && (
           <MapViewDirections
             origin={pickup.coordinates}
             destination={destination.coordinates}
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={5}
-            strokeColor="#F97316" // 🟠 orange
-            onReady={(result) => {
-              setDistance(result.distance);
-              setDuration(result.duration);
-              setWaypoints(result.coordinates);
-            }}
+            strokeColor="#F97316"
+            onReady={(result) => setWaypoints(result.coordinates)}
             onError={(err) =>
               console.warn("Directions error (pickup→dest):", err)
             }
@@ -241,78 +171,99 @@ export default function MapScreen() {
         )}
       </MapView>
 
+      {/* Header */}
+      <SafeAreaView edges={["top"]} className="absolute top-0 left-0 right-0 px-4">
+        <View className="flex-row items-center bg-[#2C2C30] rounded-full mt-2">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-11 h-11 rounded-full bg-[#3A3A3F] justify-center items-center"
+          >
+            <Ionicons name="chevron-back" size={22} color="white" />
+          </TouchableOpacity>
+          <Text
+            className="flex-1 text-white text-xl text-center mr-11"
+            numberOfLines={1}
+          >
+            {destination?.name ?? "Send a package"}
+          </Text>
+        </View>
+      </SafeAreaView>
+
       {/* Re-center button */}
       <TouchableOpacity
-        className="absolute top-12 right-4 bg-gray-700 px-4 py-2 rounded-xl z-50"
+        className="absolute right-4 bg-gray-700 p-2 rounded-full z-50"
+        style={{ bottom: hasItem ? 420 : 260 }}
         onPress={() =>
           fitAll({
-            mapRef,
+            mapRef: mapRef as React.RefObject<MapView>,
             pickup: pickup?.coordinates,
             destination: destination?.coordinates,
-            selectedRider,
+            selectedRider: waypoints?.[0],
           })
         }
       >
-        <Ionicons name="locate-outline" size={24} color="white" />
+        <Ionicons name="compass-outline" size={28} color="white" />
       </TouchableOpacity>
 
       {/* Bottom Panel */}
-      <SafeAreaView className="absolute bottom-0 left-0 right-0 px-4">
-        <View className="bg-[#3C3C43] rounded-t-2xl px-4 py-3">
-          <Text className="text-lg font-semibold text-white text-center">
-            Select Pickup & Destination
-          </Text>
-        </View>
+      <SafeAreaView
+        edges={["bottom"]}
+        className="absolute bottom-0 left-0 right-0 bg-black"
+      >
+        {hasItem ? (
+          <BookingSheet
+            itemLabel={itemType ?? "Item description"}
+            quotes={quotes}
+            quotesLoading={quotesLoading}
+            rideType={rideType}
+            booking={booking}
+            onEditItem={() =>
+              router.push({ pathname: "/map/specifications", params: { edit: "1" } })
+            }
+            onSelectRideType={setRideType}
+            onBook={handleBook}
+          />
+        ) : (
+          <View className="p-4 gap-4">
+            <Text className="text-lg font-semibold text-white text-center">
+              Select Pickup & Destination
+            </Text>
 
-        <View className="bg-[#3C3C43] p-4 rounded-b-2xl">
-          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center justify-between gap-2">
+              <TouchableOpacity
+                className="flex-1 flex-row items-center bg-[#1C1C21] rounded-xl px-2 gap-2 py-3"
+                onPress={() => setActiveField("from")}
+              >
+                {MY_ICONS.marker("green", 20)}
+                <Text className="text-white font-medium" numberOfLines={1}>
+                  {pickup ? pickup.name : "Set Pickup"}
+                </Text>
+              </TouchableOpacity>
+
+              <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
+
+              <TouchableOpacity
+                className="flex-1 flex-row items-center gap-2 bg-[#1C1C21] rounded-xl px-2 py-3"
+                onPress={() => setActiveField("to")}
+              >
+                {MY_ICONS.marker("red", 20)}
+                <Text className="text-white font-medium" numberOfLines={1}>
+                  {destination ? destination.name : "Set Destination"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
-              className="flex-1 flex-row items-center bg-white rounded-xl px-2 gap-2 py-3"
-              onPress={() => setActiveField("from")}
+              onPress={handleContinue}
+              disabled={!pickup || !destination}
+              className={`h-14 rounded-full bg-[#EE7F3A] justify-center items-center ${
+                pickup && destination ? "" : "opacity-50"
+              }`}
             >
-              {MY_ICONS.marker("green", 20)}
-              <Text className="text-gray-700 font-medium">
-                {pickup ? pickup.name : "Set Pickup"}
-              </Text>
-            </TouchableOpacity>
-
-            <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
-
-            <TouchableOpacity
-              className="flex-1 flex-row items-center gap-2 bg-white rounded-xl px-2 py-3"
-              onPress={() => setActiveField("to")}
-            >
-              {MY_ICONS.marker("red", 20)}
-              <Text className="text-gray-700 font-medium">
-                {destination ? destination.name : "Set Destination"}
-              </Text>
+              <Text className="text-white text-lg font-bold">Continue</Text>
             </TouchableOpacity>
           </View>
-
-          <View className="flex-row items-center justify-center gap-4">
-            {pickup && destination && (
-              <View className="mt-2 items-center">
-                <Text className="text-gray-300 text-xs">
-                  Distance: {distance.toFixed(1)} km
-                </Text>
-                <Text className="text-gray-300 text-xs">
-                  ETA: {Math.ceil(duration)} min
-                </Text>
-              </View>
-            )}
-            <DeliveryButton
-              pickup={pickup}
-              destination={destination}
-              price={price}
-              loading={loading}
-              hasMultipleRiders={hasMultipleRiders}
-              onConfirmLocations={handleConfirmLocations}
-              onSearchRider={handleSearchRider}
-              onConfirmDelivery={handleConfirmDelivery}
-              onCycleRider={handleCycleRider}
-            />
-          </View>
-        </View>
+        )}
       </SafeAreaView>
 
       {/* Modals */}
@@ -326,23 +277,34 @@ export default function MapScreen() {
         }}
       />
 
-      <RiderAwaitingModal
-        visible={showAwaitingModal}
-        onClose={() => {
-          setShowAwaitingModal(false);
-          router.replace("/(tabs)/deliveries");
-        }}
-        pickup_lat={pickup?.coordinates?.latitude ?? 0}
-        pickup_long={pickup?.coordinates?.longitude ?? 0}
-        pickup_name={`${pickup?.name ?? ""}, ${pickup?.address ?? ""}`}
-        dropoff_lat={destination?.coordinates?.latitude ?? 0}
-        dropoff_long={destination?.coordinates?.longitude ?? 0}
-        dropoff_name={`${destination?.name ?? ""}, ${destination?.address ?? ""}`}
-        image_url={packageImage || IMAGES.riderWithPizza}
-        package_type={packageType || "Unknown Item"}
-        package_description={packageDescription || ""}
-        initial_waypoints={waypoints}
-      />
+      {/* Opens once Korapay reports success; sends the ride request */}
+      {paymentReference && (
+        <RiderAwaitingModal
+          visible
+          paymentReference={paymentReference}
+          pickup={pickup.coordinates}
+          dropoff={destination.coordinates}
+          pickupName={placeNames.pickup}
+          dropoffName={placeNames.dropoff}
+          onClose={() => {
+            setPaymentReference(null);
+            router.replace("/(tabs)/deliveries");
+          }}
+          onCancelled={() => {
+            setPaymentReference(null);
+            reset();
+            router.replace("/(tabs)/home");
+          }}
+          onRiderFound={(orderId) => {
+            setPaymentReference(null);
+            reset();
+            router.replace({
+              pathname: "/trackPackage",
+              params: { order_id: String(orderId), rider_found: "1" },
+            });
+          }}
+        />
+      )}
     </View>
   );
 }

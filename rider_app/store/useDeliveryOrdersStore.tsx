@@ -55,7 +55,11 @@ export const useRiderOrdersStore = create<RiderOrdersState>((set, get) => {
 
   // Auto-subscribe safely — **use the state object, not get()**
   if (!(state as any)._realtimeSubscribed) {
-    supabaseEvents.on("delivery_insert", (order) => state.addOrder(order));
+    // App orders are inserted as awaiting_payment and only become available
+    // once paid (the update to pending below)
+    supabaseEvents.on("delivery_insert", (order) => {
+      if (order.status === "pending" && !order.driver_id) state.addOrder(order);
+    });
     supabaseEvents.on("delivery_update", (order: RiderOrder) => {
       if (order.status !== "pending") {
         get().removeOrder(order.id);

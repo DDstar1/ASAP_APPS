@@ -18,6 +18,10 @@ import { TouchableOpacity } from "react-native";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import {
+  registerForPushNotifications,
+  useNotificationTaps,
+} from "@/lib/push-notifications";
+import {
   startMessageEvents,
   stopAllListeners,
 } from "@/lib/supabase-realtime-functions";
@@ -108,11 +112,23 @@ export default function RootLayout() {
     // Start messages realtime (anonymous users CAN receive messages)
     startMessageEvents(user.id); // add this
 
+    // OS push (works when the app is closed); realtime above is in-app only
+    registerForPushNotifications();
+
     // Cleanup
     return () => {
       stopAllListeners();
     };
-  }, [user?.userId, user?.isAnonymous]);
+  }, [user?.id]);
+
+  // Tapping a delivery push opens that order's tracking screen
+  useNotificationTaps(loaded && !!user, (data) => {
+    if (!data.order_id) return;
+    router.push({
+      pathname: "/trackPackage",
+      params: { order_id: String(data.order_id) },
+    });
+  });
 
   /* -------------------------------------------------
    * 2️⃣ Navigate ONLY after Stack is mounted
@@ -171,7 +187,7 @@ export default function RootLayout() {
           options={{ headerShown: false }}
         />
 
-        <Stack.Screen name="map/index" options={{ headerShown: false }} />
+        <Stack.Screen name="map" options={{ headerShown: false }} />
 
         <Stack.Screen
           name="trackPackage/index"

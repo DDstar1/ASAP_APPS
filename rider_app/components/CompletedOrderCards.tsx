@@ -1,17 +1,11 @@
-import { MY_ICONS } from "@/assets/assetsData";
+import { MaterialIcons } from "@expo/vector-icons";
 import React from "react";
-import { View, Text } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
-// Status config — maps store status strings to display labels + colors
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; bg: string }
-> = {
-  pending: { label: "Pending", color: "#FBBF24", bg: "#2D2008" },
-  arriving_pickup: { label: "Picking Up", color: "#60A5FA", bg: "#0D1F3C" },
-  in_transit: { label: "In Transit", color: "#34D399", bg: "#052E1C" },
-  delivered: { label: "Delivered", color: "#A3E635", bg: "#1A2E05" },
-};
+// Customer app's My Orders card, in the rider app's palette
+const CARD_COLOR = "#1C2E52";
+const DELIVERED_CHEVRON = "#FFFFFF";
+const CANCELLED_CHEVRON = "#F87171";
 
 type Props = {
   item: {
@@ -19,121 +13,141 @@ type Props = {
     order_code: string;
     status: string;
     pickup_name: string;
-    dropoff_name: string;
+    pickup_lat: number;
+    pickup_long: number;
+    dropoff_lat: number;
+    dropoff_long: number;
+    package_type?: string | null;
     delivery_accepted_time: number;
+    dropoff_time?: string | null;
+    cancelled_at?: string | null;
+    created_at?: string;
   };
+  // Set on cancelled orders the rider still has to return to the pickup point
+  onAtReturnPoint?: () => void;
 };
 
-function formatTime(ts: number) {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// When the order finished: dropped off, or cancelled. Older rows may lack
+// those, so fall back to when it was accepted / created.
+export function finishedAt(item: Props["item"]): number {
+  const iso =
+    item.status === "cancelled"
+      ? item.cancelled_at
+      : (item.dropoff_time ??
+        (item.delivery_accepted_time
+          ? new Date(item.delivery_accepted_time).toISOString()
+          : null));
+  const ts = new Date(iso ?? item.created_at ?? 0).getTime();
+  return Number.isNaN(ts) ? 0 : ts;
 }
 
+// Straight-line pickup → dropoff distance; the road route is longer
+function distanceKm(item: Props["item"]): number | null {
+  const lat1 = Number(item.pickup_lat);
+  const lon1 = Number(item.pickup_long);
+  const lat2 = Number(item.dropoff_lat);
+  const lon2 = Number(item.dropoff_long);
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 23-05-2025
 function formatDate(ts: number) {
   if (!ts) return "—";
-  return new Date(ts).toLocaleDateString([], {
-    day: "numeric",
-    month: "short",
-  });
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 }
 
-export default function CompletedOrderCard({ item }: Props) {
-  const statusCfg = STATUS_CONFIG[item.status] ?? {
-    label: item.status,
-    color: "#7A7F9A",
-    bg: "#1A1C24",
-  };
+// 9:28pm
+function formatTime(ts: number) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${hours % 12 || 12}:${minutes}${hours < 12 ? "am" : "pm"}`;
+}
+
+export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
+  const cancelled = item.status === "cancelled";
+  const at = finishedAt(item);
+  const km = distanceKm(item);
+  const chevron = cancelled ? CANCELLED_CHEVRON : DELIVERED_CHEVRON;
+  const chevronIcon = cancelled ? "keyboard-arrow-left" : "keyboard-arrow-right";
 
   return (
-    <View className="bg-[#12141A] px-5 py-4  my-2 rounded-2xl border border-[#1F2230]">
-      {/* ── Top row: order code + status badge ── */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center gap-2">
-          {MY_ICONS.delivery("#4F8EF7", 16)}
-          <Text className="text-[#F0F2F8] text-sm font-bold tracking-wide">
-            {item.order_code}
-          </Text>
-        </View>
+    <View
+      className="rounded-3xl px-5 py-4 border border-[#4F8EF7]/20"
+      style={{ backgroundColor: CARD_COLOR }}
+      accessibilityLabel={`Order ${item.order_code}, ${cancelled ? "cancelled" : "delivered"}`}
+    >
+      {/* ── Order code ── */}
+      <Text
+        className="text-white text-lg font-extrabold tracking-wide mb-3"
+        numberOfLines={1}
+      >
+        {item.order_code}
+      </Text>
 
-        <View
-          className="rounded-full px-3 py-1 border"
-          // inline for dynamic border color
-          style={{
-            backgroundColor: statusCfg.bg,
-            borderColor: statusCfg.color + "40",
-            borderWidth: 1,
-            borderRadius: 999,
-            paddingHorizontal: 12,
-            paddingVertical: 4,
-          }}
-        >
-          <Text
-            style={{ color: statusCfg.color }}
-            className="text-[11px] font-bold tracking-wider uppercase"
-          >
-            {statusCfg.label}
-          </Text>
-        </View>
-      </View>
-
-      {/* ── Route row: pickup → dropoff ── */}
-      <View className="flex-row items-center gap-2 mb-3">
-        {/* Pickup */}
+      <View className="flex-row items-center">
+        {/* ── Date + pickup ── */}
         <View className="flex-1">
-          <Text className="text-[10px] font-bold tracking-widest text-[#7A7F9A] uppercase mb-0.5">
-            From
-          </Text>
+          <Text className="text-white/60 text-xs">{formatDate(at)}</Text>
           <Text
-            className="text-[#F0F2F8] text-sm font-medium"
+            className="text-white text-sm font-semibold mt-1"
             numberOfLines={1}
           >
-            {item.pickup_name}
+            {item.pickup_name || "—"}
           </Text>
         </View>
 
-        {/* Arrow */}
-        <View className="items-center px-1">
-          {MY_ICONS.arrowRight("#3D4160", 18)}
+        {/* ── Chevrons: > > > delivered, < < < cancelled ── */}
+        <View className="items-center px-2">
+          <View className="flex-row">
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{ marginHorizontal: -5 }}>
+                <MaterialIcons name={chevronIcon} size={22} color={chevron} />
+              </View>
+            ))}
+          </View>
+          {km != null && (
+            <Text className="text-white/70 text-[11px] font-semibold mt-0.5">
+              {km < 10 ? km.toFixed(1) : Math.round(km)}km
+            </Text>
+          )}
         </View>
 
-        {/* Dropoff */}
+        {/* ── Time + package type ── */}
         <View className="flex-1 items-end">
-          <Text className="text-[10px] font-bold tracking-widest text-[#7A7F9A] uppercase mb-0.5 text-right">
-            To
-          </Text>
+          <Text className="text-white/60 text-xs">{formatTime(at)}</Text>
           <Text
-            className="text-[#F0F2F8] text-sm font-medium text-right"
+            className="text-white text-sm font-semibold mt-1 text-right"
             numberOfLines={1}
           >
-            {item.dropoff_name}
+            {item.package_type || "Package"}
           </Text>
         </View>
       </View>
 
-      {/* ── Bottom row: date + time ── */}
-      <View className="flex-row items-center justify-between pt-3 border-t border-[#1F2230]">
-        <View className="flex-row items-center gap-1.5">
-          {MY_ICONS.calendar?.("#7A7F9A", 13) ?? null}
-          <Text className="text-[#7A7F9A] text-xs">
-            {formatDate(item.delivery_accepted_time)}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-1.5">
-          {MY_ICONS.clock?.("#7A7F9A", 13) ?? null}
-          <Text className="text-[#7A7F9A] text-xs">
-            {formatTime(item.delivery_accepted_time)}
-          </Text>
-        </View>
-        <Text className="text-[#3D4160] text-[10px] font-mono">
-          #
-          {String(item.id ?? "")
-            .slice(0, 8)
-            .toUpperCase()}
-        </Text>
-      </View>
+      {/* ── Return to pickup: opens the return code input ── */}
+      {onAtReturnPoint && (
+        <TouchableOpacity
+          onPress={onAtReturnPoint}
+          activeOpacity={0.85}
+          className="mt-4 py-3 rounded-full items-center justify-center flex-row gap-2"
+          style={{ backgroundColor: "#ff923e" }}
+        >
+          <MaterialIcons name="assignment-return" size={18} color="#000" />
+          <Text className="text-black font-bold text-sm">AT RETURN POINT</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
