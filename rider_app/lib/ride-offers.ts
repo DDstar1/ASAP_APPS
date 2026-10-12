@@ -17,14 +17,29 @@ export type OfferDetails = {
   dropoff_long: number | null;
   package_type: string | null;
   image_url: string | null;
+  // Set once the rider has answered. Rust can assign a delivery outright
+  // (status already accepted); the rider still has to tap Start.
+  responded_at: string | null;
 };
 
-/** Open offers for the signed-in rider, oldest first (for launch/foreground). */
+/** Assigned by Rust and not yet started by the rider. */
+export const isAssignedOffer = (o: {
+  status: string;
+  responded_at?: string | null;
+}) => o.status === "accepted" && !o.responded_at;
+
+/** Still needs the rider: an open request, or an assignment to start. */
+export const isAwaitingRider = (o: {
+  status: string;
+  responded_at?: string | null;
+}) => o.status === "pending" || isAssignedOffer(o);
+
+/** Offers awaiting the signed-in rider, oldest first (for launch/foreground). */
 export async function fetchPendingOfferIds(): Promise<string[]> {
   const { data, error } = await supabase
     .from("app_ride_offers")
     .select("id")
-    .eq("status", "pending")
+    .or("status.eq.pending,and(status.eq.accepted,responded_at.is.null)")
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: true });
 
@@ -53,11 +68,18 @@ export async function getOfferDetails(
  * Accept or decline. Rust takes the rider id from the auth token and answers
  * 409 when the offer already expired or was answered.
  */
-export async function respondToRideOffer(offerId: string, accepted: boolean) {
+export async function respondToRideOffer(
+  offerId: string,
+  accepted: boolean,
+  // Accepts send where the rider is so Rust can fill driver_initial_lat/long
+  location?: { lat: number; long: number } | null,
+) {
   try {
     const data = await apiPost("/drivers/driver-response", {
       offer_id: offerId,
       accepted,
+      driver_lat: location?.lat ?? null,
+      driver_long: location?.long ?? null,
     });
     return { success: true as const, data };
   } catch (err: any) {

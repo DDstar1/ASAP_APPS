@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  Dimensions,
-  FlatList,
   RefreshControl,
   SectionList,
   Text,
@@ -11,38 +9,44 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
-import { MY_ICONS } from "@/assets/assetsData";
 import CompletedOrderCards, {
   finishedAt,
 } from "@/components/CompletedOrderCards";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
-import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
 import {
   isActiveStatus,
   useAcceptedDeliveryStore,
 } from "@/store/useAcceptedDeliveriesStore";
-import ActiveDeliveriesEmptyState from "@/components/ActiveDeliveriesEmptyState";
 import EarningsPanel from "@/components/EarningsPanel";
 import ReturnCodeModal from "@/components/ReturnCodeModal";
 import { useUserStore } from "@/store/useUserStore";
 
 const HIGHLIGHT_WINDOW = 120_000; // 2 minutes
-const ACCENT_COLOR = "#4F8EF7";
+const ORANGE = "#EE7F3A";
+const GREEN = "#16A34A";
 
 type Tab = "deliveries" | "earnings";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "deliveries", label: "Deliveries" },
-  { key: "earnings", label: "Earnings" },
+// Earnings is money, so its tab lights up green
+const TABS: { key: Tab; label: string; color: string }[] = [
+  { key: "deliveries", label: "Orders", color: ORANGE },
+  { key: "earnings", label: "Earnings", color: GREEN },
 ];
 
-const openDeliveryDetails = (orderCode: string) =>
-  router.navigate({ pathname: "/order_detail", params: { orderCode } });
+// orderCode is the screen title; get-trip is looked up by payment_reference
+const openDeliveryDetails = (
+  orderCode: string,
+  paymentReference: string | null | undefined,
+) =>
+  router.navigate({
+    pathname: "/order_detail",
+    params: { orderCode, paymentReference: paymentReference ?? "" },
+  });
 
 const OrdersPage = () => {
-  const { width } = Dimensions.get("window");
   const { newlyAcceptedId, time_added } = useLocalSearchParams();
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("deliveries");
@@ -117,68 +121,89 @@ const OrdersPage = () => {
     (item) => item.status === "delivered",
   );
 
-  // ─── Section Label ─────────────────────────────────────────────────────────
-  const SectionLabel = ({
-    title,
-    count,
-  }: {
-    title: string;
-    count?: number;
-  }) => (
-    <View className="flex-row items-center gap-2">
-      <Text className="text-[11px] font-bold tracking-widest text-[#7A7F9A] uppercase">
-        {title}
-      </Text>
-      {count !== undefined && (
-        <View className="bg-[#1A1C24] rounded-lg px-2 py-0.5 border border-[#1F2230]">
-          <Text className="text-[11px] font-semibold text-[#7A7F9A]">
-            {count}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
-  // ─── Divider ───────────────────────────────────────────────────────────────
-  const Divider = () => <View className="h-px bg-[#1F2230] mx-6 my-2" />;
-
   const refreshControl = (
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
-      tintColor={ACCENT_COLOR}
-      colors={[ACCENT_COLOR]}
+      tintColor={ORANGE}
+      colors={[ORANGE]}
     />
   );
 
+  // Active orders stack above the history, one card each
+  const activeHeader = (
+    <View className="pb-2">
+      <Text className="text-white text-lg font-bold mb-3">
+        {onGoingDeliveries.length > 1
+          ? `Current Deliveries (${onGoingDeliveries.length})`
+          : "Current Delivery"}
+      </Text>
+      {onGoingDeliveries.length === 0 ? (
+        <View className="bg-[#212126] rounded-3xl px-5 py-6 flex-row items-center gap-4">
+          <View className="w-11 h-11 rounded-full bg-[#3C3C43] items-center justify-center">
+            <Ionicons name="bicycle" size={22} color={ORANGE} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-white font-semibold">No active delivery</Text>
+            <Text className="text-gray-400 text-xs mt-0.5">
+              Go online on Home to receive new orders
+            </Text>
+          </View>
+        </View>
+      ) : (
+        onGoingDeliveries.map((item) => (
+          <TouchableOpacity
+            key={`${item.order_code}-${item.id}`}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Open order ${item.order_code}`}
+            onPress={() =>
+              openDeliveryDetails(item.order_code, item.payment_reference)
+            }
+          >
+            <IncompleteDeliveryCard
+              item={item}
+              isHighlighted={isHighlightActive(item.id)}
+            />
+          </TouchableOpacity>
+        ))
+      )}
+    </View>
+  );
+
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#0A0B0F]">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-black">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <View className="flex-row items-center justify-between px-6 pt-3 pb-5">
-        <View>
-          <Text className="text-[28px] font-extrabold text-[#F0F2F8] -tracking-wide">
-            Deliveries
-          </Text>
-        </View>
-        <View className="w-11 h-11 rounded-2xl bg-[#1C2E52] items-center justify-center border border-[#4F8EF7]/20">
-          {MY_ICONS.delivery(ACCENT_COLOR, 20)}
-        </View>
+      <View className="px-5 pt-3 pb-4">
+        <Text className="text-[28px] font-extrabold text-white">
+          {tab === "earnings" ? "Earnings" : "My Orders"}
+        </Text>
       </View>
 
       {/* ── Tab switcher ────────────────────────────────────────────────────── */}
-      <View className="flex-row mx-6 mb-3 p-1 rounded-2xl bg-[#12141A] border border-[#1F2230]">
-        {TABS.map(({ key, label }) => {
+      <View
+        className="flex-row mx-5 mb-3 p-1 rounded-full bg-[#212126]"
+        accessibilityRole="tablist"
+      >
+        {TABS.map(({ key, label, color }) => {
           const active = tab === key;
           return (
             <TouchableOpacity
               key={key}
               activeOpacity={0.8}
               onPress={() => setTab(key)}
-              className="flex-1 items-center py-2.5 rounded-xl"
-              style={active ? { backgroundColor: "#1C2E52" } : undefined}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              className="flex-1 h-11 flex-row items-center justify-center gap-1.5 rounded-full"
+              style={active ? { backgroundColor: color } : undefined}
             >
+              <Ionicons
+                name={key === "earnings" ? "wallet" : "cube"}
+                size={16}
+                color={active ? "white" : "#9CA3AF"}
+              />
               <Text
-                style={{ color: active ? ACCENT_COLOR : "#7A7F9A" }}
+                style={{ color: active ? "white" : "#9CA3AF" }}
                 className="text-sm font-bold"
               >
                 {label}
@@ -188,81 +213,15 @@ const OrdersPage = () => {
         })}
       </View>
 
-      <Divider />
-
       {tab === "earnings" ? (
-        <View className="flex-1 pt-3">
+        <View className="flex-1 pt-2">
           <EarningsPanel
             completedDeliveries={deliveredDeliveries}
             onRefreshDeliveries={fetchAcceptedDeliveries}
           />
         </View>
-      ) : (
-        <>
-      {/* ── Active Deliveries — fixed height, never grows ───────────────────── */}
-      <View className="px-6 pt-3 pb-2">
-        <SectionLabel
-          title="Active"
-          count={loading ? undefined : onGoingDeliveries.length}
-        />
-      </View>
-
-      <View style={{ maxHeight: 230 }}>
-        {loading ? (
-          <FlatList
-            horizontal
-            data={[1, 2, 3]}
-            keyExtractor={(item) => item.toString()}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 24,
-              alignItems: "center",
-            }}
-            renderItem={() => <IncompleteDeliverySkeleton width={width} />}
-          />
-        ) : (
-          <FlatList
-            data={onGoingDeliveries}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 24,
-              alignItems: "center",
-            }}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            keyExtractor={(item, index) => `${item.order_code}-${index}`}
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => openDeliveryDetails(item.order_code)}
-              >
-                <IncompleteDeliveryCard
-                  item={item}
-                  index={index}
-                  width={width}
-                  isHighlighted={isHighlightActive(item.id)}
-                />
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={() => (
-              <ActiveDeliveriesEmptyState width={width} />
-            )}
-          />
-        )}
-      </View>
-
-      <Divider />
-
-      {/* ── Completed Deliveries — flex-1 fills ALL remaining space ─────────── */}
-      <View className="px-6 pt-3 pb-2">
-        <SectionLabel
-          title="Completed"
-          count={loading ? undefined : completedDeliveries.length}
-        />
-      </View>
-
-      {loading ? (
-        <View className="flex-1 px-6 gap-6">
+      ) : loading && AcceptedDeliveries.length === 0 ? (
+        <View className="flex-1 px-5 pt-2 gap-4">
           {[1, 2, 3, 4].map((_, index) => (
             <CompletedOrderSkeleton key={index} />
           ))}
@@ -270,16 +229,20 @@ const OrdersPage = () => {
       ) : (
         <SectionList
           sections={completedSections}
+          ListHeaderComponent={activeHeader}
           renderSectionHeader={({ section }) => (
-            <Text className="text-sm font-bold text-[#F0F2F8] bg-[#0A0B0F] pt-4 pb-3">
+            <Text className="text-lg font-bold text-white bg-black pt-4 pb-1">
               {section.title}
             </Text>
           )}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => (
             <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => openDeliveryDetails(item.order_code)}
+              activeOpacity={0.85}
+              className="my-2"
+              onPress={() =>
+                openDeliveryDetails(item.order_code, item.payment_reference)
+              }
             >
               <CompletedOrderCards
                 item={item}
@@ -296,21 +259,21 @@ const OrdersPage = () => {
             </TouchableOpacity>
           )}
           stickySectionHeadersEnabled
-          className="flex-1"
+          className="flex-1 px-5"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 18 }}
-          ItemSeparatorComponent={() => <View className="h-3" />}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
           refreshControl={refreshControl}
-          ListEmptyComponent={() => (
-            <View className="py-8 items-center">
-              <Text className="text-sm text-[#3D4160]">
-                No completed deliveries yet
-              </Text>
-            </View>
-          )}
+          ListFooterComponent={
+            completedSections.length === 0 ? (
+              <View className="py-8 items-center">
+                <Ionicons name="archive-outline" size={32} color="#6B6B70" />
+                <Text className="text-sm text-gray-400 mt-2">
+                  No completed deliveries yet
+                </Text>
+              </View>
+            ) : null
+          }
         />
-      )}
-        </>
       )}
 
       <ReturnCodeModal

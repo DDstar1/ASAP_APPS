@@ -12,7 +12,10 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as Linking from "expo-linking";
-import { signUpUser } from "@/lib/supabase-app-functions";
+import {
+  createCustomerAccount,
+  signUpUser,
+} from "@/lib/supabase-app-functions";
 import { normalizePhone } from "@/lib/phone";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
 
@@ -70,6 +73,12 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await signUpUser(email, password, username, phone);
+      // If this fails, ensureCustomerAccount retries it on the next session load
+      await createCustomerAccount({
+        name: username,
+        email,
+        phone: normalizePhone(phone)!,
+      }).catch((err) => console.error("Rust account setup failed:", err));
       Alert.alert(
         "Verify Your Email",
         "A verification link has been sent to your inbox.",

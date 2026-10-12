@@ -1,10 +1,11 @@
-import { respondToRideOffer } from "@/lib/ride-offers";
+import { isAssignedOffer, respondToRideOffer } from "@/lib/ride-offers";
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 import { useRideOfferStore } from "@/store/useRideOfferStore";
 import { startTracking } from "@/utils/utils_orderLocationTracking";
 import { cleanAddress } from "@/utils/utils_for_me";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -16,6 +17,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+// The offer is on a countdown, so take the last known fix if there is one
+// rather than waiting on a fresh high-accuracy reading. Null if unavailable;
+// the accept still goes through.
+async function currentLocation() {
+  try {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== "granted") return null;
+    const position =
+      (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
+      (await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      }));
+    return { lat: position.coords.latitude, long: position.coords.longitude };
+  } catch {
+    return null;
+  }
+}
 
 // Shown on the home tab when Rust offers this rider a delivery. A <Modal>
 // covers the whole app and tabs stay mounted, so it only renders while home
@@ -49,16 +68,24 @@ export function RideOfferModal() {
 
   if (!offer || !isFocused) return null;
 
+  // Rust already gave this delivery to the rider, so there's nothing to
+  // decline; Start records the response and sends their location
+  const assigned = isAssignedOffer(offer);
+
   const respond = async (accepted: boolean) => {
     if (responding) return;
     setResponding(accepted ? "accept" : "decline");
 
-    const result = await respondToRideOffer(offer.offer_id, accepted);
+    const location = accepted ? await currentLocation() : null;
+    const result = await respondToRideOffer(offer.offer_id, accepted, location);
     setResponding(null);
 
     if (!result.success) {
       if (result.expired) dismissOffer(offer.offer_id);
-      Alert.alert(accepted ? "Couldn't accept" : "Couldn't decline", result.error);
+      Alert.alert(
+        assigned ? "Couldn't start" : accepted ? "Couldn't accept" : "Couldn't decline",
+        result.error,
+      );
       return;
     }
 
@@ -79,7 +106,7 @@ export function RideOfferModal() {
         <View className="bg-white rounded-t-3xl p-6 pb-10 gap-4">
           <View className="flex-row justify-between items-center">
             <Text className="text-xl font-bold text-gray-900">
-              New delivery request
+              {assigned ? "New delivery assigned" : "New delivery request"}
             </Text>
             <View className="bg-orange-100 px-3 py-1 rounded-full">
               <Text className="text-orange-600 font-semibold">
@@ -124,17 +151,19 @@ export function RideOfferModal() {
           </View>
 
           <View className="flex-row gap-3 mt-2">
-            <TouchableOpacity
-              className="flex-1 h-12 rounded-full border border-gray-300 justify-center items-center"
-              onPress={() => respond(false)}
-              disabled={!!responding}
-            >
-              {responding === "decline" ? (
-                <ActivityIndicator color="#6B7280" />
-              ) : (
-                <Text className="text-gray-700 font-semibold">Decline</Text>
-              )}
-            </TouchableOpacity>
+            {!assigned && (
+              <TouchableOpacity
+                className="flex-1 h-12 rounded-full border border-gray-300 justify-center items-center"
+                onPress={() => respond(false)}
+                disabled={!!responding}
+              >
+                {responding === "decline" ? (
+                  <ActivityIndicator color="#6B7280" />
+                ) : (
+                  <Text className="text-gray-700 font-semibold">Decline</Text>
+                )}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               className="flex-1 h-12 rounded-full bg-green-600 justify-center items-center"
               onPress={() => respond(true)}
@@ -143,7 +172,9 @@ export function RideOfferModal() {
               {responding === "accept" ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text className="text-white font-semibold">Accept</Text>
+                <Text className="text-white font-semibold">
+                  {assigned ? "Start" : "Accept"}
+                </Text>
               )}
             </TouchableOpacity>
           </View>

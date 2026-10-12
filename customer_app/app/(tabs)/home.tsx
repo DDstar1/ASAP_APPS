@@ -1,36 +1,89 @@
 import { IMAGES } from "@/assets/assetsData";
 import SavedLocationsModal from "@/components/SavedLocationsModal";
 import ShareScreenModal from "@/components/ShareScreenModal";
-import { getCusUserById } from "@/lib/supabase-app-functions";
-import { useUserStore } from "@/store/useUserStore";
-import { shipments } from "@/utils/dummyData";
-import { getFormattedToday } from "@/utils/home_utils";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { getRecentPlaces, type RecentPlace } from "@/lib/recent-places";
+import { openWebsite } from "@/utils/website";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
   StatusBar,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const ShippingTrackerApp = () => {
+const ORANGE = "#EE7F3A";
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+// Square tile in the bottom panel
+function ActionTile({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IoniconName;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="flex-1 aspect-square rounded-2xl bg-[#212126] justify-center items-center gap-2"
+    >
+      <Ionicons name={icon} size={26} color="white" />
+      <Text className="text-white text-sm font-medium">{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// Half-width card that opens a page on the website
+function WebsiteCard({
+  icon,
+  title,
+  subtitle,
+  path,
+}: {
+  icon: IoniconName;
+  title: string;
+  subtitle: string;
+  path: string;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={() => openWebsite(path)}
+      accessibilityRole="link"
+      accessibilityLabel={`${title}. ${subtitle}. Opens the website`}
+      className="flex-1 bg-[#3C3C43] rounded-3xl p-4 gap-3"
+    >
+      <View className="w-11 h-11 rounded-full bg-[#212126] justify-center items-center">
+        <Ionicons name={icon} size={20} color={ORANGE} />
+      </View>
+      <View>
+        <Text className="text-white text-base font-bold">{title}</Text>
+        <Text className="text-gray-400 text-xs mt-0.5">{subtitle}</Text>
+      </View>
+      <View className="flex-row items-center gap-1">
+        <Text className="text-[#EE7F3A] text-xs font-semibold">Learn more</Text>
+        <Ionicons name="open-outline" size={12} color={ORANGE} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const HomeScreen = () => {
   const [shareVisible, setShareVisible] = useState(false);
   const [savedVisible, setSavedVisible] = useState(false);
-
-  const [customUser, setCustomUser] = useState<any>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const userId = useUserStore((state) => state.user?.id);
+  const [recents, setRecents] = useState<RecentPlace[]>([]);
 
   // 🧭 Deep link params
   const { modal, edit, lat, lng } = useLocalSearchParams();
-
-  console.log("🏠 Home params:", { modal, edit, lat, lng });
 
   // 🧱 Shared location state (syncs with params)
   const [SharedlocationDetails, setSharedlocationDetailsParam] = useState<any>({
@@ -42,7 +95,6 @@ const ShippingTrackerApp = () => {
 
   // 🧹 Function to clear shared location
   const handleClearSharedDetails = () => {
-    console.log("🧹 Clearing SharedlocationDetails...");
     setSharedlocationDetailsParam({
       modal: null,
       edit: null,
@@ -52,201 +104,188 @@ const ShippingTrackerApp = () => {
     router.replace("/(tabs)/home");
   };
 
-  // ✅ Whenever params change, sync to state
+  //  Whenever params change, sync to state
   useEffect(() => {
     if (modal || edit || lat || lng) {
-      const parsed = {
+      setSharedlocationDetailsParam({
         modal,
         edit,
         lat: lat ? parseFloat(lat as string) : null,
         lng: lng ? parseFloat(lng as string) : null,
-      };
-      console.log("🧭 Updated SharedlocationDetails:", parsed);
-      setSharedlocationDetailsParam(parsed);
+      });
     }
   }, [modal, edit, lat, lng]);
 
-  // ✅ Auto-open Saved Locations modal when deep link triggers
+  //  Auto-open Saved Locations modal when deep link triggers
   useEffect(() => {
     if (
       SharedlocationDetails &&
       SharedlocationDetails.modal === "sharedlocation" &&
       SharedlocationDetails.edit === "true"
     ) {
-      console.log(
-        "🗺 Opening SavedLocationsModal for:",
-        SharedlocationDetails.lat,
-        SharedlocationDetails.lng,
-      );
       setSavedVisible(true);
     }
   }, [SharedlocationDetails]);
 
-  // ✅ Fetch custom user from Supabase
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!userId) {
-        console.warn("⚠️ No user ID found in store");
-        setLoadingUser(false);
-        return;
-      }
+  // Recents change whenever a search is made on the map
+  useFocusEffect(
+    useCallback(() => {
+      getRecentPlaces().then(setRecents);
+    }, []),
+  );
 
-      try {
-        const data = await getCusUserById(userId);
-        setCustomUser(data);
-      } catch (error) {
-        console.error("❌ Error fetching user:", error);
-      } finally {
-        setLoadingUser(false);
-      }
-    };
+  const openSearch = () =>
+    router.push({ pathname: "/map", params: { search: "to" } });
 
-    fetchUser();
-  }, [userId]);
-
-  const quickActions = [
-    { icon: "navigate-outline", label: "Share Location" },
-    { icon: "send-outline", label: "Send Package" },
-    { icon: "bookmark-outline", label: "Saved Locations" },
-  ];
+  const bookToRecent = (place: RecentPlace) =>
+    router.push({
+      pathname: "/map",
+      params: {
+        dest_name: place.name,
+        dest_address: place.address ?? "",
+        dest_lat: String(place.coordinates.latitude),
+        dest_lng: String(place.coordinates.longitude),
+      },
+    });
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
-      <StatusBar barStyle="light-content" backgroundColor="#111827" />
+    <SafeAreaView edges={["top"]} className="flex-1 bg-[#212126]">
+      <StatusBar barStyle="light-content" backgroundColor="#212126" />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="flex-row justify-between items-center px-4 py-3">
-          <View className="flex-row bg-[#3C3C43] p-3 px-5 justify-evenly rounded-full items-center">
-            <View className="w-10 h-10 rounded-full bg-orange-500 justify-center items-center mr-3">
-              <Text className="text-white text-base font-bold">
-                {customUser?.username?.[0]?.toUpperCase() ?? "U"}
-              </Text>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        {/* Search + chats */}
+        <View className="flex-row items-center gap-3 px-4 pt-3 pb-4">
+          <TouchableOpacity
+            onPress={openSearch}
+            accessibilityRole="search"
+            accessibilityLabel="Where to? Search for a destination"
+            className="flex-1 h-14 rounded-full bg-[#3C3C43] flex-row items-center pl-2 pr-5 gap-3"
+          >
+            <View className="w-10 h-10 rounded-full bg-[#212126] justify-center items-center">
+              <Ionicons name="search" size={18} color="white" />
             </View>
-            <View className="justify-center">
-              <Text className="text-white text-lg font-semibold">
-                {loadingUser ? "Loading..." : customUser?.username || "User"}
-              </Text>
-              <Text className="text-gray-400 text-xs mt-0.5">
-                {getFormattedToday()}
-              </Text>
-            </View>
-          </View>
+            <Text className="text-gray-300 text-base">Where to?</Text>
+          </TouchableOpacity>
 
-          <TouchableOpacity className="ml-4 aspect-square flex-row items-center justify-center bg-[#3C3C43] p-3 rounded-full">
-            <Ionicons name="settings-outline" size={20} color="#9CA3AF" />
+          <TouchableOpacity
+            onPress={() => router.push("/all_chats")}
+            accessibilityRole="button"
+            accessibilityLabel="Messages"
+            className="w-14 h-14 rounded-full bg-[#3C3C43] justify-center items-center"
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color="white" />
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
-        <View className="px-4 py-3 mb-4">
-          <View className="bg-[#3C3C43] rounded-full px-3 py-2.5 flex-row items-center">
-            <Ionicons name="search-outline" size={16} color="#9CA3AF" />
-            <TextInput
-              className="flex-1 text-gray-300 rounded-full text-sm ml-2"
-              placeholder="Search here"
-              placeholderTextColor="#6B7280"
-            />
-            <View className="w-3 h-3 border border-gray-400 transform rotate-45" />
+        {/* Promo: send a package */}
+        <View className="mx-4 bg-[#3C3C43] rounded-3xl overflow-hidden flex-row min-h-[160px]">
+          <View className="flex-1 p-5 justify-between z-10">
+            <View>
+              <Text className="text-white text-xl font-bold leading-7">
+                Send a package{"\n"}across town
+              </Text>
+              <Text className="text-gray-300 text-xs mt-1">
+                A nearby rider picks it up in minutes.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/map")}
+              accessibilityRole="button"
+              className="self-start bg-[#EE7F3A] rounded-full px-5 h-11 justify-center mt-4"
+            >
+              <Text className="text-white text-sm font-bold">Book Ride</Text>
+            </TouchableOpacity>
           </View>
+          <Image
+            source={IMAGES.map_lines}
+            className="absolute -right-6 top-0 bottom-0 w-1/2 h-full"
+            style={{ opacity: 0.9 }}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
         </View>
 
-        {/* Promo Banner */}
-        <View className="mx-4 mb-4 bg-[#3C3C43] h-40 overflow-hidden rounded-xl p-4 flex-row justify-between items-center">
-          <View className="flex-1">
-            <Text className="text-white text-lg font-bold mb-1">
-              Claim 25% Off
-            </Text>
-            <Text className="text-white text-xs opacity-90 leading-4 mb-3">
-              Get <Text className="font-extrabold">25%</Text> Off when you pay
-              with <Text className="font-extrabold">Solana</Text>.{"\n"}Fast,
-              secure, and low fees.
-            </Text>
+        {/* Become a vendor / Invest: both on the website */}
+        <View className="flex-row gap-3 mx-4 mt-4">
+          <WebsiteCard
+            icon="storefront-outline"
+            title="Become a vendor"
+            subtitle="Sell and deliver with ASAP"
+            path="/become-vendor"
+          />
+          <WebsiteCard
+            icon="trending-up"
+            title="Invest"
+            subtitle="Own a part of ASAP"
+            path="/invest"
+          />
+        </View>
 
-            <TouchableOpacity className="bg-orange-500 rounded-full px-4 py-2 self-start">
-              <Text className="text-white text-sm font-semibold">
-                Link Phantom Wallet
+        {/* Bottom panel */}
+        <View className="flex-1 bg-[#3C3C43] rounded-t-[32px] mt-6 px-4 pt-5 pb-8">
+          <View className="flex-row gap-3">
+            <ActionTile icon="location" label="Location" onPress={openSearch} />
+            <ActionTile
+              icon="navigate-outline"
+              label="Share"
+              onPress={() => setShareVisible(true)}
+            />
+            <ActionTile
+              icon="bookmark-outline"
+              label="Saved"
+              onPress={() => setSavedVisible(true)}
+            />
+          </View>
+
+          <Text className="text-white text-lg font-bold mt-6 mb-1">Recent</Text>
+
+          {recents.length === 0 ? (
+            <TouchableOpacity
+              onPress={openSearch}
+              accessibilityRole="button"
+              className="flex-row items-center gap-4 py-3"
+            >
+              <View className="w-11 h-11 rounded-xl bg-[#212126] justify-center items-center">
+                <Ionicons name="search" size={18} color="#9CA3AF" />
+              </View>
+              <Text className="text-gray-400 text-sm flex-1">
+                Places you search for will show up here.
               </Text>
             </TouchableOpacity>
-          </View>
-          <View className="w-2/5">
-            <Image
-              source={IMAGES.wallet}
-              className="w-full"
-              resizeMode="contain"
-            />
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View className="flex-row justify-around px-4 py-4 mb-4">
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              className="items-center"
-              onPress={() => {
-                if (action.label === "Send Package") router.push("/map");
-                else if (action.label === "Share Location")
-                  setShareVisible(true);
-                else if (action.label === "Saved Locations")
-                  setSavedVisible(true);
-              }}
-            >
-              <View
-                className={`w-16 h-16 rounded-full justify-center items-center mb-2 bg-[#3C3C43]`}
+          ) : (
+            recents.slice(0, 4).map((place, i) => (
+              <TouchableOpacity
+                key={`${place.name}-${i}`}
+                onPress={() => bookToRecent(place)}
+                accessibilityRole="button"
+                accessibilityLabel={`Send to ${place.name}`}
+                className={`flex-row items-center gap-4 py-3 ${
+                  i > 0 ? "border-t border-white/10" : ""
+                }`}
               >
-                {action.label === "Send Package" ? (
-                  <Text className="text-2xl">🚴‍♂️</Text>
-                ) : (
-                  <Ionicons name={action.icon as any} size={24} color="white" />
-                )}
-              </View>
-              <Text className={`text-xs text-gray-400`}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Track Shipping Section */}
-        <View className="px-4 py-4 bg-[#3C3C43] rounded-2xl mx-4 mb-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-white text-lg font-semibold">
-              Track Shipping
-            </Text>
-            <TouchableOpacity>
-              <Text className="text-white text-sm underline">See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View className="mt-2">
-            {shipments.map((shipment, index) => (
-              <View
-                key={index}
-                className="flex-row justify-between items-center py-3"
-              >
-                <View className="flex-row items-center">
-                  <Feather
-                    name="package"
-                    size={25}
-                    color="#9CA3AF"
-                    style={{ marginRight: 12 }}
-                  />
-                  <View className="justify-center">
-                    <Text className="text-white text-sm">
-                      {shipment.recipient
-                        ? `To ${shipment.recipient}`
-                        : `From ${shipment.sender}`}
-                    </Text>
-                    <Text className="text-gray-400 text-xs mt-0.5">
-                      ID: {shipment.id}
-                    </Text>
-                  </View>
+                <View className="w-11 h-11 rounded-xl bg-[#212126] justify-center items-center">
+                  <Ionicons name="time-outline" size={20} color="white" />
                 </View>
-                <Text className={`text-xs font-medium ${shipment.statusColor}`}>
-                  {shipment.status}
-                </Text>
-              </View>
-            ))}
-          </View>
+                <View className="flex-1">
+                  <Text
+                    className="text-white text-base font-semibold"
+                    numberOfLines={1}
+                  >
+                    {place.name}
+                  </Text>
+                  {!!place.address && (
+                    <Text className="text-gray-400 text-sm" numberOfLines={1}>
+                      {place.address}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -267,4 +306,4 @@ const ShippingTrackerApp = () => {
   );
 };
 
-export default ShippingTrackerApp;
+export default HomeScreen;

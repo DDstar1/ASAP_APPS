@@ -2,10 +2,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
-// Customer app's My Orders card, in the rider app's palette
-const CARD_COLOR = "#1C2E52";
-const DELIVERED_CHEVRON = "#FFFFFF";
-const CANCELLED_CHEVRON = "#F87171";
+// Same card as the customer app's My Orders history
+const CARD_COLOR = "#EE7F3A";
+// Dark enough to read on the orange card
+const DELIVERED_CHEVRON = "#0F7A36";
+const CANCELLED_CHEVRON = "#C81E1E";
 
 type Props = {
   item: {
@@ -84,7 +85,7 @@ export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
 
   return (
     <View
-      className="rounded-3xl px-5 py-4 border border-[#4F8EF7]/20"
+      className="rounded-3xl px-5 py-4"
       style={{ backgroundColor: CARD_COLOR }}
       accessibilityLabel={`Order ${item.order_code}, ${cancelled ? "cancelled" : "delivered"}`}
     >
@@ -99,7 +100,7 @@ export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
       <View className="flex-row items-center">
         {/* ── Date + pickup ── */}
         <View className="flex-1">
-          <Text className="text-white/60 text-xs">{formatDate(at)}</Text>
+          <Text className="text-white/70 text-xs">{formatDate(at)}</Text>
           <Text
             className="text-white text-sm font-semibold mt-1"
             numberOfLines={1}
@@ -117,8 +118,15 @@ export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
               </View>
             ))}
           </View>
+          {/* Text too, so the status isn't carried by colour alone */}
+          <Text
+            style={{ color: chevron }}
+            className="text-[11px] font-bold mt-0.5"
+          >
+            {cancelled ? "Cancelled" : "Delivered"}
+          </Text>
           {km != null && (
-            <Text className="text-white/70 text-[11px] font-semibold mt-0.5">
+            <Text className="text-white/80 text-[11px] font-semibold">
               {km < 10 ? km.toFixed(1) : Math.round(km)}km
             </Text>
           )}
@@ -126,7 +134,7 @@ export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
 
         {/* ── Time + package type ── */}
         <View className="flex-1 items-end">
-          <Text className="text-white/60 text-xs">{formatTime(at)}</Text>
+          <Text className="text-white/70 text-xs">{formatTime(at)}</Text>
           <Text
             className="text-white text-sm font-semibold mt-1 text-right"
             numberOfLines={1}
@@ -141,11 +149,14 @@ export default function CompletedOrderCard({ item, onAtReturnPoint }: Props) {
         <TouchableOpacity
           onPress={onAtReturnPoint}
           activeOpacity={0.85}
-          className="mt-4 py-3 rounded-full items-center justify-center flex-row gap-2"
-          style={{ backgroundColor: "#ff923e" }}
+          accessibilityRole="button"
+          accessibilityLabel={`At return point for order ${item.order_code}`}
+          className="mt-4 h-12 rounded-full items-center justify-center flex-row gap-2 bg-white"
         >
-          <MaterialIcons name="assignment-return" size={18} color="#000" />
-          <Text className="text-black font-bold text-sm">AT RETURN POINT</Text>
+          <MaterialIcons name="assignment-return" size={18} color={CARD_COLOR} />
+          <Text style={{ color: CARD_COLOR }} className="font-bold text-sm">
+            AT RETURN POINT
+          </Text>
         </TouchableOpacity>
       )}
     </View>

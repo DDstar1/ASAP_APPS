@@ -76,6 +76,8 @@ export type Database = {
           payment_reference: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          order_ref: string
+          price: number | null
         }
         Insert: {
           client_id?: string
@@ -111,6 +113,8 @@ export type Database = {
           payment_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          order_ref?: string
+          price?: number | null
         }
         Update: {
           client_id?: string
@@ -146,6 +150,8 @@ export type Database = {
           payment_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          order_ref?: string
+          price?: number | null
         }
         Relationships: [
           {
@@ -505,7 +511,7 @@ export type Database = {
         }
         Relationships: []
       }
-      back_riders: {
+      back_custom_users: {
         Row: {
           email: string
           name: string
@@ -950,7 +956,23 @@ export type Database = {
         }
         Returns: Json
       }
+      create_order: {
+        Args: {
+          p_pickup_lat: number
+          p_pickup_long: number
+          p_pickup_name: string | null
+          p_dropoff_lat: number
+          p_dropoff_long: number
+          p_dropoff_name: string | null
+          p_package_type?: string | null
+          p_package_description?: string | null
+          p_image_url?: string | null
+          p_customer_phone?: string | null
+        }
+        Returns: { order_id: number; order_ref: string; order_code: string }[]
+      }
       delete_own_account: { Args: never; Returns: undefined }
+      discard_unpaid_order: { Args: { p_order_ref: string }; Returns: undefined }
       driver_rides_completed: {
         Args: { p_driver_id: string }
         Returns: number
@@ -980,6 +1002,7 @@ export type Database = {
       delivery_status:
         | "pending"
         | "arriving_pickup"
+        | "driver_arrived"
         | "in_transit"
         | "delivered"
         | "no_driver"
@@ -1116,6 +1139,7 @@ export const Constants = {
       delivery_status: [
         "pending",
         "arriving_pickup",
+        "driver_arrived",
         "in_transit",
         "delivered",
         "no_driver",

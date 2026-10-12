@@ -14,16 +14,16 @@ export default function TabLayout() {
           animation: "timing",
           config: { duration: 250 },
         },
-        sceneStyle: { backgroundColor: "#111827" },
+        sceneStyle: { backgroundColor: "#000000" },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: {
-          backgroundColor: "#111827", // same as bg-gray-900
+          backgroundColor: "#000000",
           borderTopColor: "transparent",
         },
-        tabBarActiveTintColor: "#f97316", // orange-500
-        tabBarInactiveTintColor: "#9CA3AF", // gray-400
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "#6B6B70",
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
@@ -41,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="deliveries"
         options={{
-          title: "Deliveries",
+          title: "Activity",
           tabBarIcon: ({ color }) => MY_ICONS.activity(color),
         }}
       />

@@ -1,5 +1,5 @@
 import { IMAGES } from "@/assets/assetsData";
-import { getDeliveryOrderByCode } from "@/lib/supabase-app-functions";
+import { getDeliveryOrderByReference } from "@/lib/supabase-app-functions";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useNavigation } from "expo-router";
@@ -26,7 +26,7 @@ const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
 export default function DeliveryTrackingScreen() {
   const navigation = useNavigation();
-  const { orderCode } = useLocalSearchParams();
+  const { orderCode, paymentReference } = useLocalSearchParams();
 
   const mapRef = useRef<MapView>(null);
 
@@ -51,12 +51,15 @@ export default function DeliveryTrackingScreen() {
 
   /* ---------------- FETCH ORDER ---------------- */
   useEffect(() => {
-    if (!orderCode) return;
+    if (!paymentReference) {
+      setLoading(false);
+      return;
+    }
 
     (async () => {
       setLoading(true);
 
-      const res = await getDeliveryOrderByCode(String(orderCode));
+      const res = await getDeliveryOrderByReference(String(paymentReference));
 
       console.log("Fetched order details:", res);
 
@@ -68,7 +71,7 @@ export default function DeliveryTrackingScreen() {
 
       setLoading(false);
     })();
-  }, [orderCode]);
+  }, [paymentReference]);
 
   /* ---------------- GET RIDER LOCATION ---------------- */
   useEffect(() => {

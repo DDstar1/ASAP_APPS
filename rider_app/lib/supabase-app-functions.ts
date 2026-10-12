@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { formatMessageTime } from "@/utils/utils_for_me";
 import { createUploadTask } from "expo-file-system/legacy";
-import { apiGet, apiPost, apiPostIgnoringBody } from "./api-client";
+import { apiGet, apiPost, apiPostIgnoringBody, apiPut } from "./api-client";
 import { normalizePhone } from "./phone";
 import { stopTracking } from "@/utils/utils_orderLocationTracking";
 import { unregisterPushToken } from "./push-notifications";
@@ -132,6 +132,31 @@ export async function signUpUser(
   useUserStore.getState().setUser(user);
 
   return user;
+}
+
+// Rust stores vehicle_type as free text; these are the two the app offers
+export type VehicleType = "Bike" | "EV";
+
+// Mirrors Rust's DriverRequest minus driver_pubkey, which Rust generates.
+// EV riders must give vehicle and license_number; optional for bikes.
+export type DriverRequest = {
+  name: string;
+  email: string;
+  phone: string; // E.164
+  vehicle_type: VehicleType;
+  vehicle: string | null;
+  license_number: string | null;
+  account_number: string | null; // set later in Profile → Bank Details
+  bank_code: string | null;
+};
+
+/**
+ * Rust leg of signup: creates the back_drivers row. Rust takes driver_id from
+ * the auth token, so it matches the Supabase user. Needs the session
+ * signUpUser just created.
+ */
+export async function createDriverAccount(details: DriverRequest) {
+  await apiPost("/admin/create-drivers", details);
 }
 
 export async function signInUser(email: string, password: string) {
@@ -429,10 +454,14 @@ export async function acceptDeliveryOrder(
   }
 } */
 
-export async function getDeliveryOrderByCode(orderCode: string) {
+// get-trip looks trips up by the order's Korapay payment_reference
+export async function getDeliveryOrderByReference(paymentReference: string) {
   try {
-    if (!orderCode) return { success: false, error: "orderCode is required" };
-    const data = await apiGet(`/trips/get-trip/${orderCode}`);
+    if (!paymentReference)
+      return { success: false, error: "paymentReference is required" };
+    const data = await apiGet(
+      `/trips/get-trip/${encodeURIComponent(paymentReference)}`,
+    );
     if (!data) return { success: false, error: "Trip not found" };
     return { success: true, data };
   } catch (err) {
@@ -457,17 +486,18 @@ export async function getRiderAcceptedDeliveries() {
 
     const driverId = user.id;
 
-    // The rider shows the pickup code (the sender enters it); the dropoff code
-    // stays out — the rider enters it and Rust checks it
+    // No codes: the customer holds them, the rider enters them and Rust
+    // checks them
     const { data, error } = await supabase
       .from("app_delivery_orders")
       .select(
-        "id,order_code,status,created_at,pickup_lat,pickup_long,pickup_name,dropoff_lat,dropoff_long,dropoff_name,image_url,package_type,delivery_accepted_time,dropoff_time,cancelled_at,payment_reference,customer_phone,pickup_code",
+        "id,order_code,status,created_at,pickup_lat,pickup_long,pickup_name,dropoff_lat,dropoff_long,dropoff_name,image_url,package_type,delivery_accepted_time,dropoff_time,cancelled_at,payment_reference,customer_phone",
       )
       .eq("driver_id", driverId)
       .in("status", [
         "pending",
         "arriving_pickup",
+        "driver_arrived",
         "in_transit",
         "delivered",
         "cancelled",
@@ -955,14 +985,13 @@ export const updateProfileImage = async (
   return publicUrl;
 };
 
+// Driver id comes from the auth token on the Rust side
 export async function updateBankDetails(
-  driverId: string,
   accountNumber: string,
   bankCode: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiPost("/drivers/update-bank-details", {
-      driver_id: driverId,
+    await apiPut("/drivers/update-bank-details", {
       account_number: accountNumber,
       bank_code: bankCode,
     });
@@ -1002,6 +1031,22 @@ export async function confirmReturn(
       order_ref: orderRef,
       driver_id: driverId,
       return_code: returnCode,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message ?? "Confirmation failed" };
+  }
+}
+
+/** The rider enters the customer's pickup code; Rust moves the order to in_transit. */
+export async function confirmRidePickup(
+  orderRef: string,
+  pickupCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost("/drivers/confirm-pickup", {
+      order_ref: orderRef,
+      pickup_code: pickupCode,
     });
     return { success: true };
   } catch (err: any) {

@@ -41,14 +41,38 @@ export default function BookingSheet({
   const selected = RIDE_TYPES.find((r) => r.type === rideType);
   const canBook = !!rideType && !booking;
 
+  // Biggest saving Rust is offering on either ride type
+  const discountPct = quotes.reduce((best, q) => {
+    if (q.original_price == null || q.original_price <= q.estimated_price)
+      return best;
+    const pct = Math.round(
+      ((q.original_price - q.estimated_price) / q.original_price) * 100,
+    );
+    return Math.max(best, pct);
+  }, 0);
+
   return (
     <View className="bg-black rounded-t-3xl px-3 pt-3 pb-2 gap-3">
-      <View className="self-center w-8 h-1 rounded-full bg-[#3A3A3F]" />
+      {/* Discount tab sits on the sheet's top edge */}
+      {discountPct > 0 && (
+        <View
+          className="absolute -top-8 left-6 bg-[#EE7F3A] rounded-t-xl px-4 h-8 justify-center"
+          accessibilityLabel={`${discountPct} percent discount applied`}
+        >
+          <Text className="text-white text-sm font-bold">
+            {discountPct}% discount
+          </Text>
+        </View>
+      )}
+
+      <View className="self-center w-10 h-1 rounded-full bg-[#3A3A3F]" />
 
       {/* Back to specifications to edit the item */}
       <TouchableOpacity
         onPress={onEditItem}
-        className="self-start flex-row items-center gap-1 border border-[#EE7F3A] rounded-full px-3 py-1"
+        accessibilityRole="button"
+        accessibilityLabel={`Item: ${itemLabel}. Edit item`}
+        className="self-start flex-row items-center gap-1 border border-[#EE7F3A] rounded-full px-4 min-h-[36px]"
       >
         <Text className="text-white text-lg font-semibold" numberOfLines={1}>
           {itemLabel}
@@ -63,8 +87,11 @@ export default function BookingSheet({
           <TouchableOpacity
             key={type}
             onPress={() => onSelectRideType(type)}
-            className={`flex-row items-center rounded-2xl p-3 bg-[#1C1C21] ${
-              isSelected ? "border-2 border-[#EE7F3A]" : "opacity-70"
+            accessibilityRole="radio"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={label}
+            className={`flex-row items-center rounded-2xl p-3 bg-[#212126] border-2 ${
+              isSelected ? "border-[#EE7F3A]" : "border-transparent opacity-60"
             }`}
           >
             <Image
@@ -87,13 +114,14 @@ export default function BookingSheet({
               ) : quote ? (
                 <>
                   <Text className="text-white text-2xl font-bold">
-                    ₦{quote.estimated_price}
+                    ₦{quote.estimated_price.toLocaleString()}
                   </Text>
-                  {quote.original_price != null && (
-                    <Text className="text-gray-400 line-through">
-                      ₦{quote.original_price}
-                    </Text>
-                  )}
+                  {quote.original_price != null &&
+                    quote.original_price > quote.estimated_price && (
+                      <Text className="text-gray-400 line-through">
+                        ₦{quote.original_price.toLocaleString()}
+                      </Text>
+                    )}
                 </>
               ) : (
                 <Text className="text-gray-400">—</Text>

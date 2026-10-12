@@ -9,6 +9,10 @@ export const IMAGES = {
   profile_img: require("./images/profile.png"),
   wallet: require("./images/wallet.png"),
   dummy_map: require("./images/dummy_map.png"),
+  // Default avatar when there's no profile photo
+  helmet_avatar: require("./images/helmet_avatar.png"),
+  // Orange road lines on transparent, for card backgrounds
+  map_lines: require("./images/map_lines.png"),
   icon: require("./images/icon.png"),
   splashIcon: require("./images/splash-icon.png"),
   indomie_package: require("./images/indomie_package.jpg"),

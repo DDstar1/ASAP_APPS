@@ -2,7 +2,14 @@ import { Animated } from "react-native";
 import { useEffect, useRef } from "react";
 
 // Add this hook inside RiderHomeScreen (or as a separate component)
-export const PulseDot = ({ isOnline }: { isOnline: boolean }) => {
+export const PulseDot = ({
+  isOnline,
+  color,
+}: {
+  isOnline: boolean;
+  // Overrides the online colour
+  color?: string;
+}) => {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -31,7 +38,10 @@ export const PulseDot = ({ isOnline }: { isOnline: boolean }) => {
 
   return (
     <Animated.View
-      style={{ opacity: pulse }}
+      style={[
+        { opacity: pulse },
+        isOnline && color ? { backgroundColor: color } : null,
+      ]}
       className={`w-2 h-2 rounded-full ${
         isOnline ? "bg-[#ff923e]" : "bg-[#a5abbd]"
       }`}

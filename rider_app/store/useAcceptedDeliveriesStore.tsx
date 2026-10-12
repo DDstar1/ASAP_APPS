@@ -25,7 +25,6 @@ export interface AcceptedDelivery {
   created_at?: string;
   package_type?: string | null;
   customer_phone?: string | null; // Rust copies the ride request's user_phone_number
-  pickup_code?: string | null; // Rust generates it on accept; the sender enters it
   payment_reference?: string | null; // links to back_trips.reference for the fee
 }
 
@@ -33,6 +32,7 @@ export interface AcceptedDelivery {
 export const isActiveStatus = (status: string) =>
   status === "pending" ||
   status === "arriving_pickup" ||
+  status === "driver_arrived" ||
   status === "in_transit";
 
 // Rows carry delivery_accepted_time as an ISO string (or null); the store

@@ -97,7 +97,10 @@ const AvailableOrdersDropdown: React.FC<AvailableOrdersDropdownProps> = ({
                 onPress={() =>
                   router.navigate({
                     pathname: "/order_detail",
-                    params: { orderCode: item.order_code },
+                    params: {
+                      orderCode: item.order_code,
+                      paymentReference: item.payment_reference ?? "",
+                    },
                   })
                 }
               >

@@ -26,7 +26,7 @@ import {
   registerForPushNotifications,
   useNotificationTaps,
 } from "@/lib/push-notifications";
-import { fetchPendingOfferIds } from "@/lib/ride-offers";
+import { fetchPendingOfferIds, isAwaitingRider } from "@/lib/ride-offers";
 import { useRideOfferStore } from "@/store/useRideOfferStore";
 import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
 import "@/utils/utils_orderLocationTracking";
@@ -70,11 +70,12 @@ export default function RootLayout() {
     if (!user) return;
     const { showOffer, dismissOffer } = useRideOfferStore.getState();
 
-    const onInsert = (row: { id: string; status: string }) => {
-      if (row.status === "pending") showOffer(row.id);
+    type OfferRow = { id: string; status: string; responded_at?: string | null };
+    const onInsert = (row: OfferRow) => {
+      if (isAwaitingRider(row)) showOffer(row.id);
     };
-    const onUpdate = (row: { id: string; status: string }) => {
-      if (row.status !== "pending") dismissOffer(row.id);
+    const onUpdate = (row: OfferRow) => {
+      if (!isAwaitingRider(row)) dismissOffer(row.id);
     };
     supabaseEvents.on("ride_offer_insert", onInsert);
     supabaseEvents.on("ride_offer_update", onUpdate);

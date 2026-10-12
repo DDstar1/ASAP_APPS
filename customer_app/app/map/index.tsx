@@ -9,13 +9,14 @@ import { fitAll, reverseGeocode } from "@/utils/mapUtils";
 import { Coordinates } from "@/utils/my_types";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MY_ICONS } from "@/assets/assetsData";
+import { mapStyleFor } from "@/constants/mapStyle";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 
@@ -38,19 +39,46 @@ export default function MapScreen() {
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
   const [booking, setBooking] = useState(false);
-  const [paymentReference, setPaymentReference] = useState<string | null>(null);
+  // Set once Korapay reports success; opens the awaiting-rider modal
+  const [checkout, setCheckout] = useState<{
+    reference: string;
+    orderRef: string;
+  } | null>(null);
   const [placeNames, setPlaceNames] = useState<{
     pickup: string | null;
     dropoff: string | null;
   }>({ pickup: null, dropoff: null });
 
   const mapRef = useRef<MapView>(null);
+  const colorScheme = useColorScheme();
   const { itemType, items, rideType, setRideType, reset } = useRideDraftStore();
   const hasItem = items.length > 0;
+
+  // From the landing screen: a recent place as the destination, and/or the
+  // search opened straight away
+  const { search, dest_lat, dest_lng, dest_name, dest_address } =
+    useLocalSearchParams<{
+      search?: "from" | "to";
+      dest_lat?: string;
+      dest_lng?: string;
+      dest_name?: string;
+      dest_address?: string;
+    }>();
 
   // Each visit to the map starts a fresh booking
   useEffect(() => {
     reset();
+
+    const latitude = Number(dest_lat);
+    const longitude = Number(dest_lng);
+    if (dest_name && Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      setDestination({
+        name: dest_name,
+        address: dest_address ?? null,
+        coordinates: { latitude, longitude },
+      });
+    }
+    if (search === "from" || search === "to") setActiveField(search);
   }, []);
 
   // Auto-zoom when pickup/destination change
@@ -105,34 +133,58 @@ export default function MapScreen() {
     ]);
     setPlaceNames({ pickup: pickupName, dropoff: dropoffName });
 
-    const payment = await payWithKorapay({
-      source: "app",
-      rider_id: user.id,
-      pick_up: pickup.coordinates,
-      drop_off: destination.coordinates,
-      ride_type: rideType,
-      payment_method: "korapay",
-      items,
-      order_ref: null,
-      user_id: null,
-      user_phone_number: user.phone ?? null,
-      vendor_phone_number: null,
-      pickup_name: pickupName,
-      dropoff_name: dropoffName,
-    });
+    // The price shown on the booking sheet; Rust re-checks it at initialize
+    const quote = quotes.find((q) => q.ride_type === rideType);
+    if (!quote) {
+      setBooking(false);
+      Alert.alert("Price unavailable", "Please wait for the price to load and try again.");
+      return;
+    }
+
+    const payment = await payWithKorapay(
+      {
+        pickup_lat: pickup.coordinates.latitude,
+        pickup_long: pickup.coordinates.longitude,
+        pickup_name: pickupName,
+        dropoff_lat: destination.coordinates.latitude,
+        dropoff_long: destination.coordinates.longitude,
+        dropoff_name: dropoffName,
+        package_type: itemType,
+        package_description: items[0]?.name ?? null,
+        image_url: items[0]?.image_url ?? null,
+        customer_phone: user.phone ?? null,
+      },
+      {
+        source: "app",
+        rider_id: user.id,
+        pick_up: pickup.coordinates,
+        drop_off: destination.coordinates,
+        ride_type: rideType,
+        payment_method: "korapay",
+        items,
+        user_id: null,
+        user_phone_number: user.phone ?? null,
+        vendor_phone_number: null,
+        pickup_name: pickupName,
+        dropoff_name: dropoffName,
+      },
+      quote.estimated_price,
+    );
     setBooking(false);
 
-    if (payment.status === "paid") setPaymentReference(payment.reference);
+    if (payment.status === "paid")
+      setCheckout({ reference: payment.reference, orderRef: payment.orderRef });
     else if (payment.status === "error") Alert.alert("Payment failed", payment.error);
   };
 
   // ----------------- RENDER -----------------
   return (
-    <View className="flex-1 bg-gray-900">
+    <View className="flex-1 bg-black">
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={{ flex: 1 }}
+        customMapStyle={mapStyleFor(colorScheme)}
         initialRegion={{
           latitude: 6.5244,
           longitude: 3.3792,
@@ -162,7 +214,7 @@ export default function MapScreen() {
             destination={destination.coordinates}
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={5}
-            strokeColor="#F97316"
+            strokeColor="#EE7F3A"
             onReady={(result) => setWaypoints(result.coordinates)}
             onError={(err) =>
               console.warn("Directions error (pickup→dest):", err)
@@ -176,23 +228,32 @@ export default function MapScreen() {
         <View className="flex-row items-center bg-[#2C2C30] rounded-full mt-2">
           <TouchableOpacity
             onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
             className="w-11 h-11 rounded-full bg-[#3A3A3F] justify-center items-center"
           >
             <Ionicons name="chevron-back" size={22} color="white" />
           </TouchableOpacity>
-          <Text
-            className="flex-1 text-white text-xl text-center mr-11"
-            numberOfLines={1}
+          {/* Tapping the title changes the destination */}
+          <TouchableOpacity
+            className="flex-1 mr-11"
+            onPress={() => setActiveField("to")}
+            accessibilityRole="button"
+            accessibilityLabel="Change destination"
           >
-            {destination?.name ?? "Send a package"}
-          </Text>
+            <Text className="text-white text-xl text-center" numberOfLines={1}>
+              {destination?.name ?? "Send a package"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
       {/* Re-center button */}
       <TouchableOpacity
-        className="absolute right-4 bg-gray-700 p-2 rounded-full z-50"
-        style={{ bottom: hasItem ? 420 : 260 }}
+        accessibilityRole="button"
+        accessibilityLabel="Show the whole route"
+        className="absolute right-4 w-11 h-11 bg-[#2C2C30] rounded-full justify-center items-center z-50"
+        style={{ bottom: hasItem ? 440 : 280 }}
         onPress={() =>
           fitAll({
             mapRef: mapRef as React.RefObject<MapView>,
@@ -202,13 +263,15 @@ export default function MapScreen() {
           })
         }
       >
-        <Ionicons name="compass-outline" size={28} color="white" />
+        <Ionicons name="compass-outline" size={24} color="white" />
       </TouchableOpacity>
 
       {/* Bottom Panel */}
       <SafeAreaView
         edges={["bottom"]}
-        className="absolute bottom-0 left-0 right-0 bg-black"
+        className={`absolute bottom-0 left-0 right-0 rounded-t-3xl ${
+          hasItem ? "bg-black" : "bg-[#3C3C43]"
+        }`}
       >
         {hasItem ? (
           <BookingSheet
@@ -224,32 +287,47 @@ export default function MapScreen() {
             onBook={handleBook}
           />
         ) : (
-          <View className="p-4 gap-4">
-            <Text className="text-lg font-semibold text-white text-center">
-              Select Pickup & Destination
-            </Text>
+          <View className="px-4 pt-3 pb-4 gap-3">
+            <View className="self-center w-10 h-1 rounded-full bg-white/20" />
 
-            <View className="flex-row items-center justify-between gap-2">
+            {/* Pick up / Deliver to, joined by a dotted line */}
+            <View className="bg-[#212126] rounded-2xl px-4">
               <TouchableOpacity
-                className="flex-1 flex-row items-center bg-[#1C1C21] rounded-xl px-2 gap-2 py-3"
+                className="flex-row items-center gap-3 py-4"
                 onPress={() => setActiveField("from")}
+                accessibilityRole="button"
+                accessibilityLabel={`Pickup: ${pickup?.name ?? "not set"}`}
               >
-                {MY_ICONS.marker("green", 20)}
-                <Text className="text-white font-medium" numberOfLines={1}>
-                  {pickup ? pickup.name : "Set Pickup"}
-                </Text>
+                <View className="w-3 h-3 rounded-full bg-[#EF4444]" />
+                <View className="flex-1">
+                  <Text className="text-gray-400 text-xs">Pick up</Text>
+                  <Text
+                    className={`text-base ${pickup ? "text-white" : "text-gray-500"}`}
+                    numberOfLines={1}
+                  >
+                    {pickup ? pickup.name : "Set pickup"}
+                  </Text>
+                </View>
               </TouchableOpacity>
 
-              <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
+              <View className="h-px bg-white/10 ml-6" />
 
               <TouchableOpacity
-                className="flex-1 flex-row items-center gap-2 bg-[#1C1C21] rounded-xl px-2 py-3"
+                className="flex-row items-center gap-3 py-4"
                 onPress={() => setActiveField("to")}
+                accessibilityRole="button"
+                accessibilityLabel={`Destination: ${destination?.name ?? "not set"}`}
               >
-                {MY_ICONS.marker("red", 20)}
-                <Text className="text-white font-medium" numberOfLines={1}>
-                  {destination ? destination.name : "Set Destination"}
-                </Text>
+                <View className="w-3 h-3 rounded-full bg-[#22C55E]" />
+                <View className="flex-1">
+                  <Text className="text-gray-400 text-xs">Deliver to</Text>
+                  <Text
+                    className={`text-base ${destination ? "text-white" : "text-gray-500"}`}
+                    numberOfLines={1}
+                  >
+                    {destination ? destination.name : "Set destination"}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -270,6 +348,7 @@ export default function MapScreen() {
       <DestinationSearchModal
         visible={!!activeField}
         field={activeField || "from"}
+        originLabel={pickup?.name}
         onClose={() => setActiveField(null)}
         onSelect={(location) => {
           if (activeField === "from") setPickup(location);
@@ -278,25 +357,26 @@ export default function MapScreen() {
       />
 
       {/* Opens once Korapay reports success; sends the ride request */}
-      {paymentReference && (
+      {checkout && (
         <RiderAwaitingModal
           visible
-          paymentReference={paymentReference}
+          paymentReference={checkout.reference}
+          orderRef={checkout.orderRef}
           pickup={pickup.coordinates}
           dropoff={destination.coordinates}
           pickupName={placeNames.pickup}
           dropoffName={placeNames.dropoff}
           onClose={() => {
-            setPaymentReference(null);
+            setCheckout(null);
             router.replace("/(tabs)/deliveries");
           }}
           onCancelled={() => {
-            setPaymentReference(null);
+            setCheckout(null);
             reset();
             router.replace("/(tabs)/home");
           }}
           onRiderFound={(orderId) => {
-            setPaymentReference(null);
+            setCheckout(null);
             reset();
             router.replace({
               pathname: "/trackPackage",

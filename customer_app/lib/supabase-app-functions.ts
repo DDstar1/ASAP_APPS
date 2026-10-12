@@ -124,6 +124,56 @@ export async function signUpUser(
   return user;
 }
 
+// Mirrors Rust's RiderRequest (Rust's "rider" is the customer) minus
+// rider_pubkey, which Rust generates
+export type RiderRequest = {
+  name: string;
+  email: string;
+  phone: string; // E.164
+};
+
+/**
+ * Rust leg of signup: creates the back_custom_users row that ride-request
+ * validates. Rust takes rider_id from the auth token, so it matches the
+ * Supabase user.
+ */
+export async function createCustomerAccount(details: RiderRequest) {
+  await apiPost("/admin/create-riders", details);
+}
+
+/**
+ * Creates the Rust account if it's missing: signup's Rust step failed, or the
+ * account predates it. Runs on every session load; a no-op once the row exists.
+ */
+export async function ensureCustomerAccount(user: {
+  id: string;
+  email?: string | null;
+  username?: string | null;
+  phone?: string | number | null;
+}) {
+  try {
+    const { data, error } = await supabase
+      .from("back_custom_users")
+      .select("rider_id")
+      .eq("rider_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return;
+
+    if (!user.email || !user.username || !user.phone) {
+      console.warn("Can't create Rust account: profile is incomplete");
+      return;
+    }
+    await createCustomerAccount({
+      name: user.username,
+      email: user.email,
+      phone: String(user.phone),
+    });
+  } catch (err: any) {
+    console.error("Rust account check failed:", err.message);
+  }
+}
+
 export async function signInUser(email: string, password: string) {
   if (!email || !password) {
     throw new Error("Email and password are required");
@@ -534,7 +584,8 @@ const CLIENT_DELIVERY_COLUMNS = [
   "dropoff_time",
   "cancelled_at",
   "driver_id",
-  // No pickup_code: the rider shows it and the customer enters it
+  // The customer holds both codes; the rider enters them
+  "pickup_code",
   "dropoff_code",
   "is_pickup_code_authenticated",
   "payment_reference",
@@ -555,6 +606,7 @@ export async function getAllClientDeliveries(): Promise<{
       .in("status", [
         "pending",
         "arriving_pickup",
+        "driver_arrived",
         "in_transit",
         "delivered",
         "cancelled",

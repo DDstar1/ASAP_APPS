@@ -1,10 +1,14 @@
-import { cancelPaidOrder } from "@/lib/payments";
+import { cancelledOrderMessage, cancelPaidOrder } from "@/lib/payments";
 import { supabaseEvents } from "@/lib/supabase";
 import {
   getDeliveryOrderById,
   getDeliveryOrderByReference,
 } from "@/lib/supabase-app-functions";
-import { GeoPointJson, requestRide } from "@/lib/ride-request";
+import {
+  GeoPointJson,
+  requestRide,
+  restartDriverSearch,
+} from "@/lib/ride-request";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { useRideDraftStore } from "@/store/useRideDraftStore";
 import { useUserStore } from "@/store/useUserStore";
@@ -28,13 +32,15 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-// Backstop in case Rust never marks the order no_driver. Keep it at or above
-// the length of Rust's driver search.
-const SEARCH_TIMEOUT_MS = 3 * 60 * 1000;
+// Backstop in case Rust never marks the order no_driver. Kept above Rust's
+// 3-minute driver search so the row, not this timer, normally ends the wait.
+const SEARCH_TIMEOUT_MS = 3.5 * 60 * 1000;
 
 type Props = {
   visible: boolean;
   paymentReference: string;
+  // app_delivery_orders.order_ref from create_order; ride-request needs it
+  orderRef: string;
   pickup: GeoPointJson;
   dropoff: GeoPointJson;
   pickupName: string | null;
@@ -51,6 +57,7 @@ type Phase = "searching" | "no_riders" | "error";
 export default function RiderAwaitingModal({
   visible,
   paymentReference,
+  orderRef,
   pickup,
   dropoff,
   pickupName,
@@ -67,6 +74,9 @@ export default function RiderAwaitingModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Bumped by "Try again" to restart the search with the same payment
   const [attempt, setAttempt] = useState(0);
+  // After no_driver the request is already stored, so "Try again" restarts
+  // the search; after an error the request itself is sent again
+  const restartSearchRef = useRef(false);
   const [cancelling, setCancelling] = useState(false);
   // Stops a rider being "found" while the cancel request is in flight
   const cancellingRef = useRef(false);
@@ -141,24 +151,26 @@ export default function RiderAwaitingModal({
         checkRow(order as any);
       }
 
-      // Rust replies only after the driver search ends (assigned or
-      // declined), so the row tells us which
-      const { ok, error } = await requestRide({
-        source: "app",
-        rider_id: user.id,
-        pick_up: pickup,
-        drop_off: dropoff,
-        ride_type: rideType,
-        payment_method: "korapay",
-        items,
-        order_ref: null,
-        user_id: null,
-        user_phone_number: user.phone ?? null,
-        vendor_phone_number: null,
-        pickup_name: pickupName,
-        dropoff_name: dropoffName,
-        payment_reference: paymentReference,
-      });
+      // Rust replies as soon as the search has started; the row tells us
+      // how it ends (driver_id, or status no_driver)
+      const { ok, error } = restartSearchRef.current
+        ? await restartDriverSearch(orderRef)
+        : await requestRide({
+            source: "app",
+            rider_id: user.id,
+            pick_up: pickup,
+            drop_off: dropoff,
+            ride_type: rideType,
+            payment_method: "korapay",
+            items,
+            order_ref: orderRef,
+            user_id: null,
+            user_phone_number: user.phone ?? null,
+            vendor_phone_number: null,
+            pickup_name: pickupName,
+            dropoff_name: dropoffName,
+            payment_reference: paymentReference,
+          });
       if (cancelled || settled) return;
 
       if (orderId == null) {
@@ -182,8 +194,7 @@ export default function RiderAwaitingModal({
         return;
       }
 
-      // Search finished without a rider on the row: declined / none found
-      noRiders();
+      // The search is running; keep waiting for the row (or the timeout)
     };
 
     start();
@@ -218,16 +229,10 @@ export default function RiderAwaitingModal({
               return;
             }
 
-            // The deliveries store picks up the cancelled status via realtime.
-            // A rider may have accepted just before the cancel, so go by
-            // what Rust actually refunded.
+            // The deliveries store picks up the cancelled status via realtime
             Alert.alert(
               "Delivery cancelled",
-              data.refund_amount == null
-                ? "Your delivery has been cancelled. Any refund due will go to your payment method."
-                : data.refund_amount > 0
-                  ? `₦${data.refund_amount.toLocaleString()} will be refunded to your payment method.`
-                  : "A rider had just accepted, so no refund is due.",
+              cancelledOrderMessage(data.refund_amount),
             );
             onCancelled();
           },
@@ -367,7 +372,10 @@ export default function RiderAwaitingModal({
               {/* Already paid, so leaving here means a refund, not just going back */}
               {cancelButton}
               <TouchableOpacity
-                onPress={() => setAttempt((a) => a + 1)}
+                onPress={() => {
+                  restartSearchRef.current = phase === "no_riders";
+                  setAttempt((a) => a + 1);
+                }}
                 className="h-12 px-6 rounded-full bg-[#EE7F3A] justify-center"
               >
                 <Text className="text-white font-semibold">Try again</Text>

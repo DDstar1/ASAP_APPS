@@ -76,6 +76,8 @@ export type Database = {
           payment_reference: string | null
           cancelled_at: string | null
           cancelled_by: string | null
+          order_ref: string
+          price: number | null
         }
         Insert: {
           client_id?: string
@@ -111,6 +113,8 @@ export type Database = {
           payment_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          order_ref?: string
+          price?: number | null
         }
         Update: {
           client_id?: string
@@ -146,6 +150,8 @@ export type Database = {
           payment_reference?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
+          order_ref?: string
+          price?: number | null
         }
         Relationships: [
           {
@@ -988,6 +994,7 @@ export type Database = {
           order_id: number
           status: string
           expires_at: string
+          responded_at: string | null
           pickup_name: string | null
           pickup_lat: number | null
           pickup_long: number | null
@@ -995,7 +1002,7 @@ export type Database = {
           dropoff_lat: number | null
           dropoff_long: number | null
           package_type: string | null
-          package_description: string | null
+          image_url: string | null
         }[]
       }
       register_push_token: {
@@ -1019,6 +1026,7 @@ export type Database = {
       delivery_status:
         | "pending"
         | "arriving_pickup"
+        | "driver_arrived"
         | "in_transit"
         | "delivered"
         | "no_driver"
@@ -1155,6 +1163,7 @@ export const Constants = {
       delivery_status: [
         "pending",
         "arriving_pickup",
+        "driver_arrived",
         "in_transit",
         "delivered",
         "no_driver",

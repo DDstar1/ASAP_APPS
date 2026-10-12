@@ -18,7 +18,6 @@ interface CodeInputComponentProps {
     pickup_name: string;
     dropoff_name: string;
     customer_phone?: string | null;
-    pickup_code?: string | null;
   } | null;
   onSubmitCode: (code: string) => Promise<void>;
   hasOngoingDeliveries: boolean;
@@ -45,7 +44,10 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
 
   // Determine which code is needed
   const needsPickupCode = currentDelivery.status === "arriving_pickup";
-  const needsDropoffCode = currentDelivery.status === "in_transit";
+  // driver_arrived = at the drop-off, so it's still the dropoff code
+  const needsDropoffCode =
+    currentDelivery.status === "in_transit" ||
+    currentDelivery.status === "driver_arrived";
 
   // If delivery is completed or in unknown state → hide
   // if (!needsPickupCode && !needsDropoffCode) {
@@ -136,38 +138,8 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
         </Text>
       </View>
 
-      {needsPickupCode ? (
-        // At pickup the sender enters this code in their app; the card moves
-        // to the dropoff step when Rust marks the order in_transit
-        <>
-          <Text className="text-white text-sm mb-3">
-            Give this code to the sender:
-          </Text>
-          <View className="bg-white rounded-xl py-4 mb-3">
-            <Text
-              selectable
-              className="text-gray-900 text-3xl font-bold text-center tracking-[8px]"
-            >
-              {currentDelivery.pickup_code ?? "—"}
-            </Text>
-          </View>
-          <View className="bg-white/20 rounded-xl p-3">
-            <View className="flex-row items-center">
-              <Ionicons
-                name="information-circle-outline"
-                size={20}
-                color="#FED7AA"
-              />
-              <Text className="text-orange-100 text-xs ml-2 flex-1">
-                {currentDelivery.pickup_code
-                  ? "This updates automatically once the sender confirms the code."
-                  : "Code not ready yet — pull down to refresh."}
-              </Text>
-            </View>
-          </View>
-        </>
-      ) : (
-        <>
+      {/* The customer holds both codes; the rider enters them here */}
+      <>
           {/* Instruction */}
           <Text className="text-white text-sm mb-3">
             Enter the {codeType} code provided by the customer:
@@ -229,8 +201,7 @@ const CodeInputComponent: React.FC<CodeInputComponentProps> = ({
               </Text>
             </View>
           </View>
-        </>
-      )}
+      </>
     </LinearGradient>
   );
 };

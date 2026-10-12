@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import { unregisterPushToken } from "@/lib/push-notifications";
-import { getCusUserById } from "@/lib/supabase-app-functions";
+import {
+  ensureCustomerAccount,
+  getCusUserById,
+} from "@/lib/supabase-app-functions";
 
 type AppUser = {
   id: string;
@@ -59,6 +62,9 @@ export const useUserStore = create<UserState>((set) => ({
       };
 
       set({ user: mergedUser, loading: false });
+
+      // Ride requests need the Rust account; don't hold up the app for it
+      ensureCustomerAccount(mergedUser);
     } catch (err) {
       console.error("❌ fetchUserSession error:", err);
       set({ user: null, loading: false });

@@ -44,12 +44,11 @@ const NIGERIAN_BANKS = [
 
 interface Props {
   visible: boolean;
-  driverId: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function UpdateBankDetailsModal({ visible, driverId, onClose, onSaved }: Props) {
+export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
   const [accountNumber, setAccountNumber] = useState("");
   const [bankCode, setBankCode] = useState("");
   const [showPicker, setShowPicker] = useState(false);
@@ -67,7 +66,7 @@ export function UpdateBankDetailsModal({ visible, driverId, onClose, onSaved }: 
   const handleSave = async () => {
     if (!accountNumber || !bankCode) return;
     setLoading(true);
-    const result = await updateBankDetails(driverId, accountNumber, bankCode);
+    const result = await updateBankDetails(accountNumber, bankCode);
     setLoading(false);
     if (result.success) {
       Alert.alert("Saved", "Bank details updated successfully.");

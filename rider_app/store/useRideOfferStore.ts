@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { getOfferDetails, type OfferDetails } from "@/lib/ride-offers";
+import {
+  getOfferDetails,
+  isAwaitingRider,
+  type OfferDetails,
+} from "@/lib/ride-offers";
 
 type RideOfferState = {
   // The offer currently on screen; the rest wait in `queue`
@@ -11,7 +15,7 @@ type RideOfferState = {
 };
 
 const isOpen = (o: OfferDetails) =>
-  o.status === "pending" && new Date(o.expires_at).getTime() > Date.now();
+  isAwaitingRider(o) && new Date(o.expires_at).getTime() > Date.now();
 
 export const useRideOfferStore = create<RideOfferState>((set, get) => ({
   offer: null,

@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import MaskedView from "@react-native-masked-view/masked-view";
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,30 +9,40 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { openGoogleMaps, openOrderChat } from "@/utils/utils_for_me";
-import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { IMAGES } from "@/assets/assetsData";
 import { useUnreadCountStore } from "@/store/useUnreadCountStore";
+import { PulseDot } from "@/components/PulseDot";
+
+const ORANGE = "#EE7F3A";
+
+// What the rider should be doing right now, per status
+const STATUS: Record<string, { label: string; color: string }> = {
+  pending: { label: "Awaiting start", color: "#EAB308" },
+  arriving_pickup: { label: "Heading to pickup", color: ORANGE },
+  in_transit: { label: "In transit", color: "#22C55E" },
+  driver_arrived: { label: "At drop-off", color: "#22C55E" },
+};
 
 type Props = {
   item: any;
-  index?: number;
-  width: number;
   isHighlighted?: boolean;
 };
 
 export default function IncompleteDeliveryCard({
   item,
-  index,
-  width,
   isHighlighted = false,
 }: Props) {
-  const rawStatus = item.status;
-  const normalizedStatus = rawStatus?.trim().toLowerCase();
+  const normalizedStatus = item.status?.trim().toLowerCase();
+  const status = STATUS[normalizedStatus] ?? {
+    label: item.status?.replace("_", " ") ?? "—",
+    color: item.statusColor ?? "#22C55E",
+  };
 
   const unreadCount = useUnreadCountStore(
     (state) => state.counts[item.id] ?? 0,
   );
 
-  // Animated value for shiny border
+  // Glowing border on a just-accepted order
   const shimmer = useSharedValue(0);
 
   useEffect(() => {
@@ -50,37 +59,64 @@ export default function IncompleteDeliveryCard({
     if (!isHighlighted) return {};
 
     return {
-      borderWidth: 3,
-      borderColor: `hsl(${shimmer.value * 360}, 100%, 50%)`,
-      shadowColor: `hsl(${shimmer.value * 360}, 100%, 50%)`,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 10,
-      elevation: 10,
+      borderWidth: 2,
+      borderColor: ORANGE,
+      opacity: 0.75 + 0.25 * Math.sin(shimmer.value * Math.PI * 2),
     };
   });
 
+  const navigate = (navigateTo: "pickup" | "dropoff") =>
+    openGoogleMaps({
+      order_status: item.status,
+      pickupLat: item.pickup_lat,
+      pickupLng: item.pickup_long,
+      dropoffLat: item.dropoff_lat,
+      dropoffLng: item.dropoff_long,
+      navigateTo,
+    });
+
+  // Before pickup the next leg is the pickup; after, the drop-off
+  const pickedUp =
+    normalizedStatus === "in_transit" || normalizedStatus === "driver_arrived";
+
   return (
     <Animated.View
-      style={[animatedBorderStyle, { marginRight: 16 }]}
-      className="rounded-2xl overflow-hidden"
+      style={animatedBorderStyle}
+      className="rounded-3xl overflow-hidden bg-[#3C3C43] mb-3"
     >
-      <View
-        key={index}
-        style={{ width: width * 0.85, height: "100%" }}
-        className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3"
-      >
-        {/* Top-right action buttons */}
-        <View className="absolute top-3 z-20 right-3 flex-col gap-3">
-          {/* Message button */}
+      {/* Faint map lines behind the content */}
+      <Image
+        source={IMAGES.map_lines}
+        resizeMode="cover"
+        style={{
+          position: "absolute",
+          right: -40,
+          top: 0,
+          bottom: 0,
+          width: "70%",
+          opacity: 0.35,
+        }}
+      />
+
+      <View className="p-5">
+        {/* ── Code + chat ── */}
+        <View className="flex-row items-center justify-between">
+          <Text className="text-white text-xl font-extrabold tracking-wide">
+            #{item.order_code}
+          </Text>
+
           {normalizedStatus !== "pending" && (
             <TouchableOpacity
               onPress={() => openOrderChat(item.id)}
-              className="p-2 bg-gray-200 rounded-full"
+              accessibilityRole="button"
+              accessibilityLabel={
+                unreadCount > 0
+                  ? `Chat with customer, ${unreadCount} unread`
+                  : "Chat with customer"
+              }
+              className="w-11 h-11 rounded-full bg-[#212126] items-center justify-center"
             >
-              {MY_ICONS.message("black", 25)}
-
-              {/* Unread badge */}
+              <Ionicons name="chatbubble-ellipses" size={20} color="white" />
               {unreadCount > 0 && (
                 <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1">
                   <Text className="text-white text-[10px] font-bold">
@@ -92,107 +128,78 @@ export default function IncompleteDeliveryCard({
           )}
         </View>
 
-        {/* Navigation Buttons */}
-        <View className="flex-row gap-2 absolute bottom-3 z-20 right-3 items-center">
-          <TouchableOpacity
-            onPress={() =>
-              openGoogleMaps({
-                order_status: item.status,
-                pickupLat: item.pickup_lat,
-                pickupLng: item.pickup_long,
-                dropoffLat: item.dropoff_lat,
-                dropoffLng: item.dropoff_long,
-                navigateTo: "pickup",
-              })
-            }
-            className="px-3 py-2 bg-blue-500 rounded-lg flex-row items-center justify-center gap-1"
-          >
-            {MY_ICONS.map("white", 16)}
-            <Text className="text-white text-xs font-semibold">To Pickup</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() =>
-              openGoogleMaps({
-                order_status: item.status,
-                pickupLat: item.pickup_lat,
-                pickupLng: item.pickup_long,
-                dropoffLat: item.dropoff_lat,
-                dropoffLng: item.dropoff_long,
-                navigateTo: "dropoff",
-              })
-            }
-            className="px-3 py-2 bg-green-500 rounded-lg flex-row items-center justify-center gap-1"
-          >
-            {MY_ICONS.map("white", 16)}
-            <Text className="text-white text-xs font-semibold">To Dropoff</Text>
-          </TouchableOpacity>
+        {/* ── Route ── */}
+        <View className="mt-4 gap-3">
+          <Stop label="Pick up from" name={item.pickup_name} dot="#EF4444" />
+          <Stop label="Delivering to" name={item.dropoff_name} dot="#22C55E" />
         </View>
 
-        {/* Left Side */}
-        <View className="flex-1 mr-20 z-10">
-          <Text className="text-white text-lg font-bold mb-2">
-            #{item.order_code}
+        {/* ── Status ── */}
+        <View className="flex-row items-center mt-4">
+          <PulseDot isOnline color={status.color} />
+          <Text
+            style={{ color: status.color }}
+            className="text-sm font-bold ml-2"
+          >
+            {status.label}
           </Text>
-
-          <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
-          <View className="flex-row items-center mb-2">
-            {MY_ICONS.location("#9CA3AF", 14)}
-            <Text numberOfLines={2} className="text-white text-sm ml-2">
-              {item.pickup_name || "Unknown"}
-            </Text>
-          </View>
-
-          <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
-          <View className="flex-row items-center mb-2">
-            {MY_ICONS.location("#9CA3AF", 14)}
-            <Text numberOfLines={2} className="text-white text-sm ml-2">
-              {item.dropoff_name || "Unknown"}
-            </Text>
-          </View>
-
-          {/* Status */}
-          <View className="flex-row items-center justify-between w-full">
-            <View className="flex-col">
-              <Text className="text-gray-400 text-xs mb-1">Status</Text>
-              <View className="flex-row items-center">
-                {MY_ICONS.circle(item.statusColor ?? "#22C55E", 7)}
-                <Text className="text-white text-sm ml-2">
-                  {rawStatus?.replace("_", " ")}
-                </Text>
-              </View>
-            </View>
-          </View>
         </View>
 
-        {/* Image */}
-        <MaskedView
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: "50%",
-            height: "110%",
-          }}
-          maskElement={
-            <LinearGradient
-              colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={{ flex: 1 }}
-            />
-          }
-        >
-          <Image
-            source={
-              item.image_url ? { uri: item.image_url } : IMAGES.indomie_package
-            }
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
+        {/* ── Navigate: next leg is the solid button ── */}
+        <View className="flex-row gap-3 mt-4">
+          <NavButton
+            label="To pickup"
+            primary={!pickedUp}
+            onPress={() => navigate("pickup")}
           />
-        </MaskedView>
+          <NavButton
+            label="To drop-off"
+            primary={pickedUp}
+            onPress={() => navigate("dropoff")}
+          />
+        </View>
       </View>
     </Animated.View>
+  );
+}
+
+function Stop({ label, name, dot }: { label: string; name?: string; dot: string }) {
+  return (
+    <View className="flex-row items-start gap-3">
+      <View
+        className="w-2.5 h-2.5 rounded-full mt-1.5"
+        style={{ backgroundColor: dot }}
+      />
+      <View className="flex-1">
+        <Text className="text-gray-400 text-xs">{label}</Text>
+        <Text numberOfLines={2} className="text-white text-sm font-semibold">
+          {name || "Unknown"}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function NavButton({
+  label,
+  primary,
+  onPress,
+}: {
+  label: string;
+  primary: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Navigate ${label.toLowerCase()}`}
+      className={`flex-1 h-11 rounded-full flex-row items-center justify-center gap-1.5 ${
+        primary ? "bg-[#EE7F3A]" : "bg-[#212126]"
+      }`}
+    >
+      <Ionicons name="navigate" size={15} color="white" />
+      <Text className="text-white text-sm font-bold">{label}</Text>
+    </TouchableOpacity>
   );
 }

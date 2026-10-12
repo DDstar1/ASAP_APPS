@@ -4,7 +4,8 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { getReturnCode } from "@/lib/supabase-app-functions";
 
 const CARD_COLOR = "#EE7F3A";
-const DELIVERED_CHEVRON = "#FFFFFF";
+// Dark enough to read on the orange card
+const DELIVERED_CHEVRON = "#0F7A36";
 const CANCELLED_CHEVRON = "#C81E1E";
 
 type Props = {
@@ -106,6 +107,9 @@ export default function CompletedOrderCard({ item, onRebook }: Props) {
           <TouchableOpacity
             onPress={onRebook}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Rebook order ${item.order_code}`}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="bg-white rounded-full px-4 py-1.5"
           >
             <Text
@@ -139,8 +143,15 @@ export default function CompletedOrderCard({ item, onRebook }: Props) {
               </View>
             ))}
           </View>
+          {/* Text too, so the status isn't carried by colour alone */}
+          <Text
+            style={{ color: chevron }}
+            className="text-[11px] font-bold mt-0.5"
+          >
+            {cancelled ? "Cancelled" : "Delivered"}
+          </Text>
           {km != null && (
-            <Text className="text-white/80 text-[11px] font-semibold mt-0.5">
+            <Text className="text-white/80 text-[11px] font-semibold">
               {km < 10 ? km.toFixed(1) : Math.round(km)}km
             </Text>
           )}

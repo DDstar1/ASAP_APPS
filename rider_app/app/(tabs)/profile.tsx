@@ -28,6 +28,8 @@ import { UpdateBankDetailsModal } from "@/components/UpdateBankDetailsModal";
 import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 
+const ORANGE = "#EE7F3A";
+
 const WEBSITE_URL = Constants.expoConfig?.extra?.websiteUrl as
   | string
   | undefined;
@@ -180,164 +182,144 @@ export default function AccountScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 pb-2 bg-[#080e1c]">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-black">
       <ScrollView
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#ff923e"
-            colors={["#ff923e"]}
+            tintColor={ORANGE}
+            colors={[ORANGE]}
           />
         }
       >
-        {/* HERO */}
-        <View className="items-center mt-10">
-          <View className="relative">
-            <View className="rounded-2xl p-1 bg-[#ff923e]/20">
+        {/* PROFILE */}
+        <View className="items-center mt-8">
+          <TouchableOpacity
+            onPress={onEditProfileImage}
+            disabled={uploadingImage}
+            accessibilityRole="button"
+            accessibilityLabel="Change profile photo"
+          >
+            <View className="w-28 h-28 rounded-full bg-white overflow-hidden justify-center items-center">
               <Image
                 source={
-                  profileImage ? { uri: profileImage } : IMAGES.profile_img
+                  profileImage ? { uri: profileImage } : IMAGES.helmet_avatar
                 }
-                className="w-28 h-28 rounded-2xl"
+                className="w-28 h-28 rounded-full"
               />
             </View>
-
-            <TouchableOpacity
-              onPress={onEditProfileImage}
-              disabled={uploadingImage}
-              className="absolute -bottom-2 -right-2 bg-[#ff923e] rounded-full p-1.5"
-            >
+            <View className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[#3C3C43] border-2 border-black justify-center items-center">
               {uploadingImage ? (
-                <ActivityIndicator size={14} color="#000" />
+                <ActivityIndicator size="small" color="white" />
               ) : (
-                <MaterialIcons name="edit" size={14} color="#000" />
+                <MaterialIcons name="photo-camera" size={16} color="white" />
               )}
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
 
-          <View className="flex-row items-center mt-5 bg-[#ff923e] px-3 py-1 rounded-full">
-            <Text className="text-black font-semibold text-sm">4.9 ★</Text>
-          </View>
-
-          <Text className="text-[#e0e5f9] text-2xl font-bold mt-3">
-            {user?.username ?? "Marcus Vance"}{" "}
-            <Text className="text-[#a5abbd] text-sm mt-1 tracking-widest">
-              • LEVEL 4
-            </Text>
+          <Text className="text-white text-2xl font-bold mt-4">
+            {user?.username ?? "Rider"}
           </Text>
-
-          <Text className="text-[#a5abbd] text-sm mt-1">
-            {user?.email ?? ""}
-          </Text>
+          {!!user?.email && (
+            <Text className="text-gray-400 text-sm mt-1">{user.email}</Text>
+          )}
         </View>
 
-        {/* ACCOUNT SETTINGS */}
-        <Section title="ACCOUNT SETTINGS" icon="manage-accounts">
-          <EditItem
-            title="Phone Number"
-            subtitle={user?.phone ?? "Not set"}
-            icon="phone-android"
+        {/* ACCOUNT */}
+        <Card>
+          <Row
+            title="Personal info"
+            subtitle={user?.phone ?? "Add your phone number"}
+            icon="person-outline"
             onPress={() => setPhoneModalVisible(true)}
           />
-          <View className="h-px bg-[#1e2a40] mx-1" />
-          <EditItem
-            title="Password"
+          <Divider />
+          <Row
+            title="Login & security"
             subtitle="Change password"
             icon="lock-outline"
             onPress={() => setPasswordModalVisible(true)}
           />
-          <View className="h-px bg-[#1e2a40] mx-1" />
-          <EditItem
-            title="Bank Details"
+          <Divider />
+          <Row
+            title="Payout account"
             subtitle="Account number & bank"
             icon="account-balance"
+            iconColor="#22C55E"
             onPress={() => setBankModalVisible(true)}
           />
-          <View className="h-px bg-[#1e2a40] mx-1" />
-          <EditItem
-            title="Rider Guidelines"
+          <Divider />
+          <Row
+            title="Rider guidelines"
             subtitle="How deliveries work"
             icon="menu-book"
             onPress={() =>
               router.push({ pathname: "/guidelines", params: { review: "1" } })
             }
           />
-        </Section>
+        </Card>
 
-        {/* GROW WITH ASAP */}
-        <Section title="GROW WITH ASAP" icon="trending-up">
-          <EditItem
-            title="Become a Vendor"
+        {/* GROW WITH ASAP (website) */}
+        <Card>
+          <Row
+            title="Become a vendor"
             subtitle="Sell and deliver with ASAP"
             icon="storefront"
+            external
             onPress={() => openWebsite("/become-vendor")}
           />
-          <View className="h-px bg-[#1e2a40] mx-1" />
-          <EditItem
+          <Divider />
+          <Row
             title="Invest"
-            subtitle="Invest in ASAP"
+            subtitle="Own a part of ASAP"
             icon="show-chart"
+            external
             onPress={() => openWebsite("/invest")}
           />
-        </Section>
+        </Card>
 
-        {/* PREFERENCES */}
-        <Section title="PREFERENCES" icon="tune">
+        {/* SETTINGS */}
+        <Text className="text-gray-400 text-xs font-semibold uppercase tracking-widest mx-6 mt-6">
+          Settings
+        </Text>
+        <Card className="mt-2">
           <ToggleItem
-            title="Delivery Alerts"
-            icon="notifications-active"
+            title="Delivery alerts"
+            icon="notifications-none"
             value={settings?.delivery_alerts ?? true}
             onValueChange={(val) => handleToggle("delivery_alerts", val)}
           />
+          <Divider />
           <ToggleItem
             title="Promotions"
             icon="local-offer"
             value={settings?.promotions ?? false}
             onValueChange={(val) => handleToggle("promotions", val)}
           />
+          <Divider />
           <ToggleItem
-            title="SMS Updates"
+            title="SMS updates"
             icon="sms"
             value={settings?.sms_updates ?? true}
             onValueChange={(val) => handleToggle("sms_updates", val)}
           />
-        </Section>
-
-        {/* PAYMENTS */}
-        <Section title="PAYMENT ECOSYSTEM" icon="account-balance-wallet">
-          <PaymentCard title="Solana Wallet" value="12.45 SOL" />
-          <PaymentCard title="Business Debit" value="•••• 8821" />
-          <TouchableOpacity className="mt-4 py-4 rounded-2xl border border-[#ff923e]/30 items-center">
-            <Text className="text-[#ff923e] font-semibold">
-              + ADD NEW METHOD
-            </Text>
-          </TouchableOpacity>
-        </Section>
-
-        {/* SUPPORT */}
-        <Section title="SUPPORT CENTER" icon="help-outline">
-          <View className="flex-row gap-4">
-            <SupportCard title="Browse FAQs" />
-            <SupportCard title="Live Chat" />
-          </View>
-        </Section>
+        </Card>
 
         {/* LOGOUT */}
         <TouchableOpacity
           onPress={onLogoutPress}
           disabled={loading}
-          className="mx-4 mt-8 mb-4 py-5 rounded-full items-center justify-center flex-row gap-2"
-          style={{ backgroundColor: "#ff923e" }}
+          accessibilityRole="button"
+          className="mx-4 mt-8 h-14 rounded-full items-center justify-center flex-row gap-2 bg-[#EE7F3A]"
         >
           {loading ? (
-            <ActivityIndicator color="#000" />
+            <ActivityIndicator color="white" />
           ) : (
             <>
-              <MaterialIcons name="logout" size={20} color="#000" />
-              <Text className="text-black font-bold text-base">
-                LOGOUT ACCOUNT
-              </Text>
+              <MaterialIcons name="logout" size={20} color="white" />
+              <Text className="text-white font-bold text-base">Log out</Text>
             </>
           )}
         </TouchableOpacity>
@@ -346,15 +328,16 @@ export default function AccountScreen() {
         <TouchableOpacity
           onPress={onDeleteAccountPress}
           disabled={deleting}
-          className="mx-4 mb-6 py-4 rounded-full items-center justify-center flex-row gap-2 border border-[#ef4444]/40"
+          accessibilityRole="button"
+          className="mx-4 mt-3 h-12 rounded-full items-center justify-center flex-row gap-2"
         >
           {deleting ? (
-            <ActivityIndicator color="#ef4444" />
+            <ActivityIndicator color="#F87171" />
           ) : (
             <>
-              <MaterialIcons name="delete-forever" size={20} color="#ef4444" />
-              <Text className="text-[#ef4444] font-semibold text-base">
-                Delete Account
+              <MaterialIcons name="delete-outline" size={20} color="#F87171" />
+              <Text className="text-red-400 font-semibold text-base">
+                Delete account
               </Text>
             </>
           )}
@@ -374,7 +357,6 @@ export default function AccountScreen() {
       />
       <UpdateBankDetailsModal
         visible={bankModalVisible}
-        driverId={user?.id ?? ""}
         onClose={() => setBankModalVisible(false)}
         onSaved={() => setBankModalVisible(false)}
       />
@@ -382,52 +364,63 @@ export default function AccountScreen() {
   );
 }
 
-function Section({
-  title,
-  icon,
+// ---------- COMPONENTS ----------
+
+type IconName = React.ComponentProps<typeof MaterialIcons>["name"];
+
+function Card({
   children,
+  className = "mt-4",
 }: {
-  title: string;
-  icon?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <View className="mx-4 mt-8">
-      <View className="flex-row items-center gap-2 mb-4">
-        {icon && <MaterialIcons name={icon as any} size={14} color="#a5abbd" />}
-        <Text className="text-[#a5abbd] text-xs tracking-widest">{title}</Text>
-      </View>
-      <View className="bg-[#121a2b] rounded-3xl p-4 space-y-3">{children}</View>
+    <View className={`mx-4 bg-[#212126] rounded-3xl px-4 ${className}`}>
+      {children}
     </View>
   );
 }
 
-function EditItem({
+const Divider = () => <View className="h-px bg-white/10 ml-14" />;
+
+function Row({
   title,
   subtitle,
   icon,
+  iconColor = "white",
   onPress,
+  external,
 }: {
   title: string;
   subtitle: string;
-  icon: string;
+  icon: IconName;
+  iconColor?: string;
   onPress: () => void;
+  // Opens the website rather than a screen
+  external?: boolean;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row justify-between items-center py-3"
+      accessibilityRole={external ? "link" : "button"}
+      accessibilityLabel={`${title}. ${subtitle}`}
+      className="flex-row items-center gap-4 py-4"
     >
-      <View className="flex-row items-center gap-3">
-        <View className="w-8 h-8 rounded-xl bg-[#0f1626] items-center justify-center">
-          <MaterialIcons name={icon as any} size={16} color="#ff923e" />
-        </View>
-        <View>
-          <Text className="text-[#e0e5f9] text-sm">{title}</Text>
-          <Text className="text-[#a5abbd] text-xs mt-0.5">{subtitle}</Text>
-        </View>
+      <View className="w-10 h-10 rounded-full bg-[#3C3C43] items-center justify-center">
+        <MaterialIcons name={icon} size={20} color={iconColor} />
       </View>
-      <MaterialIcons name="chevron-right" size={20} color="#a5abbd" />
+      <View className="flex-1">
+        <Text className="text-white text-base font-semibold">{title}</Text>
+        <Text className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+      <MaterialIcons
+        name={external ? "open-in-new" : "chevron-right"}
+        size={external ? 18 : 22}
+        color="#9CA3AF"
+      />
     </TouchableOpacity>
   );
 }
@@ -439,28 +432,28 @@ function ToggleItem({
   onValueChange,
 }: {
   title: string;
-  icon: string;
+  icon: IconName;
   value: boolean;
   onValueChange: (val: boolean) => void;
 }) {
   return (
-    <View className="flex-row justify-between items-center py-3">
-      <View className="flex-row items-center gap-3">
-        <View className="w-8 h-8 rounded-xl bg-[#0f1626] items-center justify-center">
-          <MaterialIcons name={icon as any} size={16} color="#ff923e" />
-        </View>
-        <Text className="text-[#e0e5f9]">{title}</Text>
+    <View className="flex-row items-center gap-4 py-3">
+      <View className="w-10 h-10 rounded-full bg-[#3C3C43] items-center justify-center">
+        <MaterialIcons name={icon} size={20} color="white" />
       </View>
+      <Text className="text-white text-base font-semibold flex-1">{title}</Text>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: "#2a3245", true: "#ff923e" }}
-        thumbColor={value ? "#fff" : "#a5abbd"}
+        accessibilityLabel={title}
+        trackColor={{ false: "#3C3C43", true: ORANGE }}
+        thumbColor="#fff"
       />
     </View>
   );
 }
 
+// No longer rendered (placeholder data / no feature behind them) — pending co-dev review
 function PaymentCard({ title, value }: { title: string; value: string }) {
   return (
     <View className="bg-[#0f1626] p-4 rounded-2xl flex-row justify-between items-center">

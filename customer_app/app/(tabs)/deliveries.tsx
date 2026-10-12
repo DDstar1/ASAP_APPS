@@ -1,42 +1,37 @@
-// app/(tabs)/orders.tsx
+// app/(tabs)/deliveries.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Dimensions,
-  FlatList,
+  RefreshControl,
   SectionList,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
-import { MY_ICONS } from "@/assets/assetsData";
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import CompletedOrderCards, {
   finishedAt,
 } from "@/components/CompletedOrderCards";
 import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkeleton";
-import IncompleteDeliverySkeleton from "@/components/ui/skeletons/IncompleteDeliverySkeleton";
-import ActiveDeliveriesEmptyState from "@/components/ActiveDeliveriesEmptyState";
 import CompletedOrdersEmptyState from "@/components/CompletedOrdersEmptyState";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { router } from "expo-router";
 import SelectItemTypeScreen from "@/components/SelectItemTypeScreen";
 
-// ─── Kinetic Noir tokens ───────────────────────────────────────────────────
-// primary:           #ff923e
-// surface (base):    #080e1c
-// surface-container-low:     #0d1424
-// surface-container-high:    #111827
-// surface-container-highest: #1a2235
-// on-surface:        #e0e5f9
-// on-surface-variant:#a5abbd
-// ---------------------------------------------------------------------------
+// Orders a rider is still working on (or still being found for)
+const ACTIVE_STATUSES = [
+  "pending",
+  "arriving_pickup",
+  "in_transit",
+  "driver_arrived",
+];
 
 const OrdersPage = () => {
-  const { width } = Dimensions.get("window");
   const [ItemTypeVisible, setItemTypeVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { AllDeliveries, loading, fetchAllDeliveries } =
     useCustomerDeliveryStore();
 
@@ -44,14 +39,14 @@ const OrdersPage = () => {
     fetchAllDeliveries();
   }, []);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAllDeliveries();
+    setRefreshing(false);
+  };
+
   const activeDeliveries = useMemo(
-    () =>
-      AllDeliveries.filter(
-        (item) =>
-          item.status === "pending" ||
-          item.status === "arriving_pickup" ||
-          item.status === "in_transit",
-      ),
+    () => AllDeliveries.filter((item) => ACTIVE_STATUSES.includes(item.status)),
     [AllDeliveries],
   );
 
@@ -83,125 +78,42 @@ const OrdersPage = () => {
     return groups;
   }, [completedDeliveries]);
 
-  console.log("Active Deliveries:", activeDeliveries?.length);
-  console.log("Completed Deliveries:", completedDeliveries?.length);
-  // ─── Sub-components ────────────────────────────────────────────────────────
-
-  /**
-   * SectionLabel
-   * "ACTIVE  [2]" — uppercase label with optional count badge.
-   * Matches the design-system's editorial hierarchy: small label + count pill.
-   */
-  const SectionLabel = ({
-    title,
-    count,
-  }: {
-    title: string;
-    count?: number;
-  }) => (
-    <View className="flex-row items-center gap-2">
-      <Text className="text-[11px] font-bold tracking-widest text-[#a5abbd] uppercase">
-        {title}
-      </Text>
-      {count !== undefined && (
-        // Surface-container-highest pill — no hard border (No-Line rule),
-        // tonal contrast defines the boundary.
-        <View className="bg-[#1a2235] rounded-lg px-2 py-0.5">
-          <Text className="text-[11px] font-semibold text-[#a5abbd]">
-            {count}
+  // Active orders sit above the history, one "Current Tracking" card each
+  const activeHeader = (
+    <View className="pb-2">
+      {activeDeliveries.length > 0 && (
+        <>
+          <Text className="text-white text-lg font-bold mb-3">
+            {activeDeliveries.length > 1
+              ? `Current Tracking (${activeDeliveries.length})`
+              : "Current Tracking"}
           </Text>
-        </View>
+          {activeDeliveries.map((item) => (
+            <IncompleteDeliveryCard key={String(item.id)} item={item} />
+          ))}
+        </>
       )}
     </View>
   );
 
-  /**
-   * Divider
-   * "2px vertical gap of the base surface color" — design-system rule.
-   * Very low opacity so it never reads as a hard 1px line.
-   */
-  const Divider = () => <View className="h-px bg-[#e0e5f9]/[0.06] mx-6 my-2" />;
-
-  // ─── Render ────────────────────────────────────────────────────────────────
-
   return (
-    // Surface base: #080e1c — the deep saturated navy-black foundation
-    <SafeAreaView edges={["top"]} className="flex-1 bg-[#080e1c]">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-black">
       {/* ── Header ── */}
-      <View className="flex-row items-center justify-between px-6 pt-3 pb-5">
-        {/* Display-lg title — editorial scale difference vs section labels */}
-        <Text className="text-[28px] font-extrabold text-[#e0e5f9] -tracking-wide">
-          My Orders
-        </Text>
+      <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
+        <Text className="text-[28px] font-extrabold text-white">My Orders</Text>
 
-        {/*
-          Message icon button — surface-container-highest bg.
-          Ghost border at outline-variant opacity (No full-opacity border rule).
-          Primary tint on the border to tie to brand.
-        */}
-        <View className="w-11 h-11 rounded-2xl bg-[#1a2235] items-center justify-center border border-[#ff923e]/20">
-          {MY_ICONS.message("#ff923e", 20)}
-        </View>
+        <TouchableOpacity
+          onPress={() => router.push("/all_chats")}
+          accessibilityRole="button"
+          accessibilityLabel="Messages"
+          className="w-11 h-11 rounded-full bg-[#3C3C43] items-center justify-center"
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color="white" />
+        </TouchableOpacity>
       </View>
 
-      <Divider />
-
-      {/* ── Active Deliveries ── */}
-      <View className="px-6 pt-3 pb-2">
-        <SectionLabel
-          title="Active"
-          count={loading ? undefined : activeDeliveries.length}
-        />
-      </View>
-
-      {/* maxHeight caps the horizontal scroll area at roughly one card height */}
-      <View style={{ maxHeight: 240 }}>
-        {loading ? (
-          <FlatList
-            horizontal
-            data={[1, 2, 3]}
-            keyExtractor={(item) => item.toString()}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 24,
-              alignItems: "center",
-            }}
-            renderItem={() => <IncompleteDeliverySkeleton width={width} />}
-          />
-        ) : (
-          <FlatList
-            data={activeDeliveries}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 24,
-              alignItems: "center",
-            }}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            keyExtractor={(item, index) => `${item.order_code}-${index}`}
-            renderItem={({ item }) => (
-              <IncompleteDeliveryCard item={item} width={width} />
-            )}
-            ListEmptyComponent={() => (
-              <ActiveDeliveriesEmptyState width={width} />
-            )}
-          />
-        )}
-      </View>
-
-      <Divider />
-
-      {/* ── Completed Orders ── */}
-      <View className="px-6 pt-3 pb-2">
-        <SectionLabel
-          title="Completed"
-          count={loading ? undefined : completedDeliveries.length}
-        />
-      </View>
-
-      {loading ? (
-        // Surface-container-low background behind the skeleton list
-        <View className="flex-1 px-6 gap-3">
+      {loading && AllDeliveries.length === 0 ? (
+        <View className="flex-1 px-5 gap-3">
           {[1, 2, 3, 4].map((_, i) => (
             <CompletedOrderSkeleton key={i} />
           ))}
@@ -210,6 +122,7 @@ const OrdersPage = () => {
         <SectionList
           sections={completedSections}
           keyExtractor={(item, index) => `${String(item.id)}-${index}`}
+          ListHeaderComponent={activeHeader}
           renderItem={({ item }) => (
             <CompletedOrderCards
               item={item}
@@ -217,23 +130,26 @@ const OrdersPage = () => {
             />
           )}
           renderSectionHeader={({ section }) => (
-            <Text className="text-sm font-bold text-[#e0e5f9] bg-[#080e1c] pt-4 pb-1">
+            <Text className="text-lg font-bold text-white bg-black pt-4 pb-1">
               {section.title}
             </Text>
           )}
           stickySectionHeadersEnabled
-          className=" px-6 "
+          className="px-5"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 32,
-            flexGrow: 1, // 👈 THIS IS KEY
-          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#EE7F3A"
+              colors={["#EE7F3A"]}
+            />
+          }
+          contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
           ListEmptyComponent={() => (
             <CompletedOrdersEmptyState
               activeDeliveriesCount={activeDeliveries.length}
-              onSendPackage={() => {
-                setItemTypeVisible(true);
-              }}
+              onSendPackage={() => router.push("/map")}
             />
           )}
         />
@@ -244,9 +160,6 @@ const OrdersPage = () => {
         visible={ItemTypeVisible}
         onClose={() => setItemTypeVisible(false)}
         onConfirm={async (packageType, description) => {
-          console.log("📦 Selected type:", packageType);
-          console.log("📝 Description:", description);
-
           try {
             router.navigate({
               pathname: "/map",

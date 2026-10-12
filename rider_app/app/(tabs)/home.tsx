@@ -29,6 +29,7 @@ import {
   updateRiderActiveMode,
   updateRiderLocation,
   confirmRideDropoff,
+  confirmRidePickup,
 } from "@/lib/supabase-app-functions";
 
 import { supabaseEvents } from "@/lib/supabase";
@@ -40,6 +41,13 @@ import {
 } from "@/store/useAcceptedDeliveriesStore";
 import { stopTracking } from "@/utils/utils_orderLocationTracking";
 import { useUserStore } from "@/store/useUserStore";
+
+// Orders arrive as offers only; the old available-orders list is hidden, not
+// removed, until the co-dev signs off on deleting it
+const SHOW_AVAILABLE_ORDERS_LIST = false;
+
+// Well inside Rust's 10-minute cutoff for matching
+const LOCATION_HEARTBEAT_MS = 2 * 60 * 1000;
 
 const RiderHomeScreen = () => {
   // Follows back_drivers.status (available/busy = online); starts offline
@@ -65,7 +73,9 @@ const RiderHomeScreen = () => {
     useAcceptedDeliveryStore();
 
   useEffect(() => {
-    fetchAvailableOrders();
+    // Orders now reach the rider only as offers (RideOfferModal); the
+    // /riders/assign-driver list is off pending co-dev review
+    // fetchAvailableOrders();
     fetchAcceptedDeliveries();
     fetchUserSession();
   }, []);
@@ -109,7 +119,7 @@ const RiderHomeScreen = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      fetchAvailableOrders(),
+      // fetchAvailableOrders(), // offers only, see mount effect
       fetchAcceptedDeliveries(),
       fetchUserSession(),
       earnings.reload(), // tier or fees may have changed
@@ -207,6 +217,23 @@ const RiderHomeScreen = () => {
     return () => stopRealtimeLocation();
   }, [isOnline]);
 
+  // watchPositionAsync only fires on movement, and Rust stops matching a
+  // driver with no location for 10 minutes, so a parked driver still sends
+  // the last known position on a timer
+  useEffect(() => {
+    if (!isOnline) return;
+    const heartbeat = setInterval(async () => {
+      try {
+        const last = await Location.getLastKnownPositionAsync();
+        if (last)
+          await updateRiderLocation(last.coords.latitude, last.coords.longitude);
+      } catch (err) {
+        console.error("Location heartbeat failed:", err);
+      }
+    }, LOCATION_HEARTBEAT_MS);
+    return () => clearInterval(heartbeat);
+  }, [isOnline]);
+
   // On launch, pick up the saved status instead of forcing online. A driver
   // saved as online without location access is switched offline.
   useEffect(() => {
@@ -251,6 +278,15 @@ const RiderHomeScreen = () => {
     const result = await updateRiderActiveMode(online);
     if (!result.success) {
       setIsOnline(!online);
+      // Rust refuses offline (409) while the driver is busy or carrying an
+      // order, e.g. an offer accepted that hasn't reached this screen yet
+      if (!online && String(result.error ?? "").startsWith("API 409")) {
+        Alert.alert(
+          "Delivery in progress",
+          "You can't go offline while you have an order. Finish it first.",
+        );
+        return;
+      }
       Alert.alert(
         "Couldn't update status",
         `You're still ${online ? "offline" : "online"}. Please try again.`,
@@ -258,10 +294,22 @@ const RiderHomeScreen = () => {
     }
   };
 
-  // Dropoff only: the pickup code is entered by the sender in their app
+  // The customer holds both codes; the rider enters them
   const handleSubmitCode = async (code: string) => {
     if (!activeDelivery) return;
     try {
+      if (activeDelivery.status === "arriving_pickup") {
+        const pickup = await confirmRidePickup(activeDelivery.order_code, code);
+        if (pickup.success) {
+          // Realtime brings the same status; set it now so the card moves on
+          updateDeliveryStatus(activeDelivery.id, "in_transit");
+          Alert.alert("Pickup confirmed ✓", "Head to the drop-off.");
+        } else {
+          Alert.alert("Invalid Code", pickup.error || "The code is incorrect.");
+        }
+        return;
+      }
+
       const result = await confirmRideDropoff(
         activeDelivery.order_code,
         user?.id ?? "",
@@ -285,37 +333,35 @@ const RiderHomeScreen = () => {
   };
 
   return (
-    <View className="flex-1 bg-[#080e1c]">
+    <View className="flex-1 bg-black">
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <View className="bg-[#181f42] overflow-hidden rounded-br-[200px]">
-        <SafeAreaView edges={["top"]} className="px-10 pb-10 pt-14">
-          {/* Orange accent bar */}
-          <View className="w-8 h-[3px] bg-[#ff923e] rounded-full mb-4" />
-
-          <Text className="text-[#e0e5f9] text-3xl font-bold mb-6">
-            Partner {user?.username ?? "USER"}
+      <View className="bg-[#212126] overflow-hidden rounded-b-[32px]">
+        <SafeAreaView edges={["top"]} className="px-6 pb-8 pt-6">
+          <Text className="text-gray-400 text-sm">Welcome back</Text>
+          <Text className="text-white text-3xl font-bold mb-6">
+            {user?.username ?? "Rider"}
           </Text>
 
-          <Text className="text-[#a5abbd] text-[11px] tracking-widest mb-1">
-            TOTAL EARNINGS
+          <Text className="text-gray-400 text-xs font-bold tracking-widest uppercase mb-1">
+            Total earnings
           </Text>
 
-          <Text className="text-[#ff923e] text-5xl font-bold mb-2">
+          <Text className="text-[#22C55E] text-5xl font-extrabold">
             {earnings.loading ? "—" : formatNaira(earnings.totals.all)}
           </Text>
         </SafeAreaView>
 
         <Image
           source={IMAGES.riderIllustraion}
-          className="absolute right-0 bottom-[-10px] w-52 h-52 opacity-50"
+          className="absolute right-0 bottom-[-10px] w-52 h-52 opacity-40"
           resizeMode="contain"
         />
       </View>
 
       {/* Stats Card */}
-      <View className="mx-4 mt-8 p-5 rounded-3xl bg-[#121a2b]">
+      <View className="mx-4 mt-4 p-3 rounded-3xl bg-[#212126]">
         <View className="flex-row justify-between gap-2">
           <Stat
             label="Total trips"
@@ -337,10 +383,10 @@ const RiderHomeScreen = () => {
 
       {/* Body */}
       <ScrollView
-        className="bg-[#080e1c]"
+        className="bg-black"
         contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 24,
+          paddingHorizontal: 16,
+          paddingTop: 16,
           paddingBottom: 96,
         }}
         showsVerticalScrollIndicator={false}
@@ -348,23 +394,23 @@ const RiderHomeScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#ff923e"
-            colors={["#ff923e"]}
+            tintColor="#EE7F3A"
+            colors={["#EE7F3A"]}
           />
         }
       >
         {/* Online Switch Card */}
-        <View className="bg-[#0f1626] rounded-3xl p-5 mb-4">
+        <View className="bg-[#3C3C43] rounded-3xl p-5 mb-4">
           <View className="flex-row justify-between items-center">
             <View className="flex-1">
               {/* Status row with dot */}
               <View className="flex-row items-center gap-2 mb-1.5">
-                <PulseDot isOnline={isOnline} />
-                <Text className="text-[#e0e5f9] text-base font-bold">
+                <PulseDot isOnline={isOnline} color="#22C55E" />
+                <Text className="text-white text-base font-bold">
                   {isOnline ? "Online" : "Offline"}
                 </Text>
               </View>
-              <Text className="text-[#a5abbd] text-sm">
+              <Text className="text-gray-400 text-sm">
                 {isOnline
                   ? "You're available for new deliveries."
                   : "You're currently offline."}
@@ -374,8 +420,9 @@ const RiderHomeScreen = () => {
             <Switch
               value={isOnline}
               onValueChange={handleToggleOnline}
-              thumbColor="#e0e5f9"
-              trackColor={{ false: "#2a3245", true: "#ff923e" }}
+              accessibilityLabel={isOnline ? "Go offline" : "Go online"}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: "#212126", true: "#22C55E" }}
               style={{
                 transform: [{ scaleX: 1.4 }, { scaleY: 1.4 }],
                 marginRight: 30,
@@ -390,49 +437,49 @@ const RiderHomeScreen = () => {
             onSubmitCode={handleSubmitCode}
             hasOngoingDeliveries={hasOngoingDeliveries}
           />
-        ) : (
+        ) : SHOW_AVAILABLE_ORDERS_LIST ? (
           <AvailableOrdersDropdown
             availableOrders={availableOrders}
             showOrders={showOrders}
             onToggle={toggleDropdown}
           />
-        )}
+        ) : null}
 
         {/* Confirm drop-off button — always present, unlocks within 100m of dropoff */}
         <View
           style={{
             marginTop: 16,
-            borderRadius: 20,
+            borderRadius: 999,
             overflow: "hidden",
-            opacity: canConfirmTrip ? 1 : 0.45,
+            opacity: canConfirmTrip ? 1 : 0.5,
           }}
         >
           <TouchableOpacity
             onPress={() => setShowOTPModal(true)}
             disabled={!canConfirmTrip}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canConfirmTrip }}
             style={{
-              backgroundColor: canConfirmTrip ? "#ff923e" : "#1c2a42",
+              backgroundColor: canConfirmTrip ? "#EE7F3A" : "#212126",
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
               gap: 10,
-              paddingVertical: 16,
-              borderRadius: 20,
-              borderWidth: canConfirmTrip ? 0 : 1,
-              borderColor: "#2a3a55",
+              height: 56,
+              borderRadius: 999,
             }}
           >
             <MaterialIcons
               name="verified"
               size={20}
-              color={canConfirmTrip ? "#000" : "#a5abbd"}
+              color={canConfirmTrip ? "#FFFFFF" : "#9CA3AF"}
             />
             <Text
               style={{
                 fontWeight: "700",
                 fontSize: 14,
-                color: canConfirmTrip ? "#000" : "#a5abbd",
+                color: canConfirmTrip ? "#FFFFFF" : "#9CA3AF",
               }}
             >
               {canConfirmTrip
@@ -477,19 +524,15 @@ function Stat({
   return (
     <View
       className={`flex-1 p-3 rounded-2xl ${
-        highlight ? "bg-[#ff923e]" : "bg-[#0f1626]"
+        highlight ? "bg-[#15803D]" : "bg-[#3C3C43]"
       }`}
     >
       <Text
-        className={`text-xs ${highlight ? "text-[#1a0a00]" : "text-[#a5abbd]"}`}
+        className={`text-xs ${highlight ? "text-white/80" : "text-gray-400"}`}
       >
         {label}
       </Text>
-      <Text
-        className={`text-lg font-bold ${
-          highlight ? "text-[#1a0a00]" : "text-[#e0e5f9]"
-        }`}
-      >
+      <Text className="text-lg font-bold text-white">
         {value}
       </Text>
     </View>

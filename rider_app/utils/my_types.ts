@@ -18,6 +18,7 @@ type RiderOrder = {
 
   status: "pending" | string;
   order_code: string;
+  payment_reference?: string | null; // get-trip key
 
   image_url: string | null;
   waypoints: any[] | null;
@@ -28,7 +29,12 @@ type RiderOrder = {
 };
 
 type OpenGoogleMapsParams = {
-  order_status: "pending" | "arriving_pickup" | "in_transit" | "delivered";
+  order_status:
+    | "pending"
+    | "arriving_pickup"
+    | "driver_arrived"
+    | "in_transit"
+    | "delivered";
   pickupLat?: number;
   pickupLng?: number;
   dropoffLat: number;

@@ -42,6 +42,8 @@ import MapView, {
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
+import { mapStyleFor } from "@/constants/mapStyle";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 const ORANGE = "#EE7F3A";
@@ -54,28 +56,22 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "Finding a rider",
   arriving_pickup: "Rider heading to pickup",
   in_transit: "On the way",
+  driver_arrived: "Your rider is at the drop-off",
   delivered: "Delivered",
   no_driver: "No rider found",
   awaiting_payment: "Awaiting payment",
   cancelled: "Cancelled",
 };
 
-const DARK_MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#1d1d1f" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a8f" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1d1d1f" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2c30" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a3a3f" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e10" }] },
-];
-
 // Delivery cycle: 1 in transit (rider accepted), 2 made pickup, 3 made delivery
 function cycleStage(order: any): number {
   if (!order) return 0;
   if (order.status === "delivered") return 3;
-  if (order.status === "in_transit" || order.is_pickup_code_authenticated)
+  if (
+    order.status === "in_transit" ||
+    order.status === "driver_arrived" ||
+    order.is_pickup_code_authenticated
+  )
     return 2;
   if (order.driver_id) return 1;
   return 0;
@@ -120,6 +116,7 @@ function DeliveryRing({ stage }: { stage: number }) {
 export default function RiderTrackingScreen() {
   const { order_id, rider_found } = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
+  const colorScheme = useColorScheme();
 
   const [destination, setDestination] = useState<LatLng | null>(null);
   const [pickupLocation, setPickupLocation] = useState<LatLng | null>(null);
@@ -143,7 +140,13 @@ export default function RiderTrackingScreen() {
 
   const is_order_accepted =
     order?.status &&
-    ["assigned", "arriving_pickup", "in_transit", "delivered"].includes(
+    [
+      "assigned",
+      "arriving_pickup",
+      "in_transit",
+      "driver_arrived",
+      "delivered",
+    ].includes(
       order.status,
     );
 
@@ -374,20 +377,24 @@ export default function RiderTrackingScreen() {
   FIT MAP
   */
 
-  useEffect(() => {
-    if (!mapRef.current || StoreLoading || !pickupLocation || !destination)
-      return;
-
+  const fitMap = () => {
+    if (!mapRef.current || !pickupLocation || !destination) return;
     const coordinates: LatLng[] = [pickupLocation, destination];
     if (driverLocation) coordinates.push(driverLocation);
+    mapRef.current.fitToCoordinates(coordinates, {
+      edgePadding: { top: 120, right: 50, bottom: 420, left: 50 },
+      animated: true,
+    });
+  };
 
-    setTimeout(() => {
-      mapRef.current?.fitToCoordinates(coordinates, {
-        edgePadding: { top: 100, right: 50, bottom: 420, left: 50 },
-        animated: true,
-      });
-    }, 500);
+  useEffect(() => {
+    if (StoreLoading) return;
+    const timer = setTimeout(fitMap, 500);
+    return () => clearTimeout(timer);
   }, [pickupLocation, destination, driverLocation, StoreLoading]);
+
+  const goBack = () =>
+    router.canGoBack() ? router.back() : router.replace("/(tabs)/deliveries");
 
   if (StoreLoading || !pickupLocation || !destination) {
     return (
@@ -473,12 +480,13 @@ export default function RiderTrackingScreen() {
 
   const riderAvatar = rider?.profileImage
     ? { uri: rider.profileImage }
-    : IMAGES.profile_img;
+    : IMAGES.helmet_avatar;
 
   const contactButtons = (
     <View className="flex-row items-center gap-3 mt-5">
       <TouchableOpacity
         onPress={callRider}
+        accessibilityRole="button"
         className="flex-1 h-14 rounded-full bg-[#EE7F3A] flex-row justify-center items-center gap-2"
       >
         <Ionicons name="call" size={20} color="white" />
@@ -487,6 +495,8 @@ export default function RiderTrackingScreen() {
 
       <TouchableOpacity
         onPress={() => openOrderChat(Number(order!.id))}
+        accessibilityRole="button"
+        accessibilityLabel="Chat with rider"
         className="w-14 h-14 rounded-full bg-[#EE7F3A] justify-center items-center"
       >
         <Ionicons name="chatbubble-ellipses" size={24} color="white" />
@@ -500,7 +510,7 @@ export default function RiderTrackingScreen() {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={{ flex: 1 }}
-        customMapStyle={DARK_MAP_STYLE}
+        customMapStyle={mapStyleFor(colorScheme)}
         showsUserLocation={false}
         followsUserLocation={false}
         initialRegion={{
@@ -559,11 +569,37 @@ export default function RiderTrackingScreen() {
         )}
       </MapView>
 
+      {/* Back / show whole route */}
+      <SafeAreaView
+        edges={["top"]}
+        pointerEvents="box-none"
+        className="absolute top-0 left-0 right-0 px-4 flex-row justify-between"
+      >
+        <TouchableOpacity
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          className="w-11 h-11 mt-2 rounded-full bg-[#2C2C30] justify-center items-center"
+        >
+          <Ionicons name="chevron-back" size={22} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={fitMap}
+          accessibilityRole="button"
+          accessibilityLabel="Show the whole route"
+          className="w-11 h-11 mt-2 rounded-full bg-[#2C2C30] justify-center items-center"
+        >
+          <Ionicons name="compass-outline" size={22} color="white" />
+        </TouchableOpacity>
+      </SafeAreaView>
+
       {/* Track package sheet */}
       <SafeAreaView
         edges={["bottom"]}
         className="absolute bottom-0 left-0 right-0 bg-black rounded-t-3xl border-t-2 border-[#EE7F3A] px-5 pt-5 pb-2"
       >
+        <View className="self-center w-10 h-1 rounded-full bg-[#3A3A3F] mb-4" />
+
         <View className="flex-row items-center gap-4">
           <DeliveryRing stage={cycleStage(order)} />
           <View className="flex-1">
@@ -579,17 +615,23 @@ export default function RiderTrackingScreen() {
 
           {/* Driver chip reopens the driver sheet */}
           {hasDriver && (
-            <TouchableOpacity onPress={() => setShowDriver(true)}>
+            <TouchableOpacity
+              onPress={() => setShowDriver(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Show rider details"
+            >
               <Image source={riderAvatar} className="w-11 h-11 rounded-full" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Pick up / Deliver to */}
-        <View className="mt-5">
+        <View className="h-px bg-white/10 mt-5" />
+
+        {/* Pick up (red) / Deliver to (green), joined by a dotted line */}
+        <View className="mt-4">
           <View className="flex-row gap-3">
-            <View className="items-center">
-              <MaterialCommunityIcons name="map-marker-outline" size={22} color="white" />
+            <View className="items-center w-4 pt-1.5">
+              <View className="w-3 h-3 rounded-full bg-[#EF4444]" />
               <View className="flex-1 border-l border-dashed border-gray-500 my-1" />
             </View>
             <View className="flex-1 pb-4">
@@ -601,7 +643,9 @@ export default function RiderTrackingScreen() {
           </View>
 
           <View className="flex-row gap-3">
-            <MaterialCommunityIcons name="map-marker" size={22} color={ORANGE} />
+            <View className="items-center w-4 pt-1.5">
+              <View className="w-3 h-3 rounded-full bg-[#22C55E]" />
+            </View>
             <View className="flex-1">
               <Text className="text-gray-400 text-xs">Deliver to</Text>
               <Text className="text-white text-base" numberOfLines={1}>

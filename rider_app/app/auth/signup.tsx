@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,11 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import * as Linking from "expo-linking";
-import { signUpUser } from "@/lib/supabase-app-functions";
+import {
+  createDriverAccount,
+  signUpUser,
+  VehicleType,
+} from "@/lib/supabase-app-functions";
 import { normalizePhone } from "@/lib/phone";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
 
@@ -47,6 +51,14 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
+  const [vehicle, setVehicle] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  // Set once the Supabase account exists, so a retry after the Rust step
+  // fails doesn't try to sign up the same email again
+  const accountCreated = useRef(false);
+
+  const vehicleDetailsRequired = vehicleType === "EV";
 
   const url = Linking.useURL();
   useEffect(() => {
@@ -66,10 +78,40 @@ export default function SignUpScreen() {
       );
     if (password !== confirmPassword)
       return Alert.alert("Error", "Passwords do not match");
+    if (!vehicleType)
+      return Alert.alert("Error", "Choose your vehicle type");
+    if (vehicleDetailsRequired && (!vehicle.trim() || !licenseNumber.trim()))
+      return Alert.alert(
+        "Error",
+        "EV riders must enter their vehicle and licence number",
+      );
 
     setLoading(true);
     try {
-      await signUpUser(email, password, username, phone);
+      if (!accountCreated.current) {
+        await signUpUser(email, password, username, phone);
+        accountCreated.current = true;
+      }
+
+      try {
+        await createDriverAccount({
+          name: username,
+          email,
+          phone: normalizePhone(phone)!,
+          vehicle_type: vehicleType,
+          vehicle: vehicle.trim() || null,
+          license_number: licenseNumber.trim() || null,
+          account_number: null,
+          bank_code: null,
+        });
+      } catch (err: any) {
+        console.error("Rider setup failed:", err);
+        return Alert.alert(
+          "Setup Not Finished",
+          "Your account was created but rider setup didn't finish. Tap Create Account to try again.",
+        );
+      }
+
       Alert.alert(
         "Verify Your Email",
         "A verification link has been sent to your inbox.",
@@ -161,6 +203,78 @@ export default function SignUpScreen() {
           autoComplete="tel"
           textContentType="telephoneNumber"
           left={<TextInput.Icon icon="phone-outline" color="#a5abbd" />}
+          textColor="#e0e5f9"
+          outlineColor="rgba(255,255,255,0.08)"
+          activeOutlineColor="#ff923e"
+          style={{
+            backgroundColor: "#131a2e",
+            marginBottom: 16,
+            borderRadius: 12,
+          }}
+          theme={inputTheme}
+        />
+
+        {/* Vehicle Type */}
+        <Text className="text-xs font-semibold text-[#a5abbd] tracking-widest uppercase mb-2.5">
+          Vehicle Type
+        </Text>
+        <View className="flex-row gap-3 mb-4">
+          {(["Bike", "EV"] as VehicleType[]).map((type) => {
+            const selected = vehicleType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                onPress={() => setVehicleType(type)}
+                className={`flex-1 py-3.5 rounded-xl items-center border ${
+                  selected
+                    ? "bg-[#ff923e]/15 border-[#ff923e]"
+                    : "bg-[#131a2e] border-white/[0.08]"
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold ${
+                    selected ? "text-[#ff923e]" : "text-[#e0e5f9]"
+                  }`}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Vehicle */}
+        <TextInput
+          label={vehicleDetailsRequired ? "Vehicle" : "Vehicle (optional)"}
+          mode="outlined"
+          placeholder="Make, model and plate number"
+          value={vehicle}
+          onChangeText={setVehicle}
+          left={<TextInput.Icon icon="car-outline" color="#a5abbd" />}
+          textColor="#e0e5f9"
+          outlineColor="rgba(255,255,255,0.08)"
+          activeOutlineColor="#ff923e"
+          style={{
+            backgroundColor: "#131a2e",
+            marginBottom: 16,
+            borderRadius: 12,
+          }}
+          theme={inputTheme}
+        />
+
+        {/* Licence Number */}
+        <TextInput
+          label={
+            vehicleDetailsRequired
+              ? "Licence Number"
+              : "Licence Number (optional)"
+          }
+          mode="outlined"
+          placeholder="Driver's licence number"
+          value={licenseNumber}
+          onChangeText={setLicenseNumber}
+          autoCapitalize="characters"
+          left={<TextInput.Icon icon="card-account-details-outline" color="#a5abbd" />}
           textColor="#e0e5f9"
           outlineColor="rgba(255,255,255,0.08)"
           activeOutlineColor="#ff923e"

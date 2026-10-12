@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, Text, TouchableOpacity, View } from "react-native";
 
@@ -76,25 +77,21 @@ const CompletedOrdersEmptyState = ({
       <View className="flex-row items-center gap-3.5 py-3.5">
         {/* Archive icon tile — shimmer via animated opacity */}
         <Animated.View
-          className="w-[52px] h-[52px] rounded-[14px] bg-[#1a2235] items-center justify-center border border-white/[0.15]"
+          className="w-[52px] h-[52px] rounded-[14px] bg-[#3C3C43] items-center justify-center"
           style={{ opacity: iconOpacity }}
         >
-          {/* Swap with MY_ICONS.archive or similar */}
-          <Text className="text-[22px]">🗃️</Text>
+          <Ionicons name="archive-outline" size={22} color="white" />
         </Animated.View>
 
         {/* Text */}
         <View className="flex-1 gap-1">
-          <Text className="text-sm font-semibold text-[#e0e5f9] -tracking-[0.1px]">
+          <Text className="text-sm font-semibold text-white -tracking-[0.1px]">
             No completed deliveries yet.
           </Text>
-          <Text className="text-xs text-[#a5abbd] leading-[17px]">
+          <Text className="text-xs text-gray-400 leading-[17px]">
             Your order history will appear here once a delivery is done.
           </Text>
         </View>
-
-        {/* Chevron */}
-        <Text className="text-[22px] text-[#3d4160] leading-6 mr-0.5">›</Text>
       </View>
 
       {/* Ghost separator — very low opacity, no hard 1px line */}
@@ -105,10 +102,10 @@ const CompletedOrdersEmptyState = ({
         <TouchableOpacity
           onPress={onSendPackage}
           activeOpacity={0.75}
-          className="self-start mt-3 py-3 px-3.5 w-full  rounded-full border border-[#ff923e]/25 bg-[#ff923e]/[0.07]"
+          className="self-start mt-3 h-14 justify-center w-full rounded-full bg-[#EE7F3A]"
         >
-          <Text className="text-md font-semibold text-[#ff923e] text-center tracking-[0.1px]">
-            + Send your first package
+          <Text className="text-base font-bold text-white text-center">
+            Send your first package
           </Text>
         </TouchableOpacity>
       )}

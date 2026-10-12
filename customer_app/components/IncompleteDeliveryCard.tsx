@@ -1,376 +1,223 @@
-import MaskedView from "@react-native-masked-view/masked-view";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import Animated, {
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
 
-import { IMAGES, MY_ICONS } from "@/assets/assetsData";
+import { IMAGES } from "@/assets/assetsData";
 import {
   CustomerDelivery,
   useCustomerDeliveryStore,
 } from "@/store/useCustomerDeliveriesStore";
 import { openOrderChat } from "@/utils/my_utils";
-import { confirmPickup } from "@/lib/supabase-app-functions";
+import { cancelledOrderMessage, cancelPaidOrder } from "@/lib/payments";
 import { router } from "expo-router";
+
+const ORANGE = "#EE7F3A";
+
+const STATUS: Record<string, { label: string; color: string }> = {
+  pending: { label: "Finding a rider", color: "#FACC15" },
+  arriving_pickup: { label: "Heading to pickup", color: ORANGE },
+  in_transit: { label: "In Transit", color: "#22C55E" },
+  driver_arrived: { label: "Rider at drop-off", color: "#22C55E" },
+};
 
 type Props = {
   item: CustomerDelivery;
-  width: number;
 };
 
-const IncompleteDeliveryCard = ({ item, width }: Props) => {
-  const rawStatus = item.status;
-  const normalizedStatus = rawStatus?.trim().toLowerCase();
+// "Current Tracking" card for an order still in progress
+const IncompleteDeliveryCard = ({ item }: Props) => {
+  const status = item.status?.trim().toLowerCase() ?? "pending";
+  const statusInfo = STATUS[status] ?? { label: status, color: "#9CA3AF" };
+  const isPending = status === "pending";
   const [cancelling, setCancelling] = useState(false);
-  const [showPickupModal, setShowPickupModal] = useState(false);
-  const [pickupCode, setPickupCode] = useState("");
-  const [confirming, setConfirming] = useState(false);
 
-  const pulseProgress = useSharedValue(0);
-  const { removeDelivery, unreadCounts, fetchAllDeliveries } =
-    useCustomerDeliveryStore();
-
+  const { unreadCounts, fetchAllDeliveries } = useCustomerDeliveryStore();
   const unreadCount = unreadCounts?.[String(item.id)] ?? 0;
 
+  // Status dot pulses while a rider is being found
+  const pulse = useSharedValue(1);
   useEffect(() => {
-    if (normalizedStatus === "pending") {
-      pulseProgress.value = withRepeat(
-        withTiming(1, { duration: 600 }),
-        -1,
-        true,
-      );
-    } else {
-      pulseProgress.value = 0;
-    }
-  }, [normalizedStatus]);
+    pulse.value = isPending
+      ? withRepeat(withTiming(0.3, { duration: 700 }), -1, true)
+      : 1;
+  }, [isPending]);
+  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity:
-      normalizedStatus === "pending"
-        ? interpolate(pulseProgress.value, [0, 1], [0.3, 1])
-        : 1,
-    transform:
-      normalizedStatus === "pending"
-        ? [{ scale: interpolate(pulseProgress.value, [0, 1], [0.6, 20]) }]
-        : [{ scale: 1 }],
-  }));
-
+  // The rider enters the pickup code; Rust moves the order to in_transit
+  // and realtime updates the card
   const pickedUp =
-    !!item.is_pickup_code_authenticated || normalizedStatus === "in_transit";
+    !!item.is_pickup_code_authenticated ||
+    status === "in_transit" ||
+    status === "driver_arrived";
 
-  const closePickupModal = () => {
-    setPickupCode("");
-    setShowPickupModal(false);
-  };
-
-  // Rust moves the order to in_transit; realtime updates the status and the
-  // refetch picks up is_pickup_code_authenticated
-  const handleConfirmPickup = async () => {
-    setConfirming(true);
-    const result = await confirmPickup(item.order_code, pickupCode.trim());
-    setConfirming(false);
-    if (result.success) {
-      closePickupModal();
-      fetchAllDeliveries();
-      Alert.alert("Pickup confirmed ✓", "Your package is on its way.");
-    } else {
-      setPickupCode("");
-      Alert.alert("Invalid code", result.error || "The code is incorrect.");
-    }
-  };
-
+  // A pending order is already paid, so cancelling goes through Rust, which
+  // refunds in full while no rider has accepted. The row is never deleted.
   const handleCancel = () => {
+    const reference = item.payment_reference;
+    if (!reference) {
+      Alert.alert(
+        "Can't cancel here",
+        "This order wasn't paid in the app. Please contact support to cancel it.",
+      );
+      return;
+    }
     Alert.alert(
-      "Cancel Order",
-      `Are you sure you want to cancel order #${item.order_code}?`,
+      "Cancel this delivery?",
+      "You'll get a full refund to your payment method.",
       [
-        { text: "Keep Order", style: "cancel" },
+        { text: "Keep it", style: "cancel" },
         {
-          text: "Cancel Order",
+          text: "Cancel delivery",
           style: "destructive",
           onPress: async () => {
             setCancelling(true);
-            try {
-              removeDelivery(item.order_code);
-            } catch (err) {
-              setCancelling(false);
-              Alert.alert("Error", "Failed to cancel order. Please try again.");
+            const { data, error } = await cancelPaidOrder(reference);
+            setCancelling(false);
+            if (!data) {
+              Alert.alert("Couldn't cancel", error ?? "Please try again.");
+              return;
             }
+            Alert.alert(
+              "Delivery cancelled",
+              cancelledOrderMessage(data.refund_amount),
+            );
+            fetchAllDeliveries();
           },
         },
       ],
     );
   };
 
-  return (
-    <View
-      style={{ width: width * 0.9, height: "100%" }}
-      className="bg-[#3C3C43] h-fit rounded-2xl gap-2 flex items-center flex-row overflow-hidden relative p-3 mr-4"
-    >
-      {/* Top-right action buttons */}
-      <View className="absolute top-3 z-20 right-3 flex-col gap-3">
-        {/* Map button */}
-        <TouchableOpacity
-          onPress={() =>
-            router.replace({
-              pathname: "/trackPackage",
-              params: { order_id: item.id },
-            })
-          }
-          className="p-2 bg-gray-200 rounded-full"
-        >
-          {MY_ICONS.map("black", 25)}
-        </TouchableOpacity>
+  const openTracking = () =>
+    router.push({ pathname: "/trackPackage", params: { order_id: item.id } });
 
-        {/* Message button — hidden while pending */}
-        {normalizedStatus !== "pending" && (
-          <TouchableOpacity
-            onPress={() => openOrderChat(item.id)}
-            className="p-2 bg-gray-200 rounded-full"
-          >
-            {/* Icon + unread badge */}
-            <View>
-              {MY_ICONS.message("black", 25)}
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={openTracking}
+      accessibilityRole="button"
+      accessibilityLabel={`Order ${item.order_code}, ${statusInfo.label}. Open tracking`}
+      className="bg-[#3C3C43] rounded-3xl overflow-hidden p-5 mb-3"
+    >
+      {/* Map lines on the right */}
+      <Image
+        source={IMAGES.map_lines}
+        className="absolute -right-10 top-0 bottom-0 w-3/5 h-full"
+        style={{ opacity: 0.35 }}
+        resizeMode="cover"
+      />
+
+      {/* Code + actions */}
+      <View className="flex-row items-center justify-between">
+        <Text selectable className="text-white text-xl font-extrabold flex-1">
+          #{item.order_code}
+        </Text>
+
+        <View className="flex-row gap-2">
+          {!isPending && (
+            <TouchableOpacity
+              onPress={() => openOrderChat(item.id)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                unreadCount > 0
+                  ? `Chat with rider, ${unreadCount} unread`
+                  : "Chat with rider"
+              }
+              className="w-11 h-11 rounded-full bg-[#212126] justify-center items-center"
+            >
+              <Ionicons name="chatbubble-ellipses" size={20} color="white" />
               {unreadCount > 0 && (
                 <View
                   className="absolute bg-red-500 rounded-full items-center justify-center"
-                  style={{
-                    top: -5,
-                    right: -5,
-                    minWidth: 17,
-                    height: 17,
-                    paddingHorizontal: 3,
-                  }}
+                  style={{ top: 4, right: 4, minWidth: 16, height: 16, paddingHorizontal: 3 }}
                 >
-                  <Text
-                    style={{ fontSize: 9, lineHeight: 11 }}
-                    className="text-white font-bold"
-                  >
+                  <Text style={{ fontSize: 9, lineHeight: 11 }} className="text-white font-bold">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </Text>
                 </View>
               )}
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          )}
 
-        {/* Cancel button — only while pending */}
-        {normalizedStatus === "pending" && (
-          <TouchableOpacity
-            onPress={handleCancel}
-            disabled={cancelling}
-            className="p-2 bg-red-500/90 rounded-full"
-          >
-            {cancelling ? (
-              <ActivityIndicator size={25} color="white" />
-            ) : (
-              MY_ICONS.cancel("white", 25)
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Left Side */}
-      <View className="flex-1 mr-20 z-10">
-        <Text selectable className="text-white text-lg font-bold mb-2">
-          #{item.order_code}
-        </Text>
-
-        <Text className="text-gray-400 text-xs mb-1">Pickup</Text>
-        <View className="flex-row items-center mb-2">
-          {MY_ICONS.location("#9CA3AF", 14)}
-          <Text numberOfLines={2} className="text-white text-sm ml-2">
-            {item.pickup_name || "Unknown"}
-          </Text>
-        </View>
-
-        <Text className="text-gray-400 text-xs mb-1">Dropoff</Text>
-        <View className="flex-row items-center mb-2">
-          {MY_ICONS.location("#9CA3AF", 14)}
-          <Text numberOfLines={2} className="text-white text-sm ml-2">
-            {item.dropoff_name || "Unknown"}
-          </Text>
-        </View>
-
-        <View className="flex-row items-center">
-          {/* Status Section */}
-          <View className="flex-1">
-            <Text
-              className={`text-gray-400 text-xs mb-1 ${
-                normalizedStatus === "pending" ? "ml-[63px]" : ""
-              }`}
-            >
-              Status
-            </Text>
-
-            <View className="flex-row items-center relative">
-              {/* Pulsating background effect */}
-              <Animated.View
-                style={[
-                  pulseStyle,
-                  {
-                    opacity: 0.1,
-                    position: "absolute",
-                    zIndex: -20,
-                    left: 0,
-                  },
-                ]}
-              >
-                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
-              </Animated.View>
-
-              {/* Static foreground circle */}
-              <View style={{ zIndex: 10 }}>
-                {MY_ICONS.circle(item.statusColor ?? "#c5a722", 7)}
-              </View>
-
-              <View className="ml-2 flex-1">
-                <Text
-                  className={`text-white text-sm ${
-                    normalizedStatus === "pending" ? "ml-[50px]" : ""
-                  }`}
-                >
-                  {rawStatus?.replace("_", " ")}
-                </Text>
-
-                {normalizedStatus === "pending" && (
-                  <Text className="ml-[50px] text-gray-400 text-xs">
-                    Awaiting a rider...
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Code Section */}
-          <View>
-            <Text className="text-gray-400 text-xs">Pickup</Text>
-            {pickedUp ? (
-              <Text className="text-white text-xs font-semibold mb-1">
-                Confirmed ✓
-              </Text>
-            ) : normalizedStatus === "arriving_pickup" ? (
-              <TouchableOpacity
-                onPress={() => setShowPickupModal(true)}
-                className="bg-[#ff923e] rounded-full px-2 py-1 mb-1 self-start"
-              >
-                <Text className="text-black text-xs font-semibold">
-                  Enter code
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <Text className="text-white text-xs font-semibold mb-1">—</Text>
-            )}
-            <Text className="text-gray-400 text-xs">Dropoff Code</Text>
-            <Text
-              selectable
-              className="text-white text-xs font-semibold tracking-wider"
-            >
-              {item.dropoff_code}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Map / Image */}
-      <MaskedView
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "50%",
-          height: "110%",
-        }}
-        maskElement={
-          <LinearGradient
-            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.3)"]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={{ flex: 1 }}
-          />
-        }
-      >
-        <Image
-          source={IMAGES.indomie_package}
-          style={{ width: "100%", height: "100%" }}
-          resizeMode="cover"
-        />
-      </MaskedView>
-
-      {/* Pickup code entry — the rider shows the code at pickup */}
-      <Modal
-        visible={showPickupModal}
-        transparent
-        animationType="fade"
-        onRequestClose={closePickupModal}
-      >
-        <View className="flex-1 bg-black/70 justify-center px-6">
-          <View className="bg-[#131a2e] rounded-3xl p-6">
-            <Text className="text-[#e0e5f9] text-xl font-bold mb-1">
-              Confirm pickup
-            </Text>
-            <Text className="text-[#a5abbd] text-sm mb-5">
-              Enter the pickup code
-            </Text>
-
-            <TextInput
-              value={pickupCode}
-              onChangeText={setPickupCode}
-              placeholder="Pickup code"
-              placeholderTextColor="#3d4560"
-              autoCapitalize="characters"
-              autoCorrect={false}
-              autoFocus
-              maxLength={10}
-              editable={!confirming}
-              className="bg-[#080e1c] text-[#e0e5f9] text-2xl font-bold text-center tracking-[6px] rounded-2xl py-4 mb-5"
-            />
-
+          {isPending && (
             <TouchableOpacity
-              onPress={handleConfirmPickup}
-              disabled={confirming || pickupCode.trim().length < 4}
-              className={`py-4 rounded-full items-center mb-3 ${
-                confirming || pickupCode.trim().length < 4
-                  ? "bg-[#1c2a42]"
-                  : "bg-[#ff923e]"
-              }`}
+              onPress={handleCancel}
+              disabled={cancelling}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel delivery"
+              className="h-11 px-4 rounded-full bg-[#212126] flex-row justify-center items-center gap-1"
             >
-              {confirming ? (
-                <ActivityIndicator color="#fff" />
+              {cancelling ? (
+                <ActivityIndicator color="#F87171" />
               ) : (
-                <Text className="text-black text-base font-semibold">
-                  Confirm Pickup
-                </Text>
+                <>
+                  <Ionicons name="close" size={16} color="#F87171" />
+                  <Text className="text-red-400 text-sm font-semibold">Cancel</Text>
+                </>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={closePickupModal}
-              disabled={confirming}
-              className="py-3 items-center"
-            >
-              <Text className="text-[#a5abbd] text-sm">Cancel</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
-      </Modal>
-    </View>
+      </View>
+
+      {/* Where the package is headed next */}
+      <Text className="text-gray-400 text-xs mt-4">
+        {pickedUp ? "Delivering to" : "Pick up from"}
+      </Text>
+      <View className="flex-row items-center gap-2 mt-1 pr-16">
+        <Ionicons name="location-sharp" size={16} color="white" />
+        <Text numberOfLines={1} className="text-white text-base flex-1">
+          {(pickedUp ? item.dropoff_name : item.pickup_name) || "Unknown"}
+        </Text>
+      </View>
+
+      <Text className="text-gray-400 text-xs mt-3">Status</Text>
+      <View className="flex-row items-center gap-2 mt-1">
+        <Animated.View
+          style={[pulseStyle, { backgroundColor: statusInfo.color }]}
+          className="w-2.5 h-2.5 rounded-full"
+        />
+        <Text className="text-white text-base font-semibold">
+          {statusInfo.label}
+        </Text>
+      </View>
+
+      {/* The customer gives these codes to the rider */}
+      <View className="flex-row gap-3 mt-4">
+        <View className="flex-1 bg-[#212126]/90 rounded-2xl px-3 py-2">
+          <Text className="text-gray-400 text-[11px]">Pickup code</Text>
+          {pickedUp ? (
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
+              <Text className="text-white text-sm font-semibold">Confirmed</Text>
+            </View>
+          ) : (
+            <Text selectable className="text-white text-base font-bold tracking-widest">
+              {item.pickup_code ?? "—"}
+            </Text>
+          )}
+        </View>
+        <View className="flex-1 bg-[#212126]/90 rounded-2xl px-3 py-2">
+          <Text className="text-gray-400 text-[11px]">Drop-off code</Text>
+          <Text selectable className="text-white text-base font-bold tracking-widest">
+            {item.dropoff_code ?? "—"}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 };
 

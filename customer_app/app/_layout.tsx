@@ -193,7 +193,8 @@ export default function RootLayout() {
           name="trackPackage/index"
           options={{
             title: "Track ...",
-            headerShown: true,
+            // The screen draws its own back button over the map
+            headerShown: false,
             headerLeft: () => (
               <TouchableOpacity
                 onPress={() => router.push("/(tabs)/deliveries")}

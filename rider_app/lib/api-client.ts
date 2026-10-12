@@ -64,6 +64,23 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T | null>
   return readJsonBody<T>(res, path);
 }
 
+export async function apiPut<T>(path: string, body: unknown): Promise<T | null> {
+  const token = await getAccessToken();
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API ${res.status}: ${text}`);
+  }
+  return readJsonBody<T>(res, path);
+}
+
 // For endpoints whose reply body the app doesn't use (it may not be JSON)
 export async function apiPostIgnoringBody(
   path: string,
