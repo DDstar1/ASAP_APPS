@@ -27,8 +27,9 @@ function LoginForm() {
       return
     }
 
+    // Same-site paths only, so a crafted link can't bounce users off-site
     const next = searchParams.get('next')
-    if (next) { router.push(next); return }
+    if (next && next.startsWith('/') && !next.startsWith('//')) { router.push(next); return }
 
     const { data: stores } = await getVendorsByUserId(authData.user.id)
     router.push(stores && stores.length > 0 ? '/vendor/dashboard' : '/home')

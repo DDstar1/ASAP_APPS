@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { ClipboardList, ChevronDown, Filter } from 'lucide-react'
-import { getVendorOrders, updateOrderStatus, getCustomersByTelegramIds } from '@/lib/supabase_queries'
+// Zazu owns order status; the vendor only answers Accept / Can't fulfil
+import { getVendorOrders, getCustomersByTelegramIds, respondToOrder } from '@/lib/supabase_queries'
 import { useVendor } from '@/store/vendorStore'
+import { itemsTotal } from '@/lib/supabase'
 import type { OrderRow, CustomerRow } from '@/lib/supabase'
 
 type OrderWithCustomer = OrderRow & { customer?: CustomerRow }
@@ -22,13 +24,37 @@ function formatNaira(kobo: number) {
   return '₦' + (kobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })
 }
 
+// eta is a timestamp or a ready-made label ("12 min"), whichever Zazu writes
+function formatEta(eta: string) {
+  const at = new Date(eta)
+  return isNaN(at.getTime()) ? eta : at.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })
+}
+
+const cancelReasons: Record<NonNullable<OrderRow['cancel_reason']>, string> = {
+  vendor_declined: 'You marked this order as one you can\'t fulfil',
+  vendor_no_response: 'Not accepted within 48 hours',
+  pickup_timeout: 'Not picked up within 1 hour of a rider being assigned',
+}
+
+const refundLabels: Record<NonNullable<OrderRow['refund_status']>, string> = {
+  pending: 'Customer refund in progress',
+  refunded: 'Customer refunded',
+  failed: 'Customer refund failed, ASAP support is on it',
+}
+
+function PhoneLink({ phone }: { phone: string | null | undefined }) {
+  if (!phone) return <p className="text-[#a5abbd]">No phone</p>
+  return <a href={`tel:${phone}`} className="text-[#ff923e] hover:underline">{phone}</a>
+}
+
 export default function OrdersPage() {
   const { vendor } = useVendor()
   const [orders, setOrders] = useState<OrderWithCustomer[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<OrderRow['status'] | 'all'>('all')
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [respondingId, setRespondingId] = useState<number | null>(null)
+  const [respondError, setRespondError] = useState<{ id: number; message: string } | null>(null)
 
   useEffect(() => {
     if (!vendor) return
@@ -54,11 +80,20 @@ export default function OrdersPage() {
     setLoading(false)
   }
 
-  async function handleUpdateStatus(orderId: number, status: OrderRow['status']) {
-    setUpdatingId(orderId)
-    const { error } = await updateOrderStatus(orderId, status)
-    if (!error) setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
-    setUpdatingId(null)
+  async function handleRespond(orderId: number, accept: boolean) {
+    if (!accept && !window.confirm(`Cancel order #${orderId}? The customer will be refunded. This can't be undone.`)) return
+    setRespondingId(orderId)
+    setRespondError(null)
+    const { error } = await respondToOrder(orderId, accept)
+    if (error) {
+      setRespondError({
+        id: orderId,
+        message: error.code === 'P0001' ? 'This order can no longer be changed.' : 'Something went wrong. Try again.',
+      })
+    }
+    // Reload either way: on P0001 the order has moved on (e.g. timed out)
+    await load()
+    setRespondingId(null)
   }
 
   const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter)
@@ -114,41 +149,72 @@ export default function OrdersPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-[#e0e5f9]">{formatNaira(order.total)}</span>
+                  <span className="text-sm font-bold text-[#e0e5f9]">{formatNaira(itemsTotal(order))}</span>
                   <ChevronDown className={`w-4 h-4 text-[#a5abbd] transition-transform ${expandedId === order.id ? 'rotate-180' : ''}`} />
                 </div>
               </button>
 
               {expandedId === order.id && (
                 <div className="bg-[#152035] px-5 py-4">
-                  <div className="grid sm:grid-cols-2 gap-4 mb-4">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between"><span className="text-[#a5abbd]">Subtotal</span><span className="text-[#e0e5f9] font-medium">{formatNaira(order.subtotal)}</span></div>
-                      <div className="flex justify-between"><span className="text-[#a5abbd]">Delivery Fee</span><span className="text-[#e0e5f9] font-medium">{formatNaira(order.delivery_fee)}</span></div>
-                      <div className="flex justify-between pt-2 mt-2" style={{ borderTop: '1px solid rgba(165,171,189,0.1)' }}>
-                        <span className="font-semibold text-[#e0e5f9]">Total</span>
-                        <span className="font-bold text-[#e0e5f9]">{formatNaira(order.total)}</span>
+                  <div className="space-y-2 text-sm mb-4">
+                    {order.items?.map((item, i) => (
+                      <div key={i} className="flex justify-between gap-4">
+                        <span className="text-[#a5abbd]">{item.quantity} × {item.name}</span>
+                        <span className="text-[#e0e5f9] font-medium whitespace-nowrap">{formatNaira(item.price * item.quantity)}</span>
                       </div>
+                    ))}
+                    <div className="flex justify-between pt-2 mt-2" style={{ borderTop: '1px solid rgba(165,171,189,0.1)' }}>
+                      <span className="font-semibold text-[#e0e5f9]">Items total</span>
+                      <span className="font-bold text-[#e0e5f9]">{formatNaira(itemsTotal(order))}</span>
                     </div>
-                    {order.customer && (
-                      <div className="bg-[#1c2a42] rounded-xl p-3 text-sm">
-                        <p className="font-medium text-[#a5abbd] mb-1">Customer</p>
-                        <p className="text-[#e0e5f9]">{order.customer.name}</p>
-                        <p className="text-[#a5abbd]">{order.customer.phone}</p>
-                      </div>
-                    )}
                   </div>
-                  {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                    <div>
-                      <p className="text-xs font-medium text-[#a5abbd] mb-2">Update Status</p>
-                      <div className="flex flex-wrap gap-2">
-                        {STATUS_OPTIONS.filter((s) => s !== order.status && s !== 'pending').map((s) => (
-                          <button key={s} disabled={updatingId === order.id} onClick={() => handleUpdateStatus(order.id, s)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${statusColors[s]} opacity-80 hover:opacity-100 disabled:opacity-40`}>
-                            Mark {s.replace('_', ' ')}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                    <div className="bg-[#1c2a42] rounded-xl p-3 text-sm">
+                      <p className="font-medium text-[#a5abbd] mb-1">Customer</p>
+                      <p className="text-[#e0e5f9]">{order.customer?.name ?? 'Telegram customer'}</p>
+                      <PhoneLink phone={order.customer_phone ?? order.customer?.phone} />
+                    </div>
+                    <div className="bg-[#1c2a42] rounded-xl p-3 text-sm">
+                      <p className="font-medium text-[#a5abbd] mb-1">Rider</p>
+                      {order.driver_name || order.driver_phone ? (
+                        <>
+                          <p className="text-[#e0e5f9]">{order.driver_name}</p>
+                          <PhoneLink phone={order.driver_phone} />
+                          {order.pickup_code && <p className="text-[#a5abbd] mt-1">Pickup code <span className="font-mono font-semibold text-[#ff923e]">{order.pickup_code}</span></p>}
+                          {order.eta && <p className="text-[#a5abbd]">ETA {formatEta(order.eta)}</p>}
+                        </>
+                      ) : (
+                        <p className="text-[#a5abbd]">No rider assigned yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {order.status === 'cancelled' && order.cancel_reason && (
+                    <div className="bg-red-500/10 rounded-xl p-3 text-sm mb-4">
+                      <p className="text-red-400">{cancelReasons[order.cancel_reason]}</p>
+                      {order.refund_status && <p className="text-[#a5abbd] mt-0.5">{refundLabels[order.refund_status]}</p>}
+                    </div>
+                  )}
+
+                  {respondError?.id === order.id && (
+                    <p className="text-sm text-red-400 mb-2">{respondError.message}</p>
+                  )}
+
+                  {(order.status === 'paid' || order.status === 'in_progress') && !order.pickup_confirmed_at && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {order.status === 'paid' && !order.vendor_response && (
+                        <button disabled={respondingId === order.id} onClick={() => handleRespond(order.id, true)}
+                          className="px-4 py-2 rounded-full text-sm font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition disabled:opacity-40">
+                          Accept order
+                        </button>
+                      )}
+                      <button disabled={respondingId === order.id} onClick={() => handleRespond(order.id, false)}
+                        className="px-4 py-2 rounded-full text-sm font-medium border border-red-500/30 text-red-400 hover:bg-red-500/10 transition disabled:opacity-40">
+                        Can&apos;t fulfil
+                      </button>
+                      {order.status === 'paid' && !order.vendor_response && (
+                        <span className="text-xs text-[#a5abbd]">Orders not accepted within 48 hours are cancelled and refunded</span>
+                      )}
                     </div>
                   )}
                 </div>

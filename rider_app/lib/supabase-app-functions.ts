@@ -138,7 +138,8 @@ export async function signUpUser(
 export type VehicleType = "Bike" | "EV";
 
 // Mirrors Rust's DriverRequest minus driver_pubkey, which Rust generates.
-// EV riders must give vehicle and license_number; optional for bikes.
+// EV riders must give vehicle and license_number. Bikes send the generated
+// ASAP vehicle ID ("ASP-XX-XX", see driver-setup) as license_number.
 export type DriverRequest = {
   name: string;
   email: string;
@@ -151,9 +152,8 @@ export type DriverRequest = {
 };
 
 /**
- * Rust leg of signup: creates the back_drivers row. Rust takes driver_id from
- * the auth token, so it matches the Supabase user. Needs the session
- * signUpUser just created.
+ * Creates the back_drivers row (driver-setup screen). Rust takes driver_id
+ * from the auth token, so it matches the signed-in ASAP user.
  */
 export async function createDriverAccount(details: DriverRequest) {
   await apiPost("/admin/create-drivers", details);
@@ -294,6 +294,28 @@ export async function updateRiderLocation(latitude: number, longitude: number) {
 // back_drivers.status. Rust sets "busy" on assignment; the app only ever
 // sends "available" or "offline".
 export type DriverStatus = "available" | "busy" | "offline";
+
+/**
+ * Whether the signed-in user has a back_drivers row yet. One ASAP login can be
+ * customer, driver, vendor and investor; the driver row is added after signup
+ * (driver-setup screen → Rust). null when it can't be checked (e.g. offline).
+ * Reads the own row directly so it works with or without my_access().
+ */
+export async function hasDriverProfile(): Promise<boolean | null> {
+  try {
+    const user = await requireUser();
+    const { data, error } = await supabase
+      .from("back_drivers")
+      .select("driver_id")
+      .eq("driver_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    return !!data;
+  } catch (err: any) {
+    console.error("Failed to check driver profile:", err.message);
+    return null;
+  }
+}
 
 /** The signed-in driver's saved status, or null if it can't be read. */
 export async function getDriverStatus(): Promise<DriverStatus | null> {

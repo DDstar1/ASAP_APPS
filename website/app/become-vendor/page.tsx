@@ -6,35 +6,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Loader2, ChevronRight } from 'lucide-react'
 import { getSession, checkVendorNameExists, insertVendor } from '@/lib/supabase_queries'
+import VendorGuidelines from '@/components/VendorGuidelines'
+import BankSelect from '@/components/BankSelect'
 
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false })
-
-const NIGERIAN_BANKS = [
-  { name: 'Access Bank', code: '044' },
-  { name: 'Citibank', code: '023' },
-  { name: 'Ecobank', code: '050' },
-  { name: 'Fidelity Bank', code: '070' },
-  { name: 'First Bank of Nigeria', code: '011' },
-  { name: 'First City Monument Bank (FCMB)', code: '214' },
-  { name: 'Guaranty Trust Bank (GTBank)', code: '058' },
-  { name: 'Heritage Bank', code: '030' },
-  { name: 'Jaiz Bank', code: '301' },
-  { name: 'Keystone Bank', code: '082' },
-  { name: 'Kuda Bank', code: '090267' },
-  { name: 'Moniepoint', code: '50515' },
-  { name: 'OPay', code: '100004' },
-  { name: 'PalmPay', code: '100033' },
-  { name: 'Polaris Bank', code: '076' },
-  { name: 'Providus Bank', code: '101' },
-  { name: 'Stanbic IBTC Bank', code: '221' },
-  { name: 'Standard Chartered', code: '068' },
-  { name: 'Sterling Bank', code: '232' },
-  { name: 'Union Bank', code: '032' },
-  { name: 'United Bank for Africa (UBA)', code: '033' },
-  { name: 'Unity Bank', code: '215' },
-  { name: 'Wema Bank', code: '035' },
-  { name: 'Zenith Bank', code: '057' },
-]
 
 export default function BecomeVendor() {
   const router = useRouter()
@@ -44,13 +19,14 @@ export default function BecomeVendor() {
   const [error, setError] = useState('')
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
+  const [agreed, setAgreed] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
     phone: '',
     address: '',
     open_time: '08:00',
-    close_time: '20:00',
+    close_time: '22:00',
     acct_type: 'vendor' as 'vendor' | 'Handy-man' | 'service-provider',
     bank_account_number: '',
     bank_code: '',
@@ -72,6 +48,7 @@ export default function BecomeVendor() {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
     if (lat === null || lng === null) { setError('Please pick your store location on the map.'); return }
+    if (!agreed) { setError('Please read and agree to the vendor guidelines.'); return }
     setLoading(true)
     setError('')
 
@@ -89,6 +66,7 @@ export default function BecomeVendor() {
       lng,
       acct_type: form.acct_type,
       acct_details: { bank_account_number: form.bank_account_number, bank_code: form.bank_code },
+      guidelines_accepted_at: new Date().toISOString(),
     })
 
     if (vendorError) { setError('Could not create vendor profile: ' + vendorError.message); setLoading(false); return }
@@ -161,12 +139,7 @@ export default function BecomeVendor() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Bank</label>
-                <select required value={form.bank_code} onChange={(e) => update('bank_code', e.target.value)} className={inputClass}>
-                  <option value="">Select your bank</option>
-                  {NIGERIAN_BANKS.map((b) => (
-                    <option key={b.code} value={b.code}>{b.name}</option>
-                  ))}
-                </select>
+                <BankSelect value={form.bank_code} onChange={(code) => update('bank_code', code)} className={inputClass} />
               </div>
             </div>
 
@@ -176,7 +149,9 @@ export default function BecomeVendor() {
               <LocationPicker lat={lat} lng={lng} onChange={(newLat, newLng) => { setLat(newLat); setLng(newLng) }} />
             </div>
 
-            <button type="submit" disabled={loading}
+            <VendorGuidelines agreed={agreed} onAgreedChange={setAgreed} />
+
+            <button type="submit" disabled={loading || !agreed}
               className="w-full py-3 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-semibold hover:shadow-[0_12px_32px_rgba(255,146,62,0.25)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><ChevronRight className="w-4 h-4" /> Create Vendor Account</>}
             </button>

@@ -1,20 +1,27 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
-  Bot, ExternalLink, Loader2, CheckCircle, Trash2,
-  ToggleLeft, ToggleRight, AlertCircle, Copy, Check, Sparkles, Lock,
+  ExternalLink, Loader2, CheckCircle, ToggleLeft, ToggleRight, AlertCircle, Sparkles, Lock,
 } from 'lucide-react'
-import { getVendorBot, insertBot, updateBotActive, deleteBot } from '@/lib/supabase_queries'
-import { useVendor } from '@/store/vendorStore'
+import { getVendorBot, updateBotActive, updateBotUsername, updateVendor } from '@/lib/supabase_queries'
+import { useVendor, useVendorStore } from '@/store/vendorStore'
+import type { VendorRow } from '@/lib/supabase'
+import { STRIKE_LIMIT } from '@/lib/vendorGuidelines'
 
+// A bot is paired in the same write that creates the store (DB trigger). The
+// token never reaches the browser, not even for the owning vendor. The vendor
+// names the bot here.
 type BotRow = {
   id: number
-  bot_id: number
-  bot_username: string
-  bot_token: string
+  bot_id: number | null
+  bot_username: string | null
+  bot_link: string | null // https://t.me/<handle>, set by Zazu
   vendor_id: number
   is_active: boolean
+  suspended_at: string | null // 5 strikes; only support can lift it
+  billing_paused_at: string | null // subscription unpaid; lifts itself once paid
   created_at: string
 }
 
@@ -23,12 +30,22 @@ export default function BotPage() {
   const [bot, setBot] = useState<BotRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasSubscription, setHasSubscription] = useState(false)
-  const [token, setToken] = useState('')
-  const [connecting, setConnecting] = useState(false)
   const [toggling, setToggling] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [username, setUsername] = useState('')
+  const [savingName, setSavingName] = useState(false)
+  // The bot's welcome message lives on the store (telegram_vendor.message_body)
+  const [welcome, setWelcome] = useState('')
+  const [savingWelcome, setSavingWelcome] = useState(false)
+  const [welcomeSaved, setWelcomeSaved] = useState(false)
+
+  // Reset when the vendor switches store (during render, not in an effect)
+  const [welcomeFor, setWelcomeFor] = useState<number | null>(null)
+  if (vendor && welcomeFor !== vendor.id) {
+    setWelcomeFor(vendor.id)
+    setWelcome(vendor.message_body ?? '')
+    setWelcomeSaved(false)
+  }
 
   useEffect(() => {
     if (!vendor) return
@@ -41,64 +58,48 @@ export default function BotPage() {
     })
   }, [vendor])
 
-  async function handleConnect(e: React.SyntheticEvent) {
-    e.preventDefault()
-    setConnecting(true)
-    setError('')
-
-    let botInfo: { id: number; username: string } | null = null
-    try {
-      const res = await fetch(`https://api.telegram.org/bot${token.trim()}/getMe`)
-      const json = await res.json()
-      if (!json.ok) { setError('Invalid bot token. Make sure you copied it correctly from @BotFather.'); setConnecting(false); return }
-      botInfo = { id: json.result.id, username: json.result.username }
-    } catch {
-      setError('Could not reach Telegram API. Check your connection.')
-      setConnecting(false)
-      return
-    }
-
-    const { error: dbError } = await insertBot({
-      bot_id: botInfo.id,
-      bot_username: botInfo.username,
-      bot_token: token.trim(),
-      vendor_id: vendor!.id,
-    })
-
-    if (dbError) {
-      setError(dbError.code === '23505' ? 'This bot is already connected to a store.' : dbError.message)
-      setConnecting(false)
-      return
-    }
-
-    const { data } = await getVendorBot(vendor!.id)
-    setBot(data as BotRow)
-    setHasSubscription(true)
-    setToken('')
-    setConnecting(false)
-  }
-
   async function handleToggle() {
     if (!bot) return
     setToggling(true)
-    await updateBotActive(bot.id, !bot.is_active)
-    setBot((prev) => prev ? { ...prev, is_active: !prev.is_active } : prev)
+    setError('')
+    const { error: dbError } = await updateBotActive(bot.id, !bot.is_active)
+    if (dbError) setError('Could not update the bot. Try again.')
+    else setBot((prev) => prev ? { ...prev, is_active: !prev.is_active } : prev)
     setToggling(false)
   }
 
-  async function handleDelete() {
+  async function handleSaveUsername(e: React.SyntheticEvent) {
+    e.preventDefault()
     if (!bot) return
-    setDeleting(true)
-    await deleteBot(bot.id)
-    setBot(null)
-    setDeleting(false)
+    const name = username.trim()
+    if (!name) return
+    setSavingName(true)
+    setError('')
+    const { error: dbError } = await updateBotUsername(bot.id, name)
+    if (dbError) setError(dbError.code === '23505' ? 'That bot name is already taken.' : 'Could not save the bot name. Try again.')
+    else {
+      setBot((prev) => prev ? { ...prev, bot_username: name } : prev)
+      setUsername('')
+    }
+    setSavingName(false)
   }
 
-  function copyToken() {
-    if (!bot) return
-    navigator.clipboard.writeText(bot.bot_token)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function handleSaveWelcome(e: React.SyntheticEvent) {
+    e.preventDefault()
+    if (!vendor) return
+    setSavingWelcome(true)
+    setWelcomeSaved(false)
+    setError('')
+    const { data, error: dbError } = await updateVendor(vendor.id, { message_body: welcome.trim() || null })
+    if (dbError || !data) setError('Could not save the welcome message. Try again.')
+    else {
+      const row = data as VendorRow
+      const { vendors, setVendor, setVendors } = useVendorStore.getState()
+      setVendor(row)
+      setVendors(vendors.map((v) => (v.id === row.id ? row : v)))
+      setWelcomeSaved(true)
+    }
+    setSavingWelcome(false)
   }
 
   if (loading) {
@@ -113,7 +114,7 @@ export default function BotPage() {
     <div className="max-w-2xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-[#e0e5f9]">Telegram Bot</h1>
-        <p className="text-[#a5abbd] mt-1 text-sm">Connect a Telegram bot to receive orders from customers</p>
+        <p className="text-[#a5abbd] mt-1 text-sm">The Telegram bot your customers order from</p>
       </div>
 
       {/* No subscription — upsell gate */}
@@ -139,111 +140,107 @@ export default function BotPage() {
               </div>
             ))}
           </div>
-          <button
+          <Link
+            href="/vendor/dashboard/billing"
             className="w-full py-3 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-semibold hover:shadow-[0_12px_32px_rgba(255,146,62,0.25)] transition-all flex items-center justify-center gap-2"
-            onClick={() => {
-              // TODO: link to your subscription/payment flow
-              alert('Subscription flow coming soon!')
-            }}
           >
             <Sparkles className="w-4 h-4" />
             Upgrade to get a Bot
-          </button>
+          </Link>
         </div>
       )}
 
-      {/* Has subscription — how-to guide */}
-      {(hasSubscription || bot) && (
-        <div className="bg-[#152035] rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-[#e0e5f9] mb-4 flex items-center gap-2">
-            <Bot className="w-5 h-5 text-[#ff923e]" />
-            How to get a bot
-          </h2>
-          <ol className="space-y-3 text-sm text-[#a5abbd]">
-            <li className="flex gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#ff923e]/15 text-[#ff923e] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
-              <span>Open Telegram and search for <strong className="text-[#e0e5f9]">@BotFather</strong></span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#ff923e]/15 text-[#ff923e] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
-              <span>Send the command <code className="bg-[#1c2a42] px-1.5 py-0.5 rounded text-[#e0e5f9]">/newbot</code> and follow the prompts to name your bot</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#ff923e]/15 text-[#ff923e] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
-              <span>BotFather will give you a token that looks like <code className="bg-[#1c2a42] px-1.5 py-0.5 rounded text-[#e0e5f9]">123456:ABC-DEF...</code></span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-6 h-6 rounded-full bg-[#ff923e]/15 text-[#ff923e] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
-              <span>Paste that token below to connect your bot to your store</span>
-            </li>
-          </ol>
-          <a
-            href="https://t.me/BotFather"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-[#229ED9]/15 text-[#229ED9] text-sm font-medium hover:bg-[#229ED9]/25 transition"
-          >
-            <Bot className="w-4 h-4" />
-            Open @BotFather
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      )}
-
-      {/* Connected bot */}
-      {bot ? (
+      {/* Assigned bot */}
+      {bot && (
         <div className="bg-[#152035] rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-emerald-400" />
-              Bot Connected
+              Your Bot
             </h2>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${bot.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#a5abbd]/10 text-[#a5abbd]'}`}>
-              {bot.is_active ? 'Active' : 'Inactive'}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${bot.suspended_at ? 'bg-red-500/10 text-red-400' : bot.billing_paused_at ? 'bg-amber-500/10 text-amber-400' : bot.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#a5abbd]/10 text-[#a5abbd]'}`}>
+              {bot.suspended_at ? 'Suspended' : bot.billing_paused_at ? 'Paused — unpaid' : bot.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
 
+          {bot.suspended_at && (
+            <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              This bot was deactivated after {STRIKE_LIMIT} cancelled orders. Call ASAP support to have it reinstated.
+            </div>
+          )}
+
+          {bot.billing_paused_at && !bot.suspended_at && (
+            <div className="flex items-start gap-2 bg-amber-500/10 text-amber-300 px-4 py-3 rounded-xl text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>
+                Your bot is off because your subscription payment is overdue. It switches back on as soon as you pay.{' '}
+                <Link href="/vendor/dashboard/billing" className="font-semibold underline underline-offset-2">Go to Billing</Link>
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              {error}
+            </div>
+          )}
+
           <div className="space-y-3">
             <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
-              <span className="text-sm text-[#a5abbd]">Username</span>
-              <a
-                href={`https://t.me/${bot.bot_username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-[#229ED9] hover:underline flex items-center gap-1"
-              >
-                @{bot.bot_username}
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <span className="text-sm text-[#a5abbd]">Display name</span>
+              {bot.bot_username ? (
+                <span className="text-sm font-medium text-[#e0e5f9]">{bot.bot_username}</span>
+              ) : (
+                <span className="text-sm text-[#a5abbd]">Not named yet</span>
+              )}
             </div>
-            <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
-              <span className="text-sm text-[#a5abbd]">Bot ID</span>
-              <span className="text-sm text-[#e0e5f9] font-mono">{bot.bot_id}</span>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
-              <span className="text-sm text-[#a5abbd]">Token</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[#e0e5f9] font-mono">
-                  {bot.bot_token.slice(0, 10)}••••••••••••
-                </span>
-                <button
-                  onClick={copyToken}
-                  className="p-1.5 rounded-lg text-[#a5abbd]/60 hover:text-[#a5abbd] hover:bg-[#1c2a42] transition"
-                  title="Copy token"
+            {bot.bot_link && (
+              <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
+                <span className="text-sm text-[#a5abbd]">Link</span>
+                <a
+                  href={bot.bot_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-[#229ED9] hover:underline flex items-center gap-1"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
+                  Open bot
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-[#a5abbd]">Connected</span>
-              <span className="text-sm text-[#e0e5f9]">
-                {new Date(bot.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </div>
+            )}
+            {bot.bot_id !== null && (
+              <div className="flex items-center justify-between py-3">
+                <span className="text-sm text-[#a5abbd]">Bot ID</span>
+                <span className="text-sm text-[#e0e5f9] font-mono">{bot.bot_id}</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          {!bot.bot_username && !bot.suspended_at && (
+            <form onSubmit={handleSaveUsername} className="space-y-3">
+              <label className="block text-sm font-medium text-[#e0e5f9]">Name your bot</label>
+              <p className="text-xs text-[#a5abbd]/60">The name customers see on your bot in Telegram</p>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Mercury Wears"
+                className="w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm"
+              />
+              <button
+                type="submit"
+                disabled={savingName || !username.trim()}
+                className="w-full py-3 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {savingName ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save name'}
+              </button>
+            </form>
+          )}
+
+          {!bot.suspended_at && !bot.billing_paused_at && <div className="flex items-center gap-3 pt-2">
             <button
               onClick={handleToggle}
               disabled={toggling}
@@ -259,51 +256,43 @@ export default function BotPage() {
                 ? <ToggleLeft className="w-4 h-4" />
                 : <ToggleRight className="w-4 h-4" />
               }
-              {bot.is_active ? 'Deactivate bot' : 'Activate bot'}
+              {bot.is_active ? 'Turn bot off' : 'Turn bot on'}
             </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium border border-red-500/20 text-red-400 hover:bg-red-500/10 transition disabled:opacity-60"
-            >
-              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Disconnect
-            </button>
-          </div>
+          </div>}
         </div>
-      ) : hasSubscription ? (
-        /* Connect form — subscription confirmed, no bot yet */
-        <div className="bg-[#152035] rounded-2xl p-6">
-          <h2 className="text-base font-semibold text-[#e0e5f9] mb-4">Connect your bot</h2>
-          {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm mb-4">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              {error}
-            </div>
-          )}
-          <form onSubmit={handleConnect} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Bot Token</label>
-              <input
-                type="text"
-                required
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
-                className="w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition font-mono text-sm"
-              />
-              <p className="text-xs text-[#a5abbd]/60 mt-1.5">Paste the token you received from @BotFather</p>
-            </div>
+      )}
+
+      {/* Welcome message */}
+      {bot && (
+        <form onSubmit={handleSaveWelcome} className="bg-[#152035] rounded-2xl p-6 space-y-3 mt-6">
+          <label htmlFor="welcome-message" className="block text-base font-semibold text-[#e0e5f9]">Welcome message</label>
+          <p className="text-xs text-[#a5abbd]/60">What your bot says when a customer starts a chat</p>
+          <textarea
+            id="welcome-message"
+            rows={4}
+            maxLength={1000}
+            value={welcome}
+            onChange={(e) => { setWelcome(e.target.value); setWelcomeSaved(false) }}
+            placeholder={`Welcome to ${vendor?.name ?? 'our store'}! Browse the menu and order in a few taps.`}
+            className="w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm resize-y"
+          />
+          <div className="flex items-center justify-end gap-3">
+            {welcomeSaved && (
+              <span className="flex items-center gap-1.5 text-sm text-emerald-400">
+                <CheckCircle className="w-4 h-4" />
+                Saved
+              </span>
+            )}
             <button
               type="submit"
-              disabled={connecting || !token.trim()}
-              className="w-full py-3 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-semibold hover:shadow-[0_12px_32px_rgba(255,146,62,0.25)] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={savingWelcome || welcome.trim() === (vendor?.message_body ?? '')}
+              className="py-2.5 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {connecting ? <><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</> : <><Bot className="w-4 h-4" /> Connect Bot</>}
+              {savingWelcome ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save message'}
             </button>
-          </form>
-        </div>
-      ) : null}
+          </div>
+        </form>
+      )}
     </div>
   )
 }

@@ -64,6 +64,31 @@ export async function getRideQuotes(
   }
 }
 
+// Mirrors Rust's AreaCheck: allowed says whether the trip is inside one
+// active service area; reason is worded for the customer when it isn't.
+export type AreaCheck = {
+  allowed: boolean;
+  city?: string;
+  reason?: string;
+};
+
+// The gate before the ride type screen. Quote, ride request and checkout
+// enforce the same rule in Rust, so a failed call lets the user carry on.
+export async function checkServiceArea(
+  pick_up: GeoPointJson,
+  drop_off: GeoPointJson,
+): Promise<AreaCheck> {
+  try {
+    return (
+      (await apiPost<AreaCheck>("/service-areas/check", { pick_up, drop_off })) ??
+      { allowed: true }
+    );
+  } catch (err) {
+    console.error("❌ Error checking service area:", err);
+    return { allowed: true };
+  }
+}
+
 // Rust saves the request, sets the order pending and replies straight away;
 // the driver search runs in the background (up to 3 min). The app ignores
 // the body: the order row is the source of truth, watched via realtime.

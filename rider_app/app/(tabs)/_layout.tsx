@@ -6,16 +6,25 @@ import { HapticTab } from "@/components/haptic-tab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { useUserStore } from "@/store/useUserStore";
 import { hasAcceptedGuidelines } from "@/utils/riderGuidelines";
+import { hasDriverProfile } from "@/lib/supabase-app-functions";
 
 export default function TabLayout() {
   const userId = useUserStore((s) => s.user?.id);
 
-  // Every route into the tabs passes here, so new riders see the guidelines first
+  // Every route into the tabs passes here. An ASAP login without a driver
+  // profile (e.g. made on the website or in the customer app) finishes driver
+  // setup first, then new riders see the guidelines
   useEffect(() => {
     if (!userId) return;
-    hasAcceptedGuidelines(userId).then((accepted) => {
+    (async () => {
+      const isDriver = await hasDriverProfile();
+      if (isDriver === false) {
+        router.replace("/auth/driver-setup");
+        return;
+      }
+      const accepted = await hasAcceptedGuidelines(userId);
       if (!accepted) router.replace("/guidelines");
-    });
+    })();
   }, [userId]);
 
   return (

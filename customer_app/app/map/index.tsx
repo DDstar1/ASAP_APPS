@@ -2,7 +2,7 @@ import BookingSheet from "@/components/BookingSheet";
 import DestinationSearchModal from "@/components/DestinationSearchModal";
 import RiderAwaitingModal from "@/components/RiderAwaitingModal";
 import { payWithKorapay } from "@/lib/payments";
-import { getRideQuotes, RideQuote } from "@/lib/ride-request";
+import { checkServiceArea, getRideQuotes, RideQuote } from "@/lib/ride-request";
 import { useRideDraftStore } from "@/store/useRideDraftStore";
 import { useUserStore } from "@/store/useUserStore";
 import { fitAll, reverseGeocode } from "@/utils/mapUtils";
@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,6 +39,7 @@ export default function MapScreen() {
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [checkingArea, setCheckingArea] = useState(false);
   // Set once Korapay reports success; opens the awaiting-rider modal
   const [checkout, setCheckout] = useState<{
     reference: string;
@@ -113,9 +114,16 @@ export default function MapScreen() {
     };
   }, [pickup?.coordinates, destination?.coordinates]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!pickup || !destination) {
       Alert.alert("Missing Info", "Please select both pickup and destination.");
+      return;
+    }
+    setCheckingArea(true);
+    const area = await checkServiceArea(pickup.coordinates, destination.coordinates);
+    setCheckingArea(false);
+    if (!area.allowed) {
+      Alert.alert("Outside our coverage", area.reason ?? "We don't deliver there yet.");
       return;
     }
     router.push("/map/item-type");
@@ -185,9 +193,10 @@ export default function MapScreen() {
         provider={PROVIDER_GOOGLE}
         style={{ flex: 1 }}
         customMapStyle={mapStyleFor(colorScheme)}
+        // Abuja, the centre of the first service area
         initialRegion={{
-          latitude: 6.5244,
-          longitude: 3.3792,
+          latitude: 9.0765,
+          longitude: 7.3986,
           latitudeDelta: 0.2,
           longitudeDelta: 0.2,
         }}
@@ -333,12 +342,16 @@ export default function MapScreen() {
 
             <TouchableOpacity
               onPress={handleContinue}
-              disabled={!pickup || !destination}
+              disabled={!pickup || !destination || checkingArea}
               className={`h-14 rounded-full bg-[#EE7F3A] justify-center items-center ${
                 pickup && destination ? "" : "opacity-50"
               }`}
             >
-              <Text className="text-white text-lg font-bold">Continue</Text>
+              {checkingArea ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white text-lg font-bold">Continue</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

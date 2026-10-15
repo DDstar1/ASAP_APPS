@@ -10,37 +10,11 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MyKeyboardAvoidingWrapper } from "./MyKeyboardAvoidingWrapper";
 import { updateBankDetails } from "@/lib/supabase-app-functions";
-
-const NIGERIAN_BANKS = [
-  { name: "Access Bank", code: "044" },
-  { name: "Citibank", code: "023" },
-  { name: "Ecobank", code: "050" },
-  { name: "Fidelity Bank", code: "070" },
-  { name: "First Bank of Nigeria", code: "011" },
-  { name: "First City Monument Bank (FCMB)", code: "214" },
-  { name: "Guaranty Trust Bank (GTBank)", code: "058" },
-  { name: "Heritage Bank", code: "030" },
-  { name: "Jaiz Bank", code: "301" },
-  { name: "Keystone Bank", code: "082" },
-  { name: "Kuda Bank", code: "090267" },
-  { name: "Moniepoint", code: "50515" },
-  { name: "OPay", code: "100004" },
-  { name: "PalmPay", code: "100033" },
-  { name: "Polaris Bank", code: "076" },
-  { name: "Providus Bank", code: "101" },
-  { name: "Stanbic IBTC Bank", code: "221" },
-  { name: "Standard Chartered", code: "068" },
-  { name: "Sterling Bank", code: "232" },
-  { name: "Union Bank", code: "032" },
-  { name: "United Bank for Africa (UBA)", code: "033" },
-  { name: "Unity Bank", code: "215" },
-  { name: "Wema Bank", code: "035" },
-  { name: "Zenith Bank", code: "057" },
-];
+import { getBanks, type Bank } from "@/lib/banks";
 
 interface Props {
   visible: boolean;
@@ -53,13 +27,35 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
   const [bankCode, setBankCode] = useState("");
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [banksState, setBanksState] = useState<"loading" | "ready" | "error">("loading");
+  const [search, setSearch] = useState("");
 
-  const selectedBank = NIGERIAN_BANKS.find((b) => b.code === bankCode);
+  const loadBanks = () => {
+    setBanksState("loading");
+    getBanks()
+      .then((list) => { setBanks(list); setBanksState("ready"); })
+      .catch((err) => { console.error("❌ Couldn't load banks:", err); setBanksState("error"); });
+  };
+
+  useEffect(() => {
+    if (visible && banks.length === 0) loadBanks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const selectedBank = banks.find((b) => b.code === bankCode);
+  const query = search.trim().toLowerCase();
+  const filteredBanks = query ? banks.filter((b) => b.name.toLowerCase().includes(query)) : banks;
+
+  const closePicker = () => {
+    setShowPicker(false);
+    setSearch("");
+  };
 
   const handleClose = () => {
     setAccountNumber("");
     setBankCode("");
-    setShowPicker(false);
+    closePicker();
     onClose();
   };
 
@@ -117,16 +113,30 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
           {/* Bank picker */}
           <Text className="text-[#a5abbd] text-[11px] tracking-widest mb-2">BANK</Text>
           <TouchableOpacity
-            onPress={() => setShowPicker(true)}
+            onPress={() => (banksState === "error" ? loadBanks() : setShowPicker(true))}
+            disabled={banksState === "loading"}
             className="flex-row items-center justify-between bg-[#121a2b] rounded-2xl px-4 py-4 mb-6 border border-[#ff923e]/20"
           >
-            <View className="flex-row items-center gap-3">
+            <View className="flex-row items-center gap-3 flex-1">
               <MaterialIcons name="account-balance" size={18} color="#a5abbd" />
-              <Text className={selectedBank ? "text-[#e0e5f9] text-base" : "text-[#4a5568] text-base"}>
-                {selectedBank ? selectedBank.name : "Select your bank"}
+              <Text
+                numberOfLines={1}
+                className={selectedBank ? "text-[#e0e5f9] text-base flex-1" : "text-[#4a5568] text-base flex-1"}
+              >
+                {selectedBank
+                  ? selectedBank.name
+                  : banksState === "loading"
+                    ? "Loading banks..."
+                    : banksState === "error"
+                      ? "Couldn't load banks. Tap to retry"
+                      : "Select your bank"}
               </Text>
             </View>
-            <MaterialIcons name="expand-more" size={20} color="#a5abbd" />
+            {banksState === "loading" ? (
+              <ActivityIndicator size="small" color="#a5abbd" />
+            ) : (
+              <MaterialIcons name={banksState === "error" ? "refresh" : "expand-more"} size={20} color="#a5abbd" />
+            )}
           </TouchableOpacity>
 
           {/* Save button */}
@@ -149,16 +159,32 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
       </MyKeyboardAvoidingWrapper>
 
       {/* Bank picker sheet */}
-      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
-        <Pressable className="flex-1 bg-black/80" onPress={() => setShowPicker(false)} />
+      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={closePicker}>
+        <MyKeyboardAvoidingWrapper>
+        <Pressable className="flex-1 bg-black/80" onPress={closePicker} />
         <SafeAreaView edges={["bottom"]} className="bg-[#0f1626] rounded-t-[28px] px-4 pt-4 pb-6" style={{ maxHeight: "70%" }}>
           <View className="w-10 h-1 rounded-full bg-[#2a3245] self-center mb-4" />
-          <Text className="text-[#e0e5f9] text-base font-bold mb-4 px-2">Select Bank</Text>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {NIGERIAN_BANKS.map((bank) => (
+          <Text className="text-[#e0e5f9] text-base font-bold mb-3 px-2">Select Bank</Text>
+          {/* The full list runs to hundreds of banks */}
+          <View className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-3 gap-3 mb-3 mx-1">
+            <MaterialIcons name="search" size={18} color="#a5abbd" />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search banks"
+              placeholderTextColor="#4a5568"
+              autoCorrect={false}
+              className="flex-1 text-[#e0e5f9] text-base"
+            />
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {filteredBanks.length === 0 && (
+              <Text className="text-[#a5abbd] text-sm px-2 py-4">No bank matches “{search.trim()}”</Text>
+            )}
+            {filteredBanks.map((bank) => (
               <TouchableOpacity
                 key={bank.code}
-                onPress={() => { setBankCode(bank.code); setShowPicker(false); }}
+                onPress={() => { setBankCode(bank.code); closePicker(); }}
                 className="flex-row items-center justify-between px-2 py-3.5 border-b border-[#1e2a40]"
               >
                 <Text className="text-[#e0e5f9] text-sm">{bank.name}</Text>
@@ -169,6 +195,7 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
             ))}
           </ScrollView>
         </SafeAreaView>
+        </MyKeyboardAvoidingWrapper>
       </Modal>
     </Modal>
   );

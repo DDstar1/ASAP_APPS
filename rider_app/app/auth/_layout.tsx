@@ -11,6 +11,7 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
+      <Stack.Screen name="driver-setup" options={{ gestureEnabled: false }} />
       <Stack.Screen
         name="auth-callback/index"
         options={{ headerShown: false }}
