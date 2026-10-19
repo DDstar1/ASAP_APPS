@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Package, LogOut, Loader2, Smartphone, Store, ClipboardList, Clock, CheckCircle, Truck, Bike } from 'lucide-react'
-import { getSession, signOut, getVendorsByUserId, getUserDeliveryOrders } from '@/lib/supabase_queries'
+import { Package, LogOut, Loader2, Smartphone, Store, ClipboardList, Clock, CheckCircle, Truck, Bike, Phone, XCircle } from 'lucide-react'
+import { getSession, signOut, getVendorsByUserId, getUserDeliveryOrders, getMyAccess } from '@/lib/supabase_queries'
+import { getMyApplication, type DriverApplication } from '@/lib/driverApplications'
+import DriverApplicationSheet from '@/components/DriverApplicationSheet'
 import type { User } from '@supabase/supabase-js'
 
 type Order = {
@@ -35,6 +37,9 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([])
   const [isVendor, setIsVendor] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [isDriver, setIsDriver] = useState(false)
+  const [application, setApplication] = useState<DriverApplication | null>(null)
+  const [applying, setApplying] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -43,13 +48,17 @@ export default function Home() {
       if (!user) { router.replace('/login'); return }
       setUser(user)
 
-      const [{ data: ordersData }, { data: vendorData }] = await Promise.all([
+      const [{ data: ordersData }, { data: vendorData }, { data: access }, { data: app }] = await Promise.all([
         getUserDeliveryOrders(user.id),
         getVendorsByUserId(user.id),
+        getMyAccess(),
+        getMyApplication(user.id),
       ])
 
       setOrders((ordersData as Order[]) ?? [])
       setIsVendor(!!vendorData && vendorData.length > 0)
+      setIsDriver(!!access?.driver)
+      setApplication((app as DriverApplication | null) ?? null)
       setLoading(false)
     }
     init()
@@ -120,6 +129,12 @@ export default function Home() {
           </div>
         </div>
 
+        {!isDriver && <DriverCard application={application} onApply={() => setApplying(true)} />}
+
+        {applying && (
+          <DriverApplicationSheet onClose={() => setApplying(false)} onSubmitted={setApplication} />
+        )}
+
         <div>
           <h2 className="text-lg font-semibold text-[#e0e5f9] mb-4 flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-[#ff923e]" /> Your Deliveries
@@ -159,6 +174,63 @@ export default function Home() {
           )}
         </div>
       </main>
+    </div>
+  )
+}
+
+function DriverCard({ application, onApply }: { application: DriverApplication | null; onApply: () => void }) {
+  const open = application && (application.status === 'submitted' || application.status === 'contacted')
+
+  if (open || application?.status === 'approved') {
+    const view = application!.status === 'approved'
+      ? { icon: CheckCircle, tone: 'bg-emerald-500/15 text-emerald-400', title: 'You’re approved to ride',
+          body: 'Download the ASAP Rider app and sign in with this account to start.' }
+      : application!.status === 'contacted'
+        ? { icon: Phone, tone: 'bg-sky-500/15 text-sky-400', title: 'We’ve reached out',
+            body: 'Check your phone and email to book your in-person visit.' }
+        : { icon: Clock, tone: 'bg-yellow-500/15 text-yellow-400', title: 'Application received',
+            body: 'The ASAP team will call or email you to book an in-person visit.' }
+    return (
+      <div className="bg-[#1c2a42] rounded-2xl p-6 flex items-start gap-4">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${view.tone}`}>
+          <view.icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-[#e0e5f9] font-bold">{view.title}</h2>
+          <p className="text-[#a5abbd] text-sm mt-0.5">{view.body}</p>
+        </div>
+        {application!.status === 'approved' && (
+          <Link href="/become-driver" className="shrink-0 px-4 py-2 rounded-full bg-[#ff923e] text-white text-sm font-semibold">
+            Get the app
+          </Link>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-[#1c2a42] rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-start gap-4">
+        <div className="w-11 h-11 rounded-xl bg-[#ff923e]/15 text-[#ff923e] flex items-center justify-center shrink-0">
+          {application?.status === 'rejected' ? <XCircle className="w-5 h-5" /> : <Bike className="w-5 h-5" />}
+        </div>
+        <div>
+          <h2 className="text-[#e0e5f9] font-bold">
+            {application?.status === 'rejected' ? 'Your last application wasn’t approved' : 'Become a driver'}
+          </h2>
+          <p className="text-[#a5abbd] text-sm mt-0.5">Earn on ASAP deliveries. No bike? Apply to ride one of ours.</p>
+        </div>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        <Link href="/become-driver"
+          className="px-4 py-2.5 rounded-full border border-[#a5abbd]/20 text-[#e0e5f9] text-sm font-medium hover:bg-[#253350] transition">
+          I have a bike
+        </Link>
+        <button onClick={onApply}
+          className="px-4 py-2.5 rounded-full bg-linear-to-r from-[#ff923e] to-[#c46018] text-white text-sm font-semibold cursor-pointer">
+          {application?.status === 'rejected' ? 'Apply again' : 'Ride an ASAP bike'}
+        </button>
+      </div>
     </div>
   )
 }

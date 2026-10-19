@@ -160,6 +160,50 @@ export async function createDriverAccount(details: DriverRequest) {
   await apiPost("/admin/create-drivers", details);
 }
 
+export type DriverApplicationStatus =
+  | "submitted"
+  | "contacted"
+  | "approved"
+  | "rejected"
+  | "withdrawn";
+
+export type DriverApplication = {
+  id: number;
+  asset_type: "ev" | "bicycle";
+  status: DriverApplicationStatus;
+  created_at: string;
+};
+
+export type DriverApplicationForm = {
+  asset_type: "ev" | "bicycle";
+  full_name: string;
+  phone: string; // E.164
+  area: string;
+  nin: string; // 11 digits
+  license_number: string | null; // required for EV
+  experience: string | null;
+  guarantor_name: string | null;
+  guarantor_phone: string | null;
+};
+
+// Applying to ride an ASAP-owned vehicle; approval happens in person
+export async function getMyDriverApplication(userId: string) {
+  const { data, error } = await supabase
+    .from("driver_applications")
+    .select("id, asset_type, status, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as DriverApplication | null;
+}
+
+// 201 with the application · 400 invalid field · 409 one already in progress
+export async function submitDriverApplication(form: DriverApplicationForm) {
+  return apiPost<DriverApplication>("/drivers/applications", form);
+}
+
 export async function signInUser(email: string, password: string) {
   if (!email || !password) {
     throw new Error("Email and password are required");

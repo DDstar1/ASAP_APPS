@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import GetRiderApp from '@/components/GetRiderApp'
+import ApplyForAsapBike from '@/components/ApplyForAsapBike'
 
 // For people who already have an ASAP login: same account, nothing to fill in
 // here. proxy.ts sends signed-out visitors to /login first.
@@ -19,6 +20,9 @@ export default function BecomeDriver() {
           </Link>
           <h1 className="text-3xl font-bold text-[#e0e5f9]">Become a Driver</h1>
           <p className="text-[#a5abbd] mt-2">Use the account you already have</p>
+        </div>
+        <div className="bg-[#1c2a42] rounded-3xl p-8 shadow-[0_12px_32px_rgba(8,14,28,0.5)] mb-4">
+          <ApplyForAsapBike />
         </div>
         <div className="bg-[#1c2a42] rounded-3xl p-8 shadow-[0_12px_32px_rgba(8,14,28,0.5)]">
           <GetRiderApp />

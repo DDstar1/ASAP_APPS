@@ -14,11 +14,14 @@ import { supabase } from "@/lib/supabase";
 import {
   createDriverAccount,
   getCusUserById,
+  getMyDriverApplication,
   handleLogout,
+  DriverApplication,
   VehicleType,
 } from "@/lib/supabase-app-functions";
 import { normalizePhone } from "@/lib/phone";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
+import AsapVehicleApplication from "@/components/AsapVehicleApplication";
 
 const inputTheme = {
   colors: {
@@ -93,6 +96,9 @@ export default function DriverSetupScreen() {
   const [licenseNumber, setLicenseNumber] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
   const [idsNoted, setIdsNoted] = useState(false);
+  // "asap" = applying to ride an ASAP-owned vehicle instead of their own
+  const [path, setPath] = useState<"own" | "asap">("own");
+  const [application, setApplication] = useState<DriverApplication | null>(null);
 
   const isEV = vehicleType === "EV";
 
@@ -106,9 +112,14 @@ export default function DriverSetupScreen() {
         return;
       }
       setEmail(user.email ?? "");
-      const profile = await getCusUserById(user.id);
+      const [profile, existing] = await Promise.all([
+        getCusUserById(user.id),
+        getMyDriverApplication(user.id).catch(() => null),
+      ]);
       setUsername(profile?.username ?? "");
       setSavedPhone(normalizePhone(profile?.phone ?? ""));
+      setApplication(existing);
+      if (existing && existing.status !== "withdrawn") setPath("asap");
       setLoadingProfile(false);
     })();
   }, [router]);
@@ -216,12 +227,49 @@ export default function DriverSetupScreen() {
         <Text className="text-[34px] font-bold text-[#e0e5f9] leading-tight mb-1.5">
           Finish Rider Setup.
         </Text>
-        <Text className="text-sm text-[#a5abbd] mb-9">
+        <Text className="text-sm text-[#a5abbd] mb-7">
           {email
             ? `Signed in as ${email}. Tell us what you ride.`
             : "Tell us what you ride."}
         </Text>
 
+        <View className="flex-row gap-3 mb-7">
+          {([
+            ["own", "My Own Vehicle"],
+            ["asap", "Ride an ASAP Vehicle"],
+          ] as const).map(([value, label]) => {
+            const selected = path === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                onPress={() => setPath(value)}
+                className={`flex-1 py-3.5 px-2 rounded-xl items-center border ${
+                  selected
+                    ? "bg-[#ff923e]/15 border-[#ff923e]"
+                    : "bg-[#131a2e] border-white/[0.08]"
+                }`}
+              >
+                <Text
+                  className={`text-sm font-semibold text-center ${
+                    selected ? "text-[#ff923e]" : "text-[#e0e5f9]"
+                  }`}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {path === "asap" ? (
+          <AsapVehicleApplication
+            defaultName={username}
+            savedPhone={savedPhone}
+            application={application}
+            onSubmitted={setApplication}
+          />
+        ) : (
+        <>
         {/* Phone — only when the profile doesn't have one yet */}
         {!savedPhone && (
           <TextInput
@@ -404,6 +452,8 @@ export default function DriverSetupScreen() {
             </Text>
           )}
         </TouchableOpacity>
+        </>
+        )}
 
         {/* Wrong account — swipe back is off on this screen, so this is the way out */}
         <TouchableOpacity
