@@ -35,20 +35,43 @@ const inputStyle = {
   borderRadius: 12,
 };
 
-// No I/O/0/1 so riders can copy the ID by hand without mix-ups. 32 symbols,
-// so byte % 32 has no bias.
-const VEHICLE_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+// No I/O so riders can copy the ID by hand without mix-ups
+const PLATE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const PLATE_DIGITS = "0123456789";
+
+const LICENSE_NO_ALPHABET = "0123456789";
+
+const pick = (alphabet: string, n: number) =>
+  Array.from(Crypto.getRandomBytes(n), (b) => alphabet[b % alphabet.length]).join("");
 
 /**
- * ASAP vehicle ID for bikes (and later our own fleet) that have no
- * legislative licence: "ASP-XX-XX". Stored in back_drivers.license_number.
+ * Bikes (and later our own fleet) have no legislative plate or licence, so
+ * ASAP issues both. The vehicle ID follows the plate format, 3 letters -
+ * 3 digits + 2 letters ("ASP-123AB"), and goes in back_drivers.plate_number.
  */
 function generateVehicleId() {
-  const chars = Array.from(
-    Crypto.getRandomBytes(4),
-    (b) => VEHICLE_ID_ALPHABET[b % VEHICLE_ID_ALPHABET.length],
-  );
-  return `ASP-${chars[0]}${chars[1]}-${chars[2]}${chars[3]}`;
+  return `ASP-${pick(PLATE_DIGITS, 3)}${pick(PLATE_LETTERS, 2)}`;
+}
+
+
+// 12 characters: "ASP" + 9 digits, e.g. "ASP482019376". Goes in
+// back_drivers.license_number.
+function generateLicenseNo() {
+  return `ASP${pick(LICENSE_NO_ALPHABET, 9)}`;
+}
+
+// Typed values: spaces and dashes are optional, case doesn't matter.
+// Plate: 3 letters, 3 digits, 2 letters -> "ABC-123XY", or null if invalid.
+function normalizePlate(input: string) {
+  const raw = input.replace(/[\s-]/g, "").toUpperCase();
+  if (!/^[A-Z]{3}\d{3}[A-Z]{2}$/.test(raw)) return null;
+  return `${raw.slice(0, 3)}-${raw.slice(3)}`;
+}
+
+// Licence: 12 letters or digits, or null if invalid
+function normalizeLicense(input: string) {
+  const raw = input.replace(/[\s-]/g, "").toUpperCase();
+  return /^[A-Z0-9]{12}$/.test(raw) ? raw : null;
 }
 
 /**
@@ -66,9 +89,10 @@ export default function DriverSetupScreen() {
   const [phone, setPhone] = useState("");
   const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
   const [vehicle, setVehicle] = useState("");
+  // EV: typed by the rider. Bike: generated together below.
   const [licenseNumber, setLicenseNumber] = useState("");
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
-  const [vehicleIdNoted, setVehicleIdNoted] = useState(false);
+  const [plateNumber, setPlateNumber] = useState("");
+  const [idsNoted, setIdsNoted] = useState(false);
 
   const isEV = vehicleType === "EV";
 
@@ -89,9 +113,20 @@ export default function DriverSetupScreen() {
     })();
   }, [router]);
 
-  const handleGenerateVehicleId = () => {
-    setVehicleId(generateVehicleId());
-    setVehicleIdNoted(false);
+  // Switching type clears the IDs so a generated one never ends up in the
+  // EV fields (or a typed one under "ASAP IDs")
+  const selectVehicleType = (type: VehicleType) => {
+    if (type === vehicleType) return;
+    setVehicleType(type);
+    setLicenseNumber("");
+    setPlateNumber("");
+    setIdsNoted(false);
+  };
+
+  const handleGenerateIds = () => {
+    setPlateNumber(generateVehicleId());
+    setLicenseNumber(generateLicenseNo());
+    setIdsNoted(false);
   };
 
   const handleFinish = async () => {
@@ -102,17 +137,30 @@ export default function DriverSetupScreen() {
         "Enter a valid phone number, e.g. 08012345678",
       );
     if (!vehicleType) return Alert.alert("Error", "Choose your vehicle type");
-    if (isEV && (!vehicle.trim() || !licenseNumber.trim()))
+    if (isEV && (!vehicle.trim() || !plateNumber.trim() || !licenseNumber.trim()))
       return Alert.alert(
         "Error",
-        "EV riders must enter their vehicle and licence number",
+        "EV riders must enter their vehicle, plate number and licence number",
       );
-    if (!isEV && !vehicleId)
-      return Alert.alert("Error", "Generate your ASAP vehicle ID");
-    if (!isEV && !vehicleIdNoted)
+    // Generated IDs are already in shape; typed ones are checked here
+    const plate = isEV ? normalizePlate(plateNumber) : plateNumber;
+    const license = isEV ? normalizeLicense(licenseNumber) : licenseNumber;
+    if (isEV && !plate)
       return Alert.alert(
-        "Save Your Vehicle ID",
-        `Write down ${vehicleId} and keep it safe, then confirm you've saved it.`,
+        "Check Your Plate Number",
+        "A plate number is 3 letters, 3 numbers and 2 letters, e.g. ABC-123XY",
+      );
+    if (isEV && !license)
+      return Alert.alert(
+        "Check Your Licence Number",
+        "A licence number is 12 characters, letters and numbers only",
+      );
+    if (!isEV && !plateNumber)
+      return Alert.alert("Error", "Generate your ASAP IDs");
+    if (!isEV && !idsNoted)
+      return Alert.alert(
+        "Save Your IDs",
+        `Write down vehicle ID ${plateNumber} and licence number ${licenseNumber}, then confirm you've saved them.`,
       );
 
     setSaving(true);
@@ -123,8 +171,8 @@ export default function DriverSetupScreen() {
         phone: finalPhone,
         vehicle_type: vehicleType,
         vehicle: vehicle.trim() || null,
-        // Bikes carry the ASAP vehicle ID in place of a licence number
-        license_number: isEV ? licenseNumber.trim() : vehicleId,
+        license_number: license!,
+        plate_number: plate!,
         account_number: null,
         bank_code: null,
       });
@@ -204,7 +252,7 @@ export default function DriverSetupScreen() {
             return (
               <TouchableOpacity
                 key={type}
-                onPress={() => setVehicleType(type)}
+                onPress={() => selectVehicleType(type)}
                 className={`flex-1 py-3.5 rounded-xl items-center border ${
                   selected
                     ? "bg-[#ff923e]/15 border-[#ff923e]"
@@ -227,7 +275,7 @@ export default function DriverSetupScreen() {
         <TextInput
           label={isEV ? "Vehicle" : "Vehicle (optional)"}
           mode="outlined"
-          placeholder="Make, model and plate number"
+          placeholder="Make and model"
           value={vehicle}
           onChangeText={setVehicle}
           left={<TextInput.Icon icon="car-outline" color="#a5abbd" />}
@@ -239,7 +287,22 @@ export default function DriverSetupScreen() {
         />
 
         {isEV ? (
-          /* Licence Number — EVs have a legislative licence */
+          /* EVs have a legislative plate and the rider a licence */
+          <>
+          <TextInput
+            label="Plate Number"
+            mode="outlined"
+            placeholder="e.g. LSR-123AB"
+            value={plateNumber}
+            onChangeText={setPlateNumber}
+            autoCapitalize="characters"
+            left={<TextInput.Icon icon="card-text-outline" color="#a5abbd" />}
+            textColor="#e0e5f9"
+            outlineColor="rgba(255,255,255,0.08)"
+            activeOutlineColor="#ff923e"
+            style={inputStyle}
+            theme={inputTheme}
+          />
           <TextInput
             label="Licence Number"
             mode="outlined"
@@ -259,53 +322,66 @@ export default function DriverSetupScreen() {
             style={{ ...inputStyle, marginBottom: 28 }}
             theme={inputTheme}
           />
+          </>
         ) : vehicleType ? (
-          /* ASAP Vehicle ID — required for everything that isn't an EV */
+          /* ASAP IDs — bikes have no legislative plate or licence */
           <View className="mb-7">
             <Text className="text-xs font-semibold text-[#a5abbd] tracking-widest uppercase mb-2.5">
-              ASAP Vehicle ID
+              ASAP IDs
             </Text>
-            {vehicleId ? (
+            {plateNumber ? (
               <>
-                <View className="w-full py-4 rounded-xl items-center bg-[#131a2e] border border-[#ff923e]/35 mb-2.5">
-                  <Text
-                    selectable
-                    className="text-2xl font-bold text-[#ff923e] tracking-widest"
+                {[
+                  { label: "Vehicle ID", value: plateNumber },
+                  { label: "Licence Number", value: licenseNumber },
+                ].map(({ label, value }) => (
+                  <View
+                    key={label}
+                    className="w-full py-3.5 rounded-xl items-center bg-[#131a2e] border border-[#ff923e]/35 mb-2.5"
                   >
-                    {vehicleId}
-                  </Text>
-                </View>
+                    <Text className="text-[11px] font-semibold text-[#a5abbd] tracking-widest uppercase mb-1">
+                      {label}
+                    </Text>
+                    <Text
+                      selectable
+                      className="text-2xl font-bold text-[#ff923e] tracking-widest"
+                    >
+                      {value}
+                    </Text>
+                  </View>
+                ))}
                 <Text className="text-xs text-[#a5abbd] leading-relaxed mb-3">
-                  We use this ID to trace your vehicle. Write it down and keep
-                  it safe — you&apos;ll need it.
+                  We use the vehicle ID to trace your bike and the licence
+                  number to identify you. Write both down and keep them safe —
+                  you&apos;ll need them.
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setVehicleIdNoted(!vehicleIdNoted)}
+                  onPress={() => setIdsNoted(!idsNoted)}
                   className="flex-row items-center py-2"
                 >
                   <View
                     className={`w-5 h-5 rounded border mr-3 items-center justify-center ${
-                      vehicleIdNoted
+                      idsNoted
                         ? "bg-[#ff923e] border-[#ff923e]"
                         : "border-white/30"
                     }`}
                   >
-                    {vehicleIdNoted && (
+                    {idsNoted && (
                       <Text className="text-white text-xs font-bold">✓</Text>
                     )}
                   </View>
                   <Text className="text-sm text-[#e0e5f9]">
-                    I&apos;ve saved my vehicle ID
+                    I&apos;ve saved both IDs
                   </Text>
                 </TouchableOpacity>
               </>
             ) : (
               <TouchableOpacity
-                onPress={handleGenerateVehicleId}
+                onPress={handleGenerateIds}
                 className="w-full py-3.5 rounded-xl items-center border border-[#ff923e]/35 bg-[#131a2e]"
               >
                 <Text className="text-sm font-semibold text-[#ff923e]">
-                  Generate Vehicle ID
+                  Generate My IDs
                 </Text>
               </TouchableOpacity>
             )}

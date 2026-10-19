@@ -8,6 +8,50 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* ASAP Invest (app/invest): bg-inv-surface, text-inv-muted, ... */
+  --color-inv-bg: var(--inv-bg);
+  --color-inv-surface: var(--inv-surface);
+  --color-inv-soft: var(--inv-soft);
+  --color-inv-line: var(--inv-line);
+  --color-inv-text: var(--inv-text);
+  --color-inv-muted: var(--inv-muted);
+  --color-inv-accent: var(--inv-accent);
+  --color-inv-accent-text: var(--inv-accent-text);
+}
+
+/* Invest is light by default; data-theme="dark" on the wrapper switches it */
+.invest-theme {
+  --inv-bg: #f4f5f8;
+  --inv-surface: #ffffff;
+  --inv-soft: #eceef3;
+  --inv-line: #e1e4ec;
+  --inv-text: #0d1525;
+  --inv-muted: #586074;
+  --inv-accent: #ff923e;
+  --inv-accent-text: #b4520c;
+  background: var(--inv-bg);
+  color: var(--inv-text);
+  color-scheme: light;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invest-theme * { animation: none !important; }
+}
+
+.invest-theme[data-theme="dark"] {
+  --inv-bg: #080e1c;
+  --inv-surface: #152035;
+  --inv-soft: #1c2a42;
+  --inv-line: #253350;
+  --inv-text: #e0e5f9;
+  --inv-muted: #a5abbd;
+  --inv-accent-text: #ff923e;
+  color-scheme: dark;
 }
 
 body {

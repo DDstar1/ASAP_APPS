@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Package, LogOut, Loader2, Smartphone, Store, ClipboardList, Clock, CheckCircle, Truck } from 'lucide-react'
+import { Package, LogOut, Loader2, Smartphone, Store, ClipboardList, Clock, CheckCircle, Truck, Bike } from 'lucide-react'
 import { getSession, signOut, getVendorsByUserId, getUserDeliveryOrders } from '@/lib/supabase_queries'
 import type { User } from '@supabase/supabase-js'
 
@@ -80,6 +80,10 @@ export default function Home() {
           </Link>
 
           <div className="flex items-center gap-2">
+            <Link href="/invest"
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition">
+              <Bike className="w-4 h-4" /> Invest
+            </Link>
             {isVendor ? (
               <Link href="/vendor/dashboard"
                 className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition">

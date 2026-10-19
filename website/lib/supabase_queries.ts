@@ -27,7 +27,31 @@ export function insertAppUser(id: string, username: string) {
   return supabase.from('app_custom_users').insert({ id, username })
 }
 
-export type MyAccess = { profile: boolean; driver: boolean; vendor_ids: number[] }
+// Name and photo shared with the apps (the customer app sets profileImage too)
+export function getAppUser(id: string) {
+  return supabase.from('app_custom_users').select('username, profileImage').eq('id', id).maybeSingle()
+}
+
+// Same bucket and column the customer app uses, so the photo shows everywhere
+export async function updateProfileImage(userId: string, file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const fileName = `${userId}_${Date.now()}.${ext}`
+  const bucket = supabase.storage.from('app_profile_image_bucket')
+  const { data: signed, error: signError } = await bucket.createSignedUploadUrl(fileName)
+  if (signError) throw signError
+  const { error: uploadError } = await bucket.uploadToSignedUrl(fileName, signed.token, file, { contentType: file.type })
+  if (uploadError) throw uploadError
+  const publicUrl = bucket.getPublicUrl(fileName).data.publicUrl
+  const { error } = await supabase.from('app_custom_users').update({ profileImage: publicUrl }).eq('id', userId)
+  if (error) throw error
+  return publicUrl
+}
+
+export function updateUsername(userId: string, username: string) {
+  return supabase.from('app_custom_users').update({ username }).eq('id', userId)
+}
+
+export type MyAccess = { profile: boolean; driver: boolean; vendor_ids: number[]; investor: boolean }
 
 // Which panels to offer the signed-in user; RLS still guards the data
 export async function getMyAccess() {
