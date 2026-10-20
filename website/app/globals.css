@@ -19,6 +19,117 @@
   --color-inv-accent-text: var(--inv-accent-text);
 }
 
+/* Vendor dashboard (app/vendor/dashboard): a frame (sidebar) around a content panel */
+@theme inline {
+  --color-v-frame: var(--v-frame);
+  --color-v-frame-text: var(--v-frame-text);
+  --color-v-frame-muted: var(--v-frame-muted);
+  --color-v-frame-hover: var(--v-frame-hover);
+  --color-v-surface: var(--v-surface);
+  --color-v-card: var(--v-card);
+  --color-v-raised: var(--v-raised);
+  --color-v-hover: var(--v-hover);
+  --color-v-sunken: var(--v-sunken);
+  --color-v-modal: var(--v-modal);
+  --color-v-text: var(--v-text);
+  --color-v-muted: var(--v-muted);
+  --color-v-line: var(--v-line);
+  --color-v-up: var(--v-up);
+  --color-v-down: var(--v-down);
+  --color-v-warn: var(--v-warn);
+  --color-v-info: var(--v-info);
+  --color-v-sky: var(--v-sky);
+  --color-v-accent: var(--v-accent);
+}
+
+/* Light (default): black frame, white panel. Dark swaps them. */
+.vendor-theme {
+  --v-frame: #05070d;
+  --v-frame-text: #f5f6fa;
+  --v-frame-muted: #8b91a3;
+  --v-frame-hover: #161a24;
+  --v-surface: #ffffff;
+  --v-card: #f5f6fa;
+  --v-raised: #eceef4;
+  --v-hover: #e2e5ee;
+  --v-sunken: #f0f2f7;
+  --v-modal: #ffffff;
+  --v-text: #0d1525;
+  --v-muted: #5b6275;
+  --v-line: #e5e7ef;
+  --v-up: #0f8a55;
+  --v-down: #c8312f;
+  --v-warn: #a16207;
+  --v-info: #6d28d9;
+  --v-sky: #0369a1;
+  --v-accent: #b4520c;
+  /* Overview tiles: tint and the ink drawn on it */
+  --v-violet-bg: #eeeafd; --v-violet-ink: #6d4ee8;
+  --v-mint-bg: #e3f5ec;   --v-mint-ink: #1a8f5c;
+  --v-butter-bg: #fbf3d9; --v-butter-ink: #a87400;
+  --v-sky-bg: #e3f0fb;    --v-sky-ink: #2f7bd1;
+  --v-peach-bg: #fde9df;  --v-peach-ink: #c9581a;
+  --v-rose-bg: #fce4ea;   --v-rose-ink: #c8335a;
+  background: var(--v-frame);
+  color: var(--v-text);
+  color-scheme: light;
+}
+
+.vendor-theme[data-theme="dark"] {
+  --v-frame: #f5f6fa;
+  --v-frame-text: #0d1525;
+  --v-frame-muted: #5b6275;
+  --v-frame-hover: #e4e7ef;
+  --v-surface: #0b0f19;
+  --v-card: #141b2b;
+  --v-raised: #1b2438;
+  --v-hover: #253350;
+  --v-sunken: #0f1522;
+  --v-modal: #111a2e;
+  --v-text: #e0e5f9;
+  --v-muted: #a5abbd;
+  --v-line: #1f2a3f;
+  --v-up: #34d399;
+  --v-down: #f87171;
+  --v-warn: #facc15;
+  --v-info: #a78bfa;
+  --v-sky: #38bdf8;
+  --v-accent: #ff923e;
+  --v-violet-bg: #211c3a; --v-violet-ink: #a99bff;
+  --v-mint-bg: #132a20;   --v-mint-ink: #4fd197;
+  --v-butter-bg: #2a2412; --v-butter-ink: #f2c94c;
+  --v-sky-bg: #12233a;    --v-sky-ink: #6cb2f5;
+  --v-peach-bg: #2e1c13;  --v-peach-ink: #ff9a5c;
+  --v-rose-bg: #2e1720;   --v-rose-ink: #ff7d9c;
+  color-scheme: dark;
+}
+
+/* A subtle bounce as cards load in; stagger with animation-delay */
+@keyframes rise {
+  0% { opacity: 0; transform: translateY(14px) scale(0.98); }
+  60% { opacity: 1; transform: translateY(-3px) scale(1.005); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Something needs attention: the glow flips every 0.5s */
+@keyframes flicker {
+  from { box-shadow: 0 0 0 0 rgba(255, 146, 62, 0); }
+  to { box-shadow: 0 0 0 3px rgba(255, 146, 62, 0.75), 0 0 22px 2px rgba(255, 146, 62, 0.45); }
+}
+
+.animate-flicker {
+  animation: flicker 0.5s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+  .animate-flicker { animation: none; box-shadow: 0 0 0 3px rgba(255, 146, 62, 0.75); }
+}
+
 /* Invest is light by default; data-theme="dark" on the wrapper switches it */
 .invest-theme {
   --inv-bg: #f4f5f8;

@@ -20,35 +20,35 @@ export function describeNotification(n: NotificationRow): NotificationView {
         title: 'Payment received',
         body: `${n.amount != null ? formatNaira(n.amount) : 'A payment'} for ${order}`,
         icon: Banknote,
-        tone: 'bg-emerald-500/15 text-emerald-400',
+        tone: 'bg-emerald-500/15 text-v-up',
       }
     case 'new_order':
       return {
         title: 'New order',
         body: `Accept or decline ${order} within 48 hours`,
         icon: ShoppingBag,
-        tone: 'bg-[#ff923e]/15 text-[#ff923e]',
+        tone: 'bg-[#ff923e]/15 text-v-accent',
       }
     case 'delivered':
       return {
         title: 'Order delivered',
         body: `The customer confirmed the drop-off code for ${order}`,
         icon: PackageCheck,
-        tone: 'bg-violet-500/15 text-violet-400',
+        tone: 'bg-violet-500/15 text-v-info',
       }
     case 'subscription_failed':
       return {
         title: 'Subscription payment failed',
         body: `We couldn’t charge ${n.amount != null ? formatNaira(n.amount) : 'your plan'} to your card. Update your card to keep your store bot running`,
         icon: CreditCard,
-        tone: 'bg-red-500/15 text-red-400',
+        tone: 'bg-red-500/15 text-v-down',
       }
     case 'billing_successful':
       return {
         title: 'Subscription paid',
         body: `${n.amount != null ? `${formatNaira(n.amount)} received. ` : ''}Store is up, let’s bump the hustle`,
         icon: BadgeCheck,
-        tone: 'bg-emerald-500/15 text-emerald-400',
+        tone: 'bg-emerald-500/15 text-v-up',
       }
   }
 }

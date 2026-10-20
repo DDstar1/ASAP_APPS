@@ -1105,6 +1105,41 @@ export async function confirmReturn(
   }
 }
 
+export type PackageIssueReason =
+  | "dimensions_exceeded"
+  | "weight_exceeded"
+  | "prohibited_contents"
+  | "package_not_found"
+  | "wrong_location";
+
+export async function uploadDisputePhoto(orderRef: string, imageUri: string): Promise<string> {
+  const fileName = `disputes/${orderRef}_${Date.now()}.jpg`;
+  const bucket = supabase.storage.from("package_images");
+  const { data, error } = await bucket.createSignedUploadUrl(fileName);
+  if (error) throw error;
+  const result = await createUploadTask(data.signedUrl, imageUri, {
+    httpMethod: "PUT",
+    headers: { "Content-Type": "image/jpeg" },
+  }).uploadAsync();
+  if (!result || result.status !== 200) {
+    throw new Error(`Photo upload failed with status ${result?.status ?? "unknown"}`);
+  }
+  return bucket.getPublicUrl(fileName).data.publicUrl;
+}
+
+/** Refuses the package at the pickup (before the pickup code); Rust cancels the order. */
+export async function reportPackageIssue(
+  orderRef: string,
+  reason: PackageIssueReason,
+  photoUrl: string,
+  note: string | null,
+) {
+  return apiPost<{ dispute_id: number; order_id: number; status: "pending"; order_status: "cancelled" }>(
+    "/drivers/report-package-issue",
+    { order_ref: orderRef, reason, photo_url: photoUrl, note },
+  );
+}
+
 /** The rider enters the customer's pickup code; Rust moves the order to in_transit. */
 export async function confirmRidePickup(
   orderRef: string,

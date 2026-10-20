@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
-  ShoppingBag, ClipboardList, DollarSign, TrendingUp, Clock, CheckCircle, PackageCheck, AlertTriangle, Users, UserPlus,
-  ArrowUpRight, ArrowDownRight, Minus,
+  ShoppingBag, ClipboardList, Wallet, Clock, CheckCircle, AlertTriangle, Users, UserPlus, Bike,
+  ArrowUpRight, ArrowDownRight, Minus, ChevronRight,
 } from 'lucide-react'
 import { STRIKE_LIMIT } from '@/lib/vendorGuidelines'
 import {
@@ -13,6 +14,7 @@ import {
 import { useVendor } from '@/store/vendorStore'
 import { itemsTotal } from '@/lib/supabase'
 import type { OrderRow } from '@/lib/supabase'
+import AreaChart, { type Point } from '@/components/vendor/AreaChart'
 
 type Data = {
   vendorId: number
@@ -30,8 +32,11 @@ const PERIODS: { value: StatsPeriod; label: string; hint: string; vs: string; da
   { value: 'week', label: 'Week', hint: 'Last 7 days', vs: 'vs previous 7 days', days: 7 },
   { value: 'month', label: 'Month', hint: 'Last 30 days', vs: 'vs previous 30 days', days: 30 },
   { value: 'year', label: 'Year', hint: 'Last 365 days', vs: 'vs previous 365 days', days: 365 },
-  { value: 'all', label: 'All time', hint: 'All time', vs: '', days: null },
+  { value: 'all', label: 'All', hint: 'All time', vs: '', days: null },
 ]
+
+const HOUR = 3_600_000
+const DAY = 24 * HOUR
 
 type Change = { now: number; prev: number; format?: (n: number) => string }
 
@@ -41,36 +46,63 @@ function ChangeLine({ change, vs }: { change: Change; vs: string }) {
   const fmt = change.format ?? ((n: number) => n.toLocaleString('en-NG'))
   const pct = change.prev > 0 ? Math.round((diff / change.prev) * 100) : null
   const Icon = diff > 0 ? ArrowUpRight : diff < 0 ? ArrowDownRight : Minus
-  const color = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-[#a5abbd]/70'
+  const color = diff > 0 ? 'text-v-up' : diff < 0 ? 'text-v-down' : 'text-v-muted'
   const sign = diff > 0 ? '+' : diff < 0 ? '−' : ''
   return (
-    <div className="flex flex-wrap items-center gap-x-1 text-xs mt-1.5">
-      <span className={`inline-flex items-center gap-0.5 font-medium tabular-nums ${color}`}>
+    <div className="flex flex-wrap items-center gap-x-1 text-xs mt-1">
+      <span className={`inline-flex items-center gap-0.5 font-semibold tabular-nums ${color}`}>
         <Icon className="w-3.5 h-3.5" aria-hidden />
         {pct !== null && <>{Math.abs(pct)}% · </>}
         {sign}{fmt(Math.abs(diff))}
       </span>
-      <span className="text-[#a5abbd]/60">{vs}</span>
+      <span className="text-v-muted">{vs}</span>
     </div>
   )
-}
-
-const statusColors: Record<OrderRow['status'], string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  paid: 'bg-[#ff923e]/15 text-[#ff923e]',
-  in_progress: 'bg-violet-500/15 text-violet-400',
-  delivered: 'bg-emerald-500/15 text-emerald-400',
-  cancelled: 'bg-red-500/15 text-red-400',
 }
 
 function formatNaira(kobo: number) {
   return '₦' + (kobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })
 }
 
+function compactNaira(kobo: number) {
+  return '₦' + (kobo / 100).toLocaleString('en-NG', { notation: 'compact', maximumFractionDigits: 1 })
+}
+
+// Equal slices of the period, oldest first, for the charts
+function buckets(period: StatsPeriod, now: number, firstOrderAt: number) {
+  const fmt = (t: number, opts: Intl.DateTimeFormatOptions) => new Date(t).toLocaleString('en-NG', opts)
+  const make = (count: number, span: number, label: (start: number) => string) =>
+    Array.from({ length: count }, (_, i) => {
+      const start = now - (count - i) * span
+      return { start, end: start + span, label: label(start) }
+    })
+  switch (period) {
+    case 'day': return make(24, HOUR, (t) => fmt(t + HOUR, { hour: 'numeric' }))
+    case 'week': return make(7, DAY, (t) => fmt(t + DAY, { weekday: 'short' }))
+    case 'month': return make(30, DAY, (t) => fmt(t + DAY, { day: 'numeric', month: 'short' }))
+    case 'year': return make(12, (365 * DAY) / 12, (t) => fmt(t + DAY, { month: 'short' }))
+    case 'all': {
+      const total = Math.max(now - firstOrderAt, 7 * DAY)
+      const span = total / 12
+      return make(12, span, (t) => fmt(t + span, total > 120 * DAY
+        ? { month: 'short', year: '2-digit' } : { day: 'numeric', month: 'short' }))
+    }
+  }
+}
+
+const TILE = {
+  violet: { bg: 'var(--v-violet-bg)', ink: 'var(--v-violet-ink)' },
+  mint: { bg: 'var(--v-mint-bg)', ink: 'var(--v-mint-ink)' },
+  butter: { bg: 'var(--v-butter-bg)', ink: 'var(--v-butter-ink)' },
+  sky: { bg: 'var(--v-sky-bg)', ink: 'var(--v-sky-ink)' },
+  peach: { bg: 'var(--v-peach-bg)', ink: 'var(--v-peach-ink)' },
+  rose: { bg: 'var(--v-rose-bg)', ink: 'var(--v-rose-ink)' },
+}
+
 export default function DashboardPage() {
   const { vendor } = useVendor()
   const [data, setData] = useState<Data | null>(null)
-  const [period, setPeriod] = useState<StatsPeriod>('all')
+  const [period, setPeriod] = useState<StatsPeriod>('week')
   // Fixed per load, so filtering stays pure during render
   const [loadedAt, setLoadedAt] = useState(0)
 
@@ -98,115 +130,216 @@ export default function DashboardPage() {
 
   const loading = !vendor || data?.vendorId !== vendor.id
   const current = PERIODS.find((p) => p.value === period)!
-
-  const statCards = data && !loading
-    ? (() => {
-        const span = current.days === null ? null : current.days * 86_400_000
-        const between = (from: number, to: number) =>
-          data.orders.filter((o) => { const t = new Date(o.created_at).getTime(); return t > from && t <= to })
-        const inPeriod = span === null ? data.orders : between(loadedAt - span, Infinity)
-        const delivered = inPeriod.filter((o) => o.status === 'delivered')
-        const revenue = delivered.reduce((s, o) => s + itemsTotal(o), 0)
-        // The period just before, for the % change
-        const prev = span === null ? null : between(loadedAt - 2 * span, loadedAt - span)
-        const prevDelivered = prev?.filter((o) => o.status === 'delivered') ?? null
-        const prevRevenue = prevDelivered?.reduce((s, o) => s + itemsTotal(o), 0) ?? null
-        const customers = data.customers?.[period]
-        const change = (now: number | undefined, before: number | null | undefined, format?: Change['format']): Change | null =>
-          now === undefined || before === null || before === undefined ? null : { now, prev: before, format }
-        return [
-          { label: 'Total Orders', value: inPeriod.length, icon: ClipboardList, color: 'text-[#ff923e]', bg: 'bg-[#ff923e]/10', filtered: true, change: change(inPeriod.length, prev?.length) },
-          { label: 'Pending', value: data.orders.filter((o) => o.status === 'pending').length, icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10', filtered: false, change: null },
-          { label: 'In Progress', value: data.orders.filter((o) => o.status === 'in_progress').length, icon: TrendingUp, color: 'text-violet-400', bg: 'bg-violet-500/10', filtered: false, change: null },
-          { label: 'Delivered', value: delivered.length, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', filtered: true, change: change(delivered.length, prevDelivered?.length) },
-          { label: 'Revenue', value: formatNaira(revenue), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', filtered: true, change: change(revenue, prevRevenue, formatNaira) },
-          { label: 'Customers', value: customers?.customers ?? '—', icon: Users, color: 'text-sky-400', bg: 'bg-sky-500/10', filtered: true, change: change(customers?.customers, customers?.prevCustomers) },
-          { label: 'New Customers', value: customers?.new ?? '—', icon: UserPlus, color: 'text-emerald-400', bg: 'bg-emerald-500/10', filtered: true, change: change(customers?.new, customers?.prevNew) },
-          { label: 'Total Items', value: data.totalItems, icon: ShoppingBag, color: 'text-sky-400', bg: 'bg-sky-500/10', filtered: false, change: null },
-          { label: 'Strikes', value: `${data.strikes} / ${STRIKE_LIMIT}`, icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10', filtered: false, change: null },
-        ]
-      })()
-    : []
+  const periodIndex = PERIODS.findIndex((p) => p.value === period)
 
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-5">
         <div>
-          <h1 className="text-2xl font-bold text-[#e0e5f9]">Overview</h1>
-          <p className="text-[#a5abbd] mt-1">Welcome back, {vendor?.name}</p>
+          <h1 className="text-3xl font-bold text-v-text tracking-tight">Overview</h1>
+          <p className="text-v-muted mt-1">Welcome back, {vendor?.name}</p>
         </div>
-        <div role="group" aria-label="Period" className="flex bg-[#152035] rounded-full p-1 overflow-x-auto max-w-full">
-          {PERIODS.map(({ value, label }) => (
-            <button key={value} onClick={() => setPeriod(value)} aria-pressed={period === value}
-              className={`px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                period === value ? 'bg-[#ff923e] text-white' : 'text-[#a5abbd] hover:text-[#e0e5f9]'
-              }`}>
+        <div role="radiogroup" aria-label="Period" className="relative grid grid-cols-5 bg-v-card rounded-full p-1 w-full sm:w-80">
+          <span aria-hidden className="absolute top-1 bottom-1 left-1 rounded-full bg-v-text shadow-sm transition-transform duration-300 ease-out"
+            style={{ width: 'calc((100% - 8px) / 5)', transform: `translateX(${periodIndex * 100}%)` }} />
+          {PERIODS.map(({ value, label, hint }) => (
+            <button key={value} role="radio" aria-checked={period === value} title={hint} onClick={() => setPeriod(value)}
+              className={`relative z-10 py-2 rounded-full text-sm font-semibold transition-colors cursor-pointer ${
+                period === value ? 'text-v-surface' : 'text-v-muted hover:text-v-text'}`}>
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/25 text-yellow-400 rounded-2xl px-5 py-4 mb-8 text-sm">
-        <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-        <p>
-          {STRIKE_LIMIT} cancelled orders (declined, not accepted within 48 hours, or not picked up within 1 hour of a rider
-          being assigned) will deactivate this store&apos;s bot. A deactivated bot can only be reinstated by calling ASAP support.
-        </p>
-      </div>
+      {data && !loading && (
+        <div className="flex items-start gap-3 bg-[var(--v-butter-bg)] text-v-warn rounded-2xl px-5 py-4 mb-6 text-sm animate-rise">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <p>
+            {STRIKE_LIMIT} cancelled orders (declined, not accepted within 48 hours, or not picked up within 1 hour of a rider
+            being assigned) deactivate this store&apos;s bot. Only ASAP support can reinstate it.
+          </p>
+        </div>
+      )}
 
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="h-28 bg-[#1c2a42] rounded-2xl animate-pulse" />
-          ))}
+      {loading || !data ? (
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-5">
+          <div className="space-y-5">
+            {[0, 1, 2].map((i) => <div key={i} className="h-52 bg-v-card rounded-3xl animate-pulse" />)}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 content-start">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-44 bg-v-card rounded-3xl animate-pulse" />)}
+          </div>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-            {statCards.map(({ label, value, icon: Icon, color, bg, filtered, change }) => (
-              <div key={label} className="bg-[#152035] rounded-2xl p-5">
-                <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
-                </div>
-                <div className="text-2xl font-bold text-[#e0e5f9] tabular-nums">{value}</div>
-                <div className="text-sm text-[#a5abbd] mt-0.5">{label}</div>
-                <div className="text-xs text-[#a5abbd]/60 mt-0.5">{filtered ? current.hint : 'Right now'}</div>
-                {change && <ChangeLine change={change} vs={current.vs} />}
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-[#152035] rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 flex items-center gap-2">
-              <PackageCheck className="w-5 h-5 text-[#a5abbd]" />
-              <h2 className="font-semibold text-[#e0e5f9]">Recent Orders</h2>
-            </div>
-            {data!.orders.length === 0 ? (
-              <div className="px-6 py-12 text-center text-[#a5abbd]">No orders yet</div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {data!.orders.slice(0, 5).map((order) => (
-                  <div key={order.id} className="px-6 py-4 flex items-center justify-between bg-[#0d1525]">
-                    <div>
-                      <p className="text-sm font-medium text-[#e0e5f9]">Order #{order.id}</p>
-                      <p className="text-xs text-[#a5abbd] mt-0.5">
-                        {new Date(order.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-semibold text-[#e0e5f9]">{formatNaira(itemsTotal(order))}</span>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
-                        {order.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
+        <Content data={data} period={period} current={current} loadedAt={loadedAt} />
       )}
     </div>
+  )
+}
+
+function Content({ data, period, current, loadedAt }: {
+  data: Data; period: StatsPeriod; current: (typeof PERIODS)[number]; loadedAt: number
+}) {
+  const span = current.days === null ? null : current.days * DAY
+  const between = (from: number, to: number) =>
+    data.orders.filter((o) => { const t = new Date(o.created_at).getTime(); return t > from && t <= to })
+  const inPeriod = span === null ? data.orders : between(loadedAt - span, Infinity)
+  const delivered = inPeriod.filter((o) => o.status === 'delivered')
+  const revenue = delivered.reduce((s, o) => s + itemsTotal(o), 0)
+  const prev = span === null ? null : between(loadedAt - 2 * span, loadedAt - span)
+  const prevDelivered = prev?.filter((o) => o.status === 'delivered') ?? null
+  const prevRevenue = prevDelivered?.reduce((s, o) => s + itemsTotal(o), 0) ?? null
+  const customers = data.customers?.[period]
+  const change = (now: number | undefined, before: number | null | undefined, format?: Change['format']): Change | null =>
+    now === undefined || before === null || before === undefined ? null : { now, prev: before, format }
+
+  const firstOrderAt = data.orders.length
+    ? Math.min(...data.orders.map((o) => new Date(o.created_at).getTime()))
+    : loadedAt - 7 * DAY
+  const slices = buckets(period, loadedAt, firstOrderAt)
+  const series = (pick: (orders: OrderRow[]) => number): Point[] =>
+    slices.map((b) => ({ label: b.label, value: pick(between(b.start, b.end)) }))
+
+  const wide = [
+    {
+      label: 'Total Orders', icon: ClipboardList, tile: TILE.violet,
+      value: inPeriod.length.toLocaleString('en-NG'), change: change(inPeriod.length, prev?.length),
+      points: series((os) => os.length), format: (n: number) => `${n} order${n === 1 ? '' : 's'}`,
+    },
+    {
+      label: 'Revenue', icon: Wallet, tile: TILE.mint,
+      value: formatNaira(revenue), change: change(revenue, prevRevenue, formatNaira),
+      points: series((os) => os.filter((o) => o.status === 'delivered').reduce((s, o) => s + itemsTotal(o), 0)),
+      format: compactNaira,
+    },
+    {
+      label: 'Customers', icon: Users, tile: TILE.sky,
+      value: customers ? customers.customers.toLocaleString('en-NG') : '—',
+      change: change(customers?.customers, customers?.prevCustomers),
+      points: series((os) => new Set(os.filter((o) => o.user_id !== null && o.status !== 'pending' && o.status !== 'cancelled').map((o) => o.user_id)).size),
+      format: (n: number) => `${n} ordering`,
+    },
+  ]
+
+  const small = [
+    { label: 'Pending', value: data.orders.filter((o) => o.status === 'pending').length, icon: Clock, tile: TILE.butter,
+      hint: 'Right now', href: '/vendor/dashboard/orders?tab=accept' },
+    { label: 'In Progress', value: data.orders.filter((o) => o.status === 'in_progress').length, icon: Bike, tile: TILE.violet,
+      hint: 'Right now', href: '/vendor/dashboard/orders?tab=active' },
+    { label: 'Delivered', value: delivered.length, icon: CheckCircle, tile: TILE.mint, hint: current.hint,
+      change: change(delivered.length, prevDelivered?.length) },
+    { label: 'New Customers', value: customers?.new ?? '—', icon: UserPlus, tile: TILE.sky, hint: current.hint,
+      change: change(customers?.new, customers?.prevNew) },
+    { label: 'Total Items', value: data.totalItems, icon: ShoppingBag, tile: TILE.peach, hint: 'In your store',
+      href: '/vendor/dashboard/items' },
+    { label: 'Strikes', value: `${data.strikes} / ${STRIKE_LIMIT}`, icon: AlertTriangle, tile: TILE.rose, hint: 'Cancelled orders' },
+  ]
+
+  const recentDelivered = data.orders.filter((o) => o.status === 'delivered').slice(0, 6)
+
+  return (
+    <>
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] gap-5 mb-8">
+        <div className="space-y-5">
+          {wide.map(({ label, icon: Icon, tile, value, change: c, points, format }, i) => (
+            <section key={label} className="rounded-3xl p-5 animate-rise" style={{ background: tile.bg, animationDelay: `${i * 70}ms` }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-2 text-sm font-medium text-v-text">
+                    <span className="w-8 h-8 rounded-xl bg-v-surface/70 flex items-center justify-center" style={{ color: tile.ink }}>
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    {label}
+                  </p>
+                  <p className="text-3xl font-bold text-v-text mt-3 tabular-nums truncate">{value}</p>
+                  {c ? <ChangeLine change={c} vs={current.vs} /> : <p className="text-xs text-v-muted mt-1">{current.hint}</p>}
+                </div>
+              </div>
+              <div className="mt-4">
+                <AreaChart points={points} ink={tile.ink} format={format} name={`${label}, ${current.hint}`} />
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 auto-rows-fr gap-5">
+          {small.map(({ label, value, icon: Icon, tile, hint, href, change: c }, i) => {
+            const body = (
+              <>
+                <div className="flex items-start justify-between">
+                  <span className="w-10 h-10 rounded-2xl bg-v-surface/70 flex items-center justify-center" style={{ color: tile.ink }}>
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  {href && (
+                    <span className="w-8 h-8 rounded-full bg-v-surface/70 flex items-center justify-center text-v-text group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </span>
+                  )}
+                </div>
+                <div className="mt-auto pt-6">
+                  <p className="text-3xl font-bold text-v-text tabular-nums">{value}</p>
+                  <p className="text-sm font-medium text-v-text mt-1">{label}</p>
+                  {c ? <ChangeLine change={c} vs={current.vs} /> : <p className="text-xs text-v-muted mt-0.5">{hint}</p>}
+                </div>
+              </>
+            )
+            const attention = label === 'Pending' && typeof value === 'number' && value > 0
+            const className = 'group flex flex-col rounded-3xl p-5 min-h-44 animate-rise'
+            const style = { background: tile.bg, animationDelay: `${120 + i * 60}ms` }
+            // The flicker wraps the tile so it doesn't fight the load-in animation
+            const wrap = (node: React.ReactNode) =>
+              attention ? <div key={label} className="rounded-3xl animate-flicker">{node}</div> : node
+            return wrap(href ? (
+              <Link key={label} href={href} aria-label={`${label}: ${value}. Open`}
+                className={`${className} h-full hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all`} style={style}>
+                {body}
+              </Link>
+            ) : (
+              <div key={label} className={`${className} h-full`} style={style}>{body}</div>
+            ))
+          })}
+        </div>
+      </div>
+
+      <section className="rounded-3xl border border-v-line overflow-hidden animate-rise" style={{ animationDelay: '480ms' }}>
+        <div className="px-6 py-5 flex items-center justify-between gap-4">
+          <h2 className="text-lg font-bold text-v-text">Recently delivered</h2>
+          <Link href="/vendor/dashboard/orders?tab=done" className="inline-flex items-center gap-1 text-sm font-semibold text-[#c46018] hover:gap-2 transition-all">
+            All orders <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+        {recentDelivered.length === 0 ? (
+          <p className="px-6 pb-10 pt-4 text-center text-v-muted">No delivered orders yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-v-muted border-y border-v-line">
+                  <th className="font-medium px-6 py-3">Order</th>
+                  <th className="font-medium px-6 py-3">Date</th>
+                  <th className="font-medium px-6 py-3">Items</th>
+                  <th className="font-medium px-6 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentDelivered.map((order) => (
+                  <tr key={order.id} className="border-b border-v-line last:border-0 hover:bg-v-card transition-colors">
+                    <td className="px-6 py-4 font-semibold text-v-text">#{order.id}</td>
+                    <td className="px-6 py-4 text-v-muted whitespace-nowrap">
+                      {new Date(order.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 text-v-muted">
+                      <span className="line-clamp-1">{order.items?.map((it) => `${it.quantity}× ${it.name}`).join(', ') || '—'}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-semibold text-v-text tabular-nums whitespace-nowrap">{formatNaira(itemsTotal(order))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </>
   )
 }

@@ -2,6 +2,7 @@ import { IMAGES } from "@/assets/assetsData";
 import CodeInputComponent from "@/components/CodeInputComponent";
 import AvailableOrdersDropdown from "@/components/AvailableOrdersDropdown";
 import PickupConfirmOTP from "@/components/PickupConfirmOTP";
+import RaiseDisputeSheet from "@/components/RaiseDisputeSheet";
 import { RideOfferModal } from "@/components/RideOfferModal";
 import * as Location from "expo-location";
 import { router } from "expo-router";
@@ -129,6 +130,11 @@ const RiderHomeScreen = () => {
 
   const activeDelivery =
     AcceptedDeliveries.find((d) => isActiveStatus(d.status)) || null;
+  // Rust only accepts a dispute before the pickup code is entered
+  const atPickup =
+    activeDelivery?.status === "arriving_pickup" ||
+    activeDelivery?.status === "driver_arrived";
+  const [showDispute, setShowDispute] = useState(false);
 
   const deliveredDeliveries = useMemo(
     () => AcceptedDeliveries.filter((d) => d.status === "delivered"),
@@ -445,6 +451,17 @@ const RiderHomeScreen = () => {
           />
         ) : null}
 
+        {atPickup && (
+          <TouchableOpacity
+            onPress={() => setShowDispute(true)}
+            accessibilityRole="button"
+            className="flex-row items-center justify-center gap-2 h-12 mt-3 rounded-full border border-red-500/40"
+          >
+            <MaterialIcons name="report-problem" size={18} color="#F87171" />
+            <Text className="text-red-400 font-bold text-sm">PROBLEM WITH THE PACKAGE?</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Confirm drop-off button — always present, unlocks within 100m of dropoff */}
         <View
           style={{
@@ -489,6 +506,22 @@ const RiderHomeScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {activeDelivery && atPickup && (
+        <RaiseDisputeSheet
+          visible={showDispute}
+          orderRef={activeDelivery.order_code}
+          onClose={() => setShowDispute(false)}
+          onReported={() => {
+            setShowDispute(false);
+            updateDeliveryStatus(activeDelivery.id, "cancelled");
+            Alert.alert(
+              "Order cancelled",
+              "Thanks for reporting it. ASAP will review your photo; you're free for new deliveries.",
+            );
+          }}
+        />
+      )}
 
       {activeDelivery && (
         <PickupConfirmOTP

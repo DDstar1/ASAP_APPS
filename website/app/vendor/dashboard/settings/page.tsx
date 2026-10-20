@@ -17,7 +17,7 @@ const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ss
 const OUTSIDE_COVERAGE = 'Sorry, outside our current coverage.'
 
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm'
+  'w-full px-4 py-3 rounded-xl border border-v-muted/15 bg-v-raised text-v-text placeholder:text-v-muted/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm'
 const saveClass =
   'py-2.5 px-6 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2'
 
@@ -148,7 +148,7 @@ export default function SettingsPage() {
 
   const noticeFor = (section: Section) =>
     notice?.section === section && (
-      <div className={`flex items-start gap-2 px-4 py-3 rounded-xl text-sm ${notice.kind === 'error' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+      <div className={`flex items-start gap-2 px-4 py-3 rounded-xl text-sm ${notice.kind === 'error' ? 'bg-red-500/10 text-v-down' : 'bg-emerald-500/10 text-v-up'}`}>
         {notice.kind === 'error' ? <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />}
         {notice.text}
       </div>
@@ -157,38 +157,38 @@ export default function SettingsPage() {
   const locationChanged = location.lat !== vendor.lat || location.lng !== vendor.lng || location.address.trim() !== vendor.address
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="mb-2">
-        <h1 className="text-2xl font-bold text-[#e0e5f9]">Settings</h1>
-        <p className="text-[#a5abbd] mt-1 text-sm">Settings for {vendor.name}</p>
+        <h1 className="text-3xl font-bold text-v-text tracking-tight">Settings</h1>
+        <p className="text-v-muted mt-1">Settings for {vendor.name}</p>
       </div>
 
       {/* Store details */}
-      <form onSubmit={handleSaveDetails} className="bg-[#152035] rounded-2xl p-6 space-y-4">
-        <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
-          <Store className="w-5 h-5 text-[#ff923e]" />
+      <form onSubmit={handleSaveDetails} className="bg-v-card rounded-2xl p-6 space-y-4">
+        <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+          <Store className="w-5 h-5 text-v-accent" />
           Store details
         </h2>
         {noticeFor('details')}
         <div>
-          <label htmlFor="store-name" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Store name</label>
+          <label htmlFor="store-name" className="block text-sm font-medium text-v-text mb-1.5">Store name</label>
           <input id="store-name" type="text" required value={details.name} onChange={(e) => setDetails((d) => ({ ...d, name: e.target.value }))} className={inputClass} />
         </div>
         <div>
-          <label htmlFor="store-phone" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Phone</label>
+          <label htmlFor="store-phone" className="block text-sm font-medium text-v-text mb-1.5">Phone</label>
           <input id="store-phone" type="tel" required autoComplete="tel" value={details.phone} onChange={(e) => setDetails((d) => ({ ...d, phone: e.target.value }))} placeholder="+234..." className={inputClass} />
-          <p className="text-xs text-[#a5abbd]/60 mt-1.5">Riders and customers call this number about orders</p>
+          <p className="text-xs text-v-muted/60 mt-1.5">Riders and customers call this number about orders</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="open-time" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Opens at</label>
+            <label htmlFor="open-time" className="block text-sm font-medium text-v-text mb-1.5">Opens at</label>
             <input id="open-time" type="time" required value={details.open_time} onChange={(e) => setDetails((d) => ({ ...d, open_time: e.target.value }))} className={inputClass} />
           </div>
           <div>
-            <label htmlFor="close-time" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Closes at</label>
+            <label htmlFor="close-time" className="block text-sm font-medium text-v-text mb-1.5">Closes at</label>
             <input id="close-time" type="time" required value={details.close_time} onChange={(e) => setDetails((d) => ({ ...d, close_time: e.target.value }))} className={inputClass} />
           </div>
-          <p className="col-span-2 text-xs text-[#a5abbd]/60 -mt-2">
+          <p className="col-span-2 text-xs text-v-muted/60 -mt-2">
             Nigerian time. If ASAP Logistics is on, your bot stays online outside these hours but doesn&apos;t take new delivery orders.
           </p>
         </div>
@@ -200,13 +200,13 @@ export default function SettingsPage() {
       </form>
 
       {/* Location */}
-      <div className="bg-[#152035] rounded-2xl p-6 space-y-4">
+      <div className="bg-v-card rounded-2xl p-6 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[#ff923e]" />
+          <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-v-accent" />
             Store location
           </h2>
-          <p className="text-xs text-[#a5abbd]/60 mt-1">
+          <p className="text-xs text-v-muted/60 mt-1">
             Riders collect orders here and ASAP checks delivery range from it. It can&apos;t be changed while orders are open.
           </p>
         </div>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
           onAddress={(address) => setLocation((l) => ({ ...l, address }))}
         />
         <div>
-          <label htmlFor="store-address" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Address</label>
+          <label htmlFor="store-address" className="block text-sm font-medium text-v-text mb-1.5">Address</label>
           <input id="store-address" type="text" required value={location.address} onChange={(e) => setLocation((l) => ({ ...l, address: e.target.value }))} className={inputClass} />
         </div>
         <div className="flex justify-end">
@@ -229,16 +229,16 @@ export default function SettingsPage() {
       </div>
 
       {/* Logistics */}
-      <div className="bg-[#152035] rounded-2xl p-6 space-y-4">
+      <div className="bg-v-card rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
-              <Truck className="w-5 h-5 text-[#ff923e]" />
+            <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+              <Truck className="w-5 h-5 text-v-accent" />
               Logistics
             </h2>
-            <p className="text-xs text-[#a5abbd]/60 mt-1">ASAP riders deliver this store&apos;s orders. Only available inside our coverage area.</p>
+            <p className="text-xs text-v-muted/60 mt-1">ASAP riders deliver this store&apos;s orders. Only available inside our coverage area.</p>
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${vendor.allows_logistics ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#a5abbd]/10 text-[#a5abbd]'}`}>
+          <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${vendor.allows_logistics ? 'bg-emerald-500/10 text-v-up' : 'bg-v-muted/10 text-v-muted'}`}>
             {vendor.allows_logistics ? 'On' : 'Off'}
           </span>
         </div>
@@ -249,8 +249,8 @@ export default function SettingsPage() {
           disabled={saving === 'logistics'}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition w-full justify-center ${
             vendor.allows_logistics
-              ? 'border border-[#a5abbd]/20 text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]'
-              : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+              ? 'border border-v-muted/20 text-v-muted hover:bg-v-raised hover:text-v-text'
+              : 'bg-emerald-500/15 text-v-up hover:bg-emerald-500/25'
           } disabled:opacity-60`}
         >
           {saving === 'logistics'
@@ -261,21 +261,21 @@ export default function SettingsPage() {
       </div>
 
       {/* Payout account */}
-      <form onSubmit={handleSaveBank} className="bg-[#152035] rounded-2xl p-6 space-y-4">
+      <form onSubmit={handleSaveBank} className="bg-v-card rounded-2xl p-6 space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
-            <Landmark className="w-5 h-5 text-[#ff923e]" />
+          <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+            <Landmark className="w-5 h-5 text-v-accent" />
             Payout account
           </h2>
-          <p className="text-xs text-[#a5abbd]/60 mt-1">Where this store&apos;s earnings are paid</p>
+          <p className="text-xs text-v-muted/60 mt-1">Where this store&apos;s earnings are paid</p>
         </div>
         {noticeFor('bank')}
         <div>
-          <label htmlFor="bank-code" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Bank</label>
+          <label htmlFor="bank-code" className="block text-sm font-medium text-v-text mb-1.5">Bank</label>
           <BankSelect id="bank-code" value={bank.bank_code} onChange={(code) => setBank((b) => ({ ...b, bank_code: code }))} className={inputClass} />
         </div>
         <div>
-          <label htmlFor="account-number" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Account number</label>
+          <label htmlFor="account-number" className="block text-sm font-medium text-v-text mb-1.5">Account number</label>
           <input id="account-number" type="text" inputMode="numeric" required maxLength={10} value={bank.bank_account_number} onChange={(e) => setBank((b) => ({ ...b, bank_account_number: e.target.value.replace(/\D/g, '') }))} placeholder="0123456789" className={inputClass} />
         </div>
         <div className="flex justify-end">
@@ -286,13 +286,13 @@ export default function SettingsPage() {
       </form>
 
       {/* Delete store */}
-      <div className="bg-[#152035] rounded-2xl p-6 space-y-4 border border-red-500/20">
+      <div className="bg-v-card rounded-2xl p-6 space-y-4 border border-red-500/20">
         <div>
-          <h2 className="text-base font-semibold text-red-400 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-v-down flex items-center gap-2">
             <Trash2 className="w-5 h-5" />
             Delete store
           </h2>
-          <p className="text-xs text-[#a5abbd]/60 mt-1">
+          <p className="text-xs text-v-muted/60 mt-1">
             Removes {vendor.name} from your dashboard and switches its bot off. Your other stores and your login are not affected.
             Not possible while orders are open or refunds are pending.
           </p>
@@ -302,7 +302,7 @@ export default function SettingsPage() {
           type="button"
           onClick={handleDelete}
           disabled={saving === 'delete'}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition w-full justify-center bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-60"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition w-full justify-center bg-red-500/10 text-v-down hover:bg-red-500/20 disabled:opacity-60"
         >
           {saving === 'delete' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
           Delete this store

@@ -74,10 +74,12 @@ export default function DestinationSearchModal({
   onSelect,
   field,
   originLabel,
+  onChooseOnMap,
 }: {
   visible: boolean;
   onClose: () => void;
   onSelect: (location: any) => void;
+  onChooseOnMap?: () => void;
   field: "from" | "to";
   // Shown in the top pill while choosing the destination
   originLabel?: string | null;
@@ -251,6 +253,18 @@ export default function DestinationSearchModal({
               onPress={handleUseCurrentLocation}
               loading={loadingLocation}
             />
+            {onChooseOnMap && (
+              <PlaceRow
+                icon="map-outline"
+                iconColor={ORANGE}
+                title="Choose on map"
+                subtitle={`Move the map to set your ${fieldLabel}`}
+                onPress={() => {
+                  onClose();
+                  onChooseOnMap();
+                }}
+              />
+            )}
 
             {recents.length > 0 && (
               <Text className="text-gray-400 text-xs font-semibold uppercase tracking-widest mt-5 mb-1">

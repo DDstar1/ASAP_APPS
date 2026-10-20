@@ -105,37 +105,37 @@ export default function BotPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#ff923e]" />
+        <Loader2 className="w-8 h-8 animate-spin text-v-accent" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#e0e5f9]">Telegram Bot</h1>
-        <p className="text-[#a5abbd] mt-1 text-sm">The Telegram bot your customers order from</p>
+        <h1 className="text-3xl font-bold text-v-text tracking-tight">Telegram Bot</h1>
+        <p className="text-v-muted mt-1">The Telegram bot your customers order from</p>
       </div>
 
       {/* No subscription — upsell gate */}
       {!hasSubscription && !bot && (
-        <div className="bg-[#152035] rounded-2xl p-8 mb-6 flex flex-col items-center text-center">
+        <div className="bg-v-card rounded-2xl p-8 mb-6 flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl bg-[#ff923e]/10 flex items-center justify-center mb-4">
-            <Lock className="w-8 h-8 text-[#ff923e]" />
+            <Lock className="w-8 h-8 text-v-accent" />
           </div>
-          <h2 className="text-lg font-bold text-[#e0e5f9] mb-2">Subscription Required</h2>
-          <p className="text-[#a5abbd] text-sm max-w-sm mb-6">
+          <h2 className="text-lg font-bold text-v-text mb-2">Subscription Required</h2>
+          <p className="text-v-muted text-sm max-w-sm mb-6">
             A Telegram bot for your store is a premium feature. Upgrade your plan to connect a bot and start receiving orders directly from customers on Telegram.
           </p>
-          <div className="w-full bg-[#1c2a42] rounded-xl p-5 mb-6 text-left space-y-3">
+          <div className="w-full bg-v-raised rounded-xl p-5 mb-6 text-left space-y-3">
             {[
               'Receive orders directly in Telegram',
               'Automated order confirmations & updates',
               'Custom bot name for your brand',
               'Activate or pause the bot anytime',
             ].map((f) => (
-              <div key={f} className="flex items-center gap-3 text-sm text-[#a5abbd]">
-                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div key={f} className="flex items-center gap-3 text-sm text-v-muted">
+                <CheckCircle className="w-4 h-4 text-v-up shrink-0" />
                 {f}
               </div>
             ))}
@@ -152,26 +152,26 @@ export default function BotPage() {
 
       {/* Assigned bot */}
       {bot && (
-        <div className="bg-[#152035] rounded-2xl p-6 space-y-5">
+        <div className="bg-v-card rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-[#e0e5f9] flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-base font-semibold text-v-text flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-v-up" />
               Your Bot
             </h2>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${bot.suspended_at ? 'bg-red-500/10 text-red-400' : bot.billing_paused_at ? 'bg-amber-500/10 text-amber-400' : bot.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#a5abbd]/10 text-[#a5abbd]'}`}>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${bot.suspended_at ? 'bg-red-500/10 text-v-down' : bot.billing_paused_at ? 'bg-amber-500/10 text-v-warn' : bot.is_active ? 'bg-emerald-500/10 text-v-up' : 'bg-v-muted/10 text-v-muted'}`}>
               {bot.suspended_at ? 'Suspended' : bot.billing_paused_at ? 'Paused — unpaid' : bot.is_active ? 'Active' : 'Inactive'}
             </span>
           </div>
 
           {bot.suspended_at && (
-            <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm">
+            <div className="flex items-start gap-2 bg-red-500/10 text-v-down px-4 py-3 rounded-xl text-sm">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               This bot was deactivated after {STRIKE_LIMIT} cancelled orders. Call ASAP support to have it reinstated.
             </div>
           )}
 
           {bot.billing_paused_at && !bot.suspended_at && (
-            <div className="flex items-start gap-2 bg-amber-500/10 text-amber-300 px-4 py-3 rounded-xl text-sm">
+            <div className="flex items-start gap-2 bg-amber-500/10 text-v-warn px-4 py-3 rounded-xl text-sm">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <p>
                 Your bot is off because your subscription payment is overdue. It switches back on as soon as you pay.{' '}
@@ -181,24 +181,24 @@ export default function BotPage() {
           )}
 
           {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm">
+            <div className="flex items-start gap-2 bg-red-500/10 text-v-down px-4 py-3 rounded-xl text-sm">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               {error}
             </div>
           )}
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
-              <span className="text-sm text-[#a5abbd]">Display name</span>
+            <div className="flex items-center justify-between py-3 border-b border-v-muted/10">
+              <span className="text-sm text-v-muted">Display name</span>
               {bot.bot_username ? (
-                <span className="text-sm font-medium text-[#e0e5f9]">{bot.bot_username}</span>
+                <span className="text-sm font-medium text-v-text">{bot.bot_username}</span>
               ) : (
-                <span className="text-sm text-[#a5abbd]">Not named yet</span>
+                <span className="text-sm text-v-muted">Not named yet</span>
               )}
             </div>
             {bot.bot_link && (
-              <div className="flex items-center justify-between py-3 border-b border-[#a5abbd]/10">
-                <span className="text-sm text-[#a5abbd]">Link</span>
+              <div className="flex items-center justify-between py-3 border-b border-v-muted/10">
+                <span className="text-sm text-v-muted">Link</span>
                 <a
                   href={bot.bot_link}
                   target="_blank"
@@ -212,23 +212,23 @@ export default function BotPage() {
             )}
             {bot.bot_id !== null && (
               <div className="flex items-center justify-between py-3">
-                <span className="text-sm text-[#a5abbd]">Bot ID</span>
-                <span className="text-sm text-[#e0e5f9] font-mono">{bot.bot_id}</span>
+                <span className="text-sm text-v-muted">Bot ID</span>
+                <span className="text-sm text-v-text font-mono">{bot.bot_id}</span>
               </div>
             )}
           </div>
 
           {!bot.bot_username && !bot.suspended_at && (
             <form onSubmit={handleSaveUsername} className="space-y-3">
-              <label className="block text-sm font-medium text-[#e0e5f9]">Name your bot</label>
-              <p className="text-xs text-[#a5abbd]/60">The name customers see on your bot in Telegram</p>
+              <label className="block text-sm font-medium text-v-text">Name your bot</label>
+              <p className="text-xs text-v-muted/60">The name customers see on your bot in Telegram</p>
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Mercury Wears"
-                className="w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-v-muted/15 bg-v-raised text-v-text placeholder:text-v-muted/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm"
               />
               <button
                 type="submit"
@@ -246,8 +246,8 @@ export default function BotPage() {
               disabled={toggling}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition flex-1 justify-center ${
                 bot.is_active
-                  ? 'border border-[#a5abbd]/20 text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]'
-                  : 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                  ? 'border border-v-muted/20 text-v-muted hover:bg-v-raised hover:text-v-text'
+                  : 'bg-emerald-500/15 text-v-up hover:bg-emerald-500/25'
               } disabled:opacity-60`}
             >
               {toggling
@@ -264,9 +264,9 @@ export default function BotPage() {
 
       {/* Welcome message */}
       {bot && (
-        <form onSubmit={handleSaveWelcome} className="bg-[#152035] rounded-2xl p-6 space-y-3 mt-6">
-          <label htmlFor="welcome-message" className="block text-base font-semibold text-[#e0e5f9]">Welcome message</label>
-          <p className="text-xs text-[#a5abbd]/60">What your bot says when a customer starts a chat</p>
+        <form onSubmit={handleSaveWelcome} className="bg-v-card rounded-2xl p-6 space-y-3 mt-6">
+          <label htmlFor="welcome-message" className="block text-base font-semibold text-v-text">Welcome message</label>
+          <p className="text-xs text-v-muted/60">What your bot says when a customer starts a chat</p>
           <textarea
             id="welcome-message"
             rows={4}
@@ -274,11 +274,11 @@ export default function BotPage() {
             value={welcome}
             onChange={(e) => { setWelcome(e.target.value); setWelcomeSaved(false) }}
             placeholder={`Welcome to ${vendor?.name ?? 'our store'}! Browse the menu and order in a few taps.`}
-            className="w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm resize-y"
+            className="w-full px-4 py-3 rounded-xl border border-v-muted/15 bg-v-raised text-v-text placeholder:text-v-muted/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm resize-y"
           />
           <div className="flex items-center justify-end gap-3">
             {welcomeSaved && (
-              <span className="flex items-center gap-1.5 text-sm text-emerald-400">
+              <span className="flex items-center gap-1.5 text-sm text-v-up">
                 <CheckCircle className="w-4 h-4" />
                 Saved
               </span>

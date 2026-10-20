@@ -237,6 +237,17 @@ export function getVendorOrders(vendorId: number) {
     .order('created_at', { ascending: false })
 }
 
+// Paid orders still waiting for Accept / Can't fulfil (the sidebar badge)
+export async function getAwaitingAcceptCount(vendorId: number) {
+  const { count } = await supabase
+    .from('telegram_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('vendor_id', vendorId)
+    .eq('status', 'paid')
+    .is('vendor_response', null)
+  return count ?? 0
+}
+
 // The vendor's only order write: Accept, or Can't fulfil (cancels + queues
 // Zazu's refund). Errors with P0001 once the order is past changing.
 export function respondToOrder(orderId: number, accept: boolean) {

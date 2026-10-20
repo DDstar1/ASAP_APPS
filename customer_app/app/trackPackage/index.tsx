@@ -44,6 +44,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { mapStyleFor } from "@/constants/mapStyle";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import CancellationNotice from "@/components/CancellationNotice";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 const ORANGE = "#EE7F3A";
@@ -656,6 +657,8 @@ export default function RiderTrackingScreen() {
         </View>
 
         {hasDriver && !isDelivered && contactButtons}
+
+        {isCancelled && order && <CancellationNotice orderId={Number(order.id)} />}
 
         {canCancel && (
           <TouchableOpacity

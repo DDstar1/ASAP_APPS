@@ -12,7 +12,7 @@ import Constants from "expo-constants";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mapStyleFor } from "@/constants/mapStyle";
@@ -49,6 +49,14 @@ export default function MapScreen() {
     pickup: string | null;
     dropoff: string | null;
   }>({ pickup: null, dropoff: null });
+
+  // "Choose on map": a fixed centre pin; the address under it is looked up
+  // each time the map stops moving
+  const [pickingField, setPickingField] = useState<"from" | "to" | null>(null);
+  const [pinCenter, setPinCenter] = useState<Coordinates | null>(null);
+  const [pinAddress, setPinAddress] = useState<string | null>(null);
+  const [pinLoading, setPinLoading] = useState(false);
+  const geocodeSeq = useRef(0);
 
   const mapRef = useRef<MapView>(null);
   const colorScheme = useColorScheme();
@@ -129,6 +137,52 @@ export default function MapScreen() {
     router.push("/map/item-type");
   };
 
+  const startPicking = (field: "from" | "to") => {
+    setPickingField(field);
+    setPinAddress(null);
+    const current = (field === "from" ? pickup : destination)?.coordinates;
+    if (current) {
+      mapRef.current?.animateToRegion(
+        { ...current, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+        400,
+      );
+    } else {
+      // Zoom in where the map already is, close enough to pick a street
+      mapRef.current?.getCamera().then((camera) => {
+        mapRef.current?.animateToRegion(
+          { ...camera.center, latitudeDelta: 0.02, longitudeDelta: 0.02 },
+          400,
+        );
+      });
+    }
+  };
+
+  const handleRegionChangeComplete = async (region: Region) => {
+    if (!pickingField) return;
+    const center = { latitude: region.latitude, longitude: region.longitude };
+    setPinCenter(center);
+    setPinLoading(true);
+    // Only the latest lookup wins when the user keeps moving the map
+    const seq = ++geocodeSeq.current;
+    const address = await reverseGeocode(center.latitude, center.longitude).catch(() => null);
+    if (seq !== geocodeSeq.current) return;
+    setPinAddress(address);
+    setPinLoading(false);
+  };
+
+  const confirmPin = () => {
+    if (!pickingField || !pinCenter) return;
+    const location = {
+      name: pinAddress?.split(",")[0]?.trim() || "Pinned location",
+      address: pinAddress,
+      coordinates: pinCenter,
+    };
+    if (pickingField === "from") setPickup(location);
+    else setDestination(location);
+    setPickingField(null);
+    setPinCenter(null);
+  };
+
   // Book → Korapay → awaiting rider
   const handleBook = async () => {
     const user = useUserStore.getState().user;
@@ -200,8 +254,9 @@ export default function MapScreen() {
           latitudeDelta: 0.2,
           longitudeDelta: 0.2,
         }}
+        onRegionChangeComplete={handleRegionChangeComplete}
       >
-        {pickup?.coordinates && (
+        {pickup?.coordinates && pickingField !== "from" && (
           <Marker
             coordinate={pickup.coordinates}
             title="Pickup"
@@ -209,7 +264,7 @@ export default function MapScreen() {
           />
         )}
 
-        {destination?.coordinates && (
+        {destination?.coordinates && pickingField !== "to" && (
           <Marker
             coordinate={destination.coordinates}
             title="Destination"
@@ -257,7 +312,68 @@ export default function MapScreen() {
         </View>
       </SafeAreaView>
 
+      {pickingField && (
+        <>
+          {/* Fixed pin: its tip marks the centre of the map */}
+          <View
+            pointerEvents="none"
+            className="absolute left-1/2 top-1/2"
+            style={{ marginLeft: -22, marginTop: -44 }}
+          >
+            <Ionicons
+              name="location"
+              size={44}
+              color={pickingField === "from" ? "#22C55E" : "#EF4444"}
+            />
+          </View>
+
+          <SafeAreaView
+            edges={["bottom"]}
+            className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-[#3C3C43] px-4 pt-3 pb-4 gap-3"
+          >
+            <View className="self-center w-10 h-1 rounded-full bg-white/20" />
+            <Text className="text-gray-400 text-xs">
+              Move the map to place the pin on your {pickingField === "from" ? "pickup" : "destination"}
+            </Text>
+            <View className="bg-[#212126] rounded-2xl px-4 py-4 flex-row items-center gap-3 min-h-[60px]">
+              {pinLoading ? (
+                <ActivityIndicator color="#EE7F3A" />
+              ) : (
+                <Ionicons name="location-outline" size={20} color="#9CA3AF" />
+              )}
+              <Text className="text-white text-base flex-1" numberOfLines={2}>
+                {pinLoading
+                  ? "Finding address…"
+                  : pinAddress ?? (pinCenter ? "No address here — you can still use this spot" : "Move the map")}
+              </Text>
+            </View>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setPickingField(null)}
+                accessibilityRole="button"
+                className="h-14 px-6 rounded-full border border-white/20 justify-center items-center"
+              >
+                <Text className="text-white font-semibold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmPin}
+                disabled={!pinCenter || pinLoading}
+                accessibilityRole="button"
+                className={`flex-1 h-14 rounded-full bg-[#EE7F3A] justify-center items-center ${
+                  !pinCenter || pinLoading ? "opacity-50" : ""
+                }`}
+              >
+                <Text className="text-white text-lg font-bold">
+                  Confirm {pickingField === "from" ? "pickup" : "destination"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </>
+      )}
+
       {/* Re-center button */}
+      {!pickingField && (
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel="Show the whole route"
@@ -274,13 +390,14 @@ export default function MapScreen() {
       >
         <Ionicons name="compass-outline" size={24} color="white" />
       </TouchableOpacity>
+      )}
 
       {/* Bottom Panel */}
       <SafeAreaView
         edges={["bottom"]}
         className={`absolute bottom-0 left-0 right-0 rounded-t-3xl ${
           hasItem ? "bg-black" : "bg-[#3C3C43]"
-        }`}
+        } ${pickingField ? "hidden" : ""}`}
       >
         {hasItem ? (
           <BookingSheet
@@ -363,6 +480,7 @@ export default function MapScreen() {
         field={activeField || "from"}
         originLabel={pickup?.name}
         onClose={() => setActiveField(null)}
+        onChooseOnMap={() => startPicking(activeField || "from")}
         onSelect={(location) => {
           if (activeField === "from") setPickup(location);
           if (activeField === "to") setDestination(location);

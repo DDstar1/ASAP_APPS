@@ -47,16 +47,16 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-3xl">
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div className="max-w-3xl mx-auto">
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#e0e5f9]">Notifications</h1>
-          <p className="text-[#a5abbd] mt-0.5 text-sm">
+          <h1 className="text-3xl font-bold text-v-text tracking-tight">Notifications</h1>
+          <p className="text-v-muted mt-1">
             {unread > 0 ? `${unread} unread` : 'You’re all caught up'}
           </p>
         </div>
         <button onClick={handleMarkAll} disabled={unread === 0 || markingAll}
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[#152035] text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9] transition disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-v-card text-v-muted hover:bg-v-raised hover:text-v-text transition disabled:opacity-40 disabled:cursor-not-allowed">
           {markingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
           Mark all as read
         </button>
@@ -66,7 +66,7 @@ export default function NotificationsPage() {
         {FILTERS.map(({ value, label }) => (
           <button key={value} onClick={() => setFilter(value)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
-              filter === value ? 'bg-[#ff923e] text-white' : 'bg-[#152035] text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]'
+              filter === value ? 'bg-v-text text-v-surface' : 'bg-v-card text-v-muted hover:bg-v-raised hover:text-v-text'
             }`}>
             {label}
           </button>
@@ -75,15 +75,15 @@ export default function NotificationsPage() {
 
       {!loaded ? (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-18 bg-[#152035] rounded-2xl animate-pulse" />)}
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-18 bg-v-card rounded-2xl animate-pulse" />)}
         </div>
       ) : shown.length === 0 ? (
         <div className="text-center py-16">
-          <div className="w-16 h-16 bg-[#1c2a42] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Bell className="w-8 h-8 text-[#a5abbd]/40" />
+          <div className="w-16 h-16 bg-v-raised rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Bell className="w-8 h-8 text-v-muted/40" />
           </div>
-          <p className="text-[#a5abbd] font-medium">No notifications yet</p>
-          <p className="text-[#a5abbd]/60 text-sm mt-1">Payments, new orders and deliveries show up here as they happen</p>
+          <p className="text-v-muted font-medium">No notifications yet</p>
+          <p className="text-v-muted/60 text-sm mt-1">Payments, new orders and deliveries show up here as they happen</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-0.5">
@@ -93,19 +93,19 @@ export default function NotificationsPage() {
               <li key={n.id}>
                 <Link href={notificationHref(n)} onClick={() => handleOpen(n)}
                   className={`flex items-start gap-4 px-5 py-4 rounded-2xl transition ${
-                    n.read_at ? 'bg-[#0d1525] hover:bg-[#111a2e]' : 'bg-[#152035] hover:bg-[#1c2a42]'
+                    n.read_at ? 'bg-v-surface hover:bg-v-card' : 'bg-v-card hover:bg-v-raised'
                   }`}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${view.tone}`}>
                     <view.icon className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm ${n.read_at ? 'font-medium text-[#a5abbd]' : 'font-semibold text-[#e0e5f9]'}`}>{view.title}</p>
+                      <p className={`text-sm ${n.read_at ? 'font-medium text-v-muted' : 'font-semibold text-v-text'}`}>{view.title}</p>
                       {!n.read_at && <span className="w-1.5 h-1.5 rounded-full bg-[#ff923e]" aria-label="Unread" />}
                     </div>
-                    <p className="text-sm text-[#a5abbd] mt-0.5">{view.body}</p>
+                    <p className="text-sm text-v-muted mt-0.5">{view.body}</p>
                   </div>
-                  <span className="text-xs text-[#a5abbd]/70 whitespace-nowrap">{timeAgo(n.created_at)}</span>
+                  <span className="text-xs text-v-muted/70 whitespace-nowrap">{timeAgo(n.created_at)}</span>
                 </Link>
               </li>
             )

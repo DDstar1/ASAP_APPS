@@ -4,7 +4,8 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Package, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { signInWithPassword, getVendorsByUserId } from '@/lib/supabase_queries'
+import { signInWithPassword } from '@/lib/supabase_queries'
+import { landingPath, explicitNext } from '@/lib/landing'
 
 function LoginForm() {
   const router = useRouter()
@@ -27,12 +28,7 @@ function LoginForm() {
       return
     }
 
-    // Same-site paths only, so a crafted link can't bounce users off-site
-    const next = searchParams.get('next')
-    if (next && next.startsWith('/') && !next.startsWith('//')) { router.push(next); return }
-
-    const { data: stores } = await getVendorsByUserId(authData.user.id)
-    router.push(stores && stores.length > 0 ? '/vendor/dashboard' : '/home')
+    router.push(explicitNext(searchParams.get('next')) ?? await landingPath(authData.user.id))
   }
 
   return (

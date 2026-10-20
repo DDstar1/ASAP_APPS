@@ -87,6 +87,13 @@ export type ItemRow = {
   menu_id: number | null
   price: number
   stock: number
+  // Packed size, sent to riders with the ride request. size_estimated = still
+  // the default food-parcel size the database filled in, not the vendor's.
+  weight_kg: number
+  length_cm: number
+  width_cm: number
+  height_cm: number
+  size_estimated: boolean
 }
 
 export type OrderRow = {

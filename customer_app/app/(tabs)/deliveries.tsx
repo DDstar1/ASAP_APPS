@@ -20,6 +20,17 @@ import CompletedOrdersEmptyState from "@/components/CompletedOrdersEmptyState";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { router } from "expo-router";
 import SelectItemTypeScreen from "@/components/SelectItemTypeScreen";
+import ReviewCard, { PackageReview } from "@/components/ReviewCard";
+import { supabase } from "@/lib/supabase";
+
+// RLS returns only disputes on the signed-in customer's orders
+async function fetchReviews() {
+  const { data } = await supabase
+    .from("back_package_disputes")
+    .select("id, order_id, reason, status, refund_amount, refund_status, created_at")
+    .order("created_at", { ascending: false });
+  return (data ?? []) as PackageReview[];
+}
 
 // Orders a rider is still working on (or still being found for)
 const ACTIVE_STATUSES = [
@@ -35,15 +46,38 @@ const OrdersPage = () => {
   const { AllDeliveries, loading, fetchAllDeliveries } =
     useCustomerDeliveryStore();
 
+  const [reviews, setReviews] = useState<PackageReview[]>([]);
+
   useEffect(() => {
     fetchAllDeliveries();
+    fetchReviews().then(setReviews);
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchAllDeliveries();
+    const [, latest] = await Promise.all([fetchAllDeliveries(), fetchReviews()]);
+    setReviews(latest);
     setRefreshing(false);
   };
+
+  const reviewsFooter =
+    reviews.length > 0 ? (
+      <View className="pt-4">
+        <Text className="text-lg font-bold text-white pb-1">
+          {reviews.some((r) => r.status === "pending") ? "Pending Reviews" : "Reviews"}
+        </Text>
+        {reviews.map((review) => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            orderCode={
+              AllDeliveries.find((d) => Number(d.id) === review.order_id)?.order_code ??
+              `#${review.order_id}`
+            }
+          />
+        ))}
+      </View>
+    ) : null;
 
   const activeDeliveries = useMemo(
     () => AllDeliveries.filter((item) => ACTIVE_STATUSES.includes(item.status)),
@@ -123,6 +157,7 @@ const OrdersPage = () => {
           sections={completedSections}
           keyExtractor={(item, index) => `${String(item.id)}-${index}`}
           ListHeaderComponent={activeHeader}
+          ListFooterComponent={reviewsFooter}
           renderItem={({ item }) => (
             <CompletedOrderCards
               item={item}
