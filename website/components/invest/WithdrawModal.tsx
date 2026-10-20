@@ -38,7 +38,7 @@ export default function WithdrawModal({ balance, onClose, onDone }: Props) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
       <form onSubmit={handleSubmit} role="dialog" aria-modal="true" aria-labelledby="withdraw-title"
-        className="relative w-full max-w-md bg-inv-surface rounded-3xl p-6 sm:p-8 shadow-2xl">
+        className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-inv-surface rounded-3xl p-6 sm:p-8 shadow-2xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <h2 id="withdraw-title" className="text-xl font-bold text-inv-text">Withdraw</h2>

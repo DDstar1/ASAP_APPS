@@ -42,7 +42,7 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#152035] rounded-2xl p-6 shadow-[0_12px_32px_rgba(8,14,28,0.5)]">
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-[#152035] rounded-2xl p-6 shadow-[0_12px_32px_rgba(8,14,28,0.5)]">
         <div className="flex items-center justify-between mb-5">
           <h2 id="change-password-title" className="text-lg font-bold text-[#e0e5f9]">Change password</h2>
           <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]">

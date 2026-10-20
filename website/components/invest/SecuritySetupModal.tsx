@@ -64,7 +64,7 @@ export default function SecuritySetupModal({ onClose, onDone }: Props) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
       <form onSubmit={step === 'pin' ? submitPin : submitBank} role="dialog" aria-modal="true" aria-labelledby="setup-title"
-        className="relative w-full max-w-md bg-inv-surface rounded-3xl p-6 sm:p-8 shadow-2xl">
+        className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-inv-surface rounded-3xl p-6 sm:p-8 shadow-2xl">
         <div className="flex items-start justify-between gap-4 mb-2">
           <div className="w-11 h-11 rounded-2xl bg-[#ff923e]/12 text-inv-accent-text flex items-center justify-center">
             {step === 'pin' ? <ShieldCheck className="w-5 h-5" /> : <Landmark className="w-5 h-5" />}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-import { Plus, Pencil, Trash2, Loader2, X, ImageIcon, Search, Package, AlertTriangle, Ruler } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, ImageIcon, Search, Package, AlertTriangle, Ruler, ArrowLeft } from 'lucide-react'
 import { getVendorItems, getVendorCategories, insertItem, updateItem, deleteItem, updateItemStock, uploadItemImage } from '@/lib/supabase_queries'
 import { useVendor } from '@/store/vendorStore'
 import type { ItemRow, MenuRow } from '@/lib/supabase'
@@ -227,13 +227,20 @@ export default function ItemsPage() {
       )}
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-v-modal rounded-2xl w-full max-w-md shadow-[0_12px_32px_rgba(8,14,28,0.7)]">
-            <div className="flex items-center justify-between p-6 pb-4">
-              <h2 className="text-lg font-semibold text-v-text">{editing ? 'Edit Item' : 'Add Item'}</h2>
-              <button onClick={() => setModalOpen(false)} className="p-1 text-v-muted/60 hover:text-v-muted transition"><X className="w-5 h-5" /></button>
+        // Phones: a full-height sheet. Desktop: a centred panel capped to the window.
+        // Header and buttons stay put; only the fields scroll.
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="item-modal-title"
+            className="bg-v-modal w-full sm:max-w-lg h-[94dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] rounded-t-3xl sm:rounded-3xl flex flex-col shadow-[0_12px_32px_rgba(8,14,28,0.5)]">
+            <div className="shrink-0 flex items-center gap-2 px-3 sm:px-4 h-16 border-b border-v-line">
+              <button type="button" onClick={() => setModalOpen(false)} aria-label="Back"
+                className="inline-flex items-center gap-1.5 h-10 pl-2 pr-3 rounded-full text-sm font-semibold text-v-muted hover:bg-v-card hover:text-v-text transition cursor-pointer">
+                <ArrowLeft className="w-5 h-5" /> Back
+              </button>
+              <h2 id="item-modal-title" className="flex-1 text-center text-lg font-semibold text-v-text pr-20">{editing ? 'Edit Item' : 'Add Item'}</h2>
             </div>
-            <form onSubmit={handleSave} className="px-6 pb-6 space-y-4">
+            <form onSubmit={handleSave} className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 py-5 space-y-4">
               {error && <div className="text-sm text-v-down bg-red-500/10 px-3 py-2 rounded-xl">{error}</div>}
               <div>
                 <label className="block text-sm font-medium text-v-text mb-1.5">Image</label>
@@ -292,9 +299,10 @@ export default function ItemsPage() {
                   ))}
                 </div>
               </fieldset>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 border border-v-muted/20 text-v-muted rounded-full font-medium text-sm hover:bg-v-raised hover:text-v-text transition">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-2 py-2.5 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-medium text-sm hover:shadow-[0_8px_20px_rgba(255,146,62,0.25)] transition disabled:opacity-60 flex items-center justify-center gap-2">
+              </div>
+              <div className="shrink-0 flex gap-3 px-5 sm:px-6 py-4 border-t border-v-line pb-[max(1rem,env(safe-area-inset-bottom))]">
+                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3 border border-v-muted/20 text-v-muted rounded-full font-medium text-sm hover:bg-v-raised hover:text-v-text transition cursor-pointer">Cancel</button>
+                <button type="submit" disabled={saving} className="flex-2 py-3 bg-linear-to-r from-[#ff923e] to-[#c46018] text-white rounded-full font-semibold text-sm hover:shadow-[0_8px_20px_rgba(255,146,62,0.25)] transition disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer">
                   {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : editing ? 'Save Changes' : 'Add Item'}
                 </button>
               </div>
