@@ -1,10 +1,12 @@
 import Image from 'next/image'
 import { CUSTOMER_APP_STORE_URL, CUSTOMER_PLAY_STORE_URL } from '@/lib/app-links'
 
+// Widths are shares of the phone row (30 + 38 + 30, less the overlap, stays under 100%),
+// so the three always fit the column; fixed rem widths overflowed it and Safari clipped the right phone
 const PHONES = [
-  { src: '/apps/orders.png', alt: 'ASAP app: your orders', className: 'w-[4.75rem] lg:w-[6rem] translate-y-[14%]' },
-  { src: '/apps/loading.png', alt: 'ASAP app loading screen', className: 'z-10 -mx-3 w-[5.75rem] lg:w-[7.5rem] translate-y-[6%]' },
-  { src: '/apps/booking.png', alt: 'ASAP app: booking a delivery', className: 'w-[4.75rem] lg:w-[6rem] translate-y-[14%]' },
+  { src: '/apps/orders.png', alt: 'ASAP app: your orders', className: 'w-[30%] max-w-[6rem] translate-y-[14%]' },
+  { src: '/apps/loading.png', alt: 'ASAP app loading screen', className: 'z-10 -mx-[2%] w-[38%] max-w-[7.5rem] translate-y-[6%]' },
+  { src: '/apps/booking.png', alt: 'ASAP app: booking a delivery', className: 'w-[30%] max-w-[6rem] translate-y-[14%]' },
 ]
 
 function AppleLogo() {
@@ -55,9 +57,9 @@ export default function AppDownload() {
 
       <div className="relative overflow-hidden ml-auto w-[75%] h-[17rem] lg:ml-0 lg:w-full lg:h-full">
         <div className="app-disc absolute left-8 lg:left-12 top-1/2 -translate-y-1/2 size-[30rem] lg:size-[38rem] rounded-full bg-linear-to-br from-[#ff923e] to-[#c46018]" />
-        <div className="relative h-full pl-24 lg:pl-36 flex items-end justify-center">
+        <div className="relative h-full pl-[22%] pr-[3%] flex items-end justify-center">
           {PHONES.map((p) => (
-            <div key={p.src} className={`relative shrink-0 ${p.className}`}>
+            <div key={p.src} className={`relative ${p.className}`}>
               <Image src={p.src} alt={p.alt} width={640} height={1302} sizes="7rem"
                 className="app-cycle-phone w-full h-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)]" />
             </div>
