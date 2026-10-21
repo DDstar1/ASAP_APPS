@@ -19,6 +19,53 @@
   --color-inv-accent-text: var(--inv-accent-text);
 }
 
+/* Shared pieces (modals, pickers) used in more than one area: bg-ui-surface etc.
+   Each area maps these to its own tokens, so they follow that area's theme. */
+@theme inline {
+  --color-ui-surface: var(--ui-surface);
+  --color-ui-field: var(--ui-field);
+  --color-ui-line: var(--ui-line);
+  --color-ui-text: var(--ui-text);
+  --color-ui-muted: var(--ui-muted);
+  --color-ui-up: var(--ui-up);
+  --color-ui-down: var(--ui-down);
+}
+
+:root {
+  --ui-surface: #152035;
+  --ui-field: #1c2a42;
+  --ui-line: rgba(165, 171, 189, 0.15);
+  --ui-text: #e0e5f9;
+  --ui-muted: #a5abbd;
+  --ui-up: #34d399;
+  --ui-down: #f87171;
+}
+
+.vendor-theme {
+  --ui-surface: var(--v-modal);
+  --ui-field: var(--v-card);
+  --ui-line: var(--v-line);
+  --ui-text: var(--v-text);
+  --ui-muted: var(--v-muted);
+  --ui-up: var(--v-up);
+  --ui-down: var(--v-down);
+}
+
+.invest-theme {
+  --ui-surface: var(--inv-surface);
+  --ui-field: var(--inv-soft);
+  --ui-line: var(--inv-line);
+  --ui-text: var(--inv-text);
+  --ui-muted: var(--inv-muted);
+  --ui-up: #059669;
+  --ui-down: #dc2626;
+}
+
+.invest-theme[data-theme="dark"] {
+  --ui-up: #34d399;
+  --ui-down: #f87171;
+}
+
 /* Vendor dashboard (app/vendor/dashboard): a frame (sidebar) around a content panel */
 @theme inline {
   --color-v-frame: var(--v-frame);
@@ -128,6 +175,37 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-rise { animation: none; }
   .animate-flicker { animation: none; box-shadow: 0 0 0 3px rgba(255, 146, 62, 0.75); }
+}
+
+/* Homepage app section: a disc taller than the section, so only its left edge
+   curves, with a round bite out of the middle of that edge */
+.app-disc {
+  mask-image: radial-gradient(35% 35% at 0 50%, transparent 99%, #000 100%);
+}
+
+/* Every 7s the headline fades out and back while the phones drop out of the panel and rise back */
+@keyframes app-text {
+  0%, 80% { opacity: 1; }
+  87%, 91% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes app-phone {
+  0%, 80% { transform: translateY(0); }
+  87%, 91% { transform: translateY(160%); }
+  100% { transform: translateY(0); }
+}
+
+.app-cycle-text {
+  animation: app-text 7s ease-in-out infinite;
+}
+
+.app-cycle-phone {
+  animation: app-phone 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-cycle-text, .app-cycle-phone { animation: none; }
 }
 
 /* Invest is light by default; data-theme="dark" on the wrapper switches it */

@@ -27,7 +27,7 @@ export default function BankSelect({ id, value, onChange, className }: Props) {
           <option key={b.code} value={b.code}>{b.name}</option>
         ))}
       </select>
-      {failed && <p className="text-xs text-red-400 mt-1.5">Could not load the bank list. Refresh the page to try again.</p>}
+      {failed && <p className="text-xs text-ui-down mt-1.5">Could not load the bank list. Refresh the page to try again.</p>}
     </>
   )
 }

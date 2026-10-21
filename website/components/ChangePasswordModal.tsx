@@ -37,22 +37,22 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
   }
 
   const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#1c2a42] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm'
+    'w-full px-4 py-3 rounded-xl border border-ui-line bg-ui-field text-ui-text placeholder:text-ui-muted/60 focus:outline-none focus:border-[#ff923e]/50 focus:ring-2 focus:ring-[#ff923e]/25 transition text-sm'
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-[#152035] rounded-2xl p-6 shadow-[0_12px_32px_rgba(8,14,28,0.5)]">
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-ui-surface border border-ui-line rounded-3xl p-6 shadow-[0_12px_32px_rgba(8,14,28,0.35)]">
         <div className="flex items-center justify-between mb-5">
-          <h2 id="change-password-title" className="text-lg font-bold text-[#e0e5f9]">Change password</h2>
-          <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg text-[#a5abbd] hover:bg-[#1c2a42] hover:text-[#e0e5f9]">
+          <h2 id="change-password-title" className="text-lg font-bold text-ui-text">Change password</h2>
+          <button onClick={onClose} aria-label="Close" className="p-2 rounded-lg text-ui-muted hover:bg-ui-field hover:text-ui-text">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {done ? (
           <div className="space-y-5">
-            <div className="flex items-start gap-2 bg-emerald-500/10 text-emerald-400 px-4 py-3 rounded-xl text-sm">
+            <div className="flex items-start gap-2 bg-emerald-500/10 text-ui-up px-4 py-3 rounded-xl text-sm">
               <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
               Password changed. Use it next time you sign in, on the website and in the ASAP apps.
             </div>
@@ -63,24 +63,24 @@ export default function ChangePasswordModal({ onClose }: { onClose: () => void }
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="flex items-start gap-2 bg-red-500/10 text-red-400 px-4 py-3 rounded-xl text-sm">
+              <div className="flex items-start gap-2 bg-red-500/10 text-ui-down px-4 py-3 rounded-xl text-sm">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 {error}
               </div>
             )}
             <div>
-              <label htmlFor="current-password" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Current password</label>
+              <label htmlFor="current-password" className="block text-sm font-medium text-ui-text mb-1.5">Current password</label>
               <input id="current-password" type={show ? 'text' : 'password'} required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label htmlFor="new-password" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">New password</label>
+              <label htmlFor="new-password" className="block text-sm font-medium text-ui-text mb-1.5">New password</label>
               <input id="new-password" type={show ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-[#e0e5f9] mb-1.5">Confirm new password</label>
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-ui-text mb-1.5">Confirm new password</label>
               <input id="confirm-password" type={show ? 'text' : 'password'} required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
             </div>
-            <button type="button" onClick={() => setShow((s) => !s)} className="flex items-center gap-2 text-xs text-[#a5abbd] hover:text-[#e0e5f9]">
+            <button type="button" onClick={() => setShow((s) => !s)} className="flex items-center gap-2 text-xs text-ui-muted hover:text-ui-text">
               {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               {show ? 'Hide passwords' : 'Show passwords'}
             </button>

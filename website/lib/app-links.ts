@@ -9,5 +9,7 @@ export const RIDER_PLAY_STORE_URL =
 export const CUSTOMER_PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.ddhaven.asap_customer'
 
+export const ZAZU_URL = process.env.NEXT_PUBLIC_ZAZU_URL
+
 // Numeric Apple ID of the customer app, for the iOS Safari smart app banner.
 export const CUSTOMER_APPLE_APP_ID = process.env.NEXT_PUBLIC_CUSTOMER_APPLE_APP_ID
