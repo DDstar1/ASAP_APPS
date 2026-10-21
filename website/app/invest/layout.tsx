@@ -121,20 +121,21 @@ export default function InvestLayout({ children }: { children: React.ReactNode }
   return (
     <InvestContext.Provider value={value}>
       <div className="invest-theme min-h-dvh" data-theme={dark ? 'dark' : 'light'}>
-        <header className="sticky top-0 z-40 bg-inv-surface/85 backdrop-blur border-b border-inv-line">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-            <Link href="/invest" className="flex items-center gap-2 shrink-0">
+        <header className="inv-page-bg sticky top-0 z-40">
+          {/* Equal side columns keep the nav centred on the page whatever the sides hold */}
+          <div className="px-4 sm:px-6 lg:px-[7.5%] h-[72px] grid grid-cols-[1fr_auto] md:grid-cols-[1fr_auto_1fr] items-center gap-4">
+            <Link href="/invest" className="flex items-center gap-2 justify-self-start">
               <div className="bg-linear-to-br from-[#ff923e] to-[#c46018] p-2 rounded-xl">
-                <Package className="w-5 h-5 text-white" />
+                <Package className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-linear-to-r from-[#ff923e] to-[#c46018] bg-clip-text text-transparent">ASAP.</span>
+              <span className="text-2xl font-bold bg-linear-to-r from-[#ff923e] to-[#c46018] bg-clip-text text-transparent">ASAP.</span>
             </Link>
 
             <nav aria-label="Owner panel" className="hidden md:flex items-center gap-1">
               {navItems.map((item) => navLink(item, false))}
             </nav>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 justify-self-end">
               <Link href="/invest/notifications"
                 aria-label={unread.notifications > 0 ? `Notifications, ${unread.notifications} unread` : 'Notifications'}
                 className={`relative w-10 h-10 rounded-full flex items-center justify-center transition ${
@@ -172,7 +173,9 @@ export default function InvestLayout({ children }: { children: React.ReactNode }
 
         {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
+        <main className="px-4 sm:px-6 lg:px-[7.5%] py-8 sm:py-10">
+          <div className="mx-auto max-w-7xl">{children}</div>
+        </main>
       </div>
     </InvestContext.Provider>
   )

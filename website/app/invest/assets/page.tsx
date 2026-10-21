@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, Loader2, XCircle, Clock } from 'lucide-react'
+import { CheckCircle, Loader2, XCircle, Clock, Bike } from 'lucide-react'
+import EmptyState from '@/components/invest/EmptyState'
 import {
   getMyAssets, getMySlots, getEarnings, verifyPurchase, assetType, naira, pct, PENDING_PURCHASE_KEY,
   type InvestAssetWithPlan, type InvestSlot, type Earning, type PurchaseStatus,
@@ -81,13 +82,11 @@ function Assets() {
           {[0, 1, 2].map((i) => <div key={i} className="h-80 rounded-3xl bg-inv-surface border border-inv-line animate-pulse" />)}
         </div>
       ) : data.assets.length === 0 ? (
-        <div className="rounded-3xl bg-inv-surface border border-inv-line p-12 text-center">
-          <p className="font-semibold text-inv-text">You don&apos;t own any assets yet.</p>
-          <p className="text-sm text-inv-muted mt-1">Buy a slot in a bike and it will show up here.</p>
-          <Link href="/invest" className="inline-block mt-5 px-5 py-2.5 rounded-full bg-linear-to-r from-[#ff923e] to-[#c46018] text-white text-sm font-semibold">
+        <EmptyState icon={Bike} title="You don't own any assets yet" body="Buy a slot in a bike and it will show up here.">
+          <Link href="/invest" className="inline-block px-6 py-3 rounded-full bg-linear-to-r from-[#ff923e] to-[#c46018] text-white text-sm font-semibold">
             See plans
           </Link>
-        </div>
+        </EmptyState>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {data.assets.map((asset) => {

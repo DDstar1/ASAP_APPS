@@ -66,22 +66,6 @@ export default function EarningsPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-inv-text">Earnings</h1>
 
-      <section className="rounded-3xl bg-linear-to-br from-[#ff923e] to-[#c46018] text-white p-6 sm:p-8 shadow-[0_20px_48px_rgba(255,146,62,0.35)]">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-          <div>
-            <p className="text-sm text-white/80">Available balance</p>
-            <p className="text-4xl sm:text-5xl font-bold tabular-nums mt-1">{naira(data.wallet.balance, 2)}</p>
-            <p className="text-sm text-white/80 mt-3 tabular-nums">
-              Earned {naira(data.wallet.earned)} · Withdrawn {naira(data.wallet.withdrawn)}
-            </p>
-          </div>
-          <button onClick={() => { setDone(null); setWithdrawing(true) }} disabled={data.wallet.balance <= 0}
-            className="px-6 py-3.5 rounded-full bg-white text-[#b4520c] font-semibold hover:bg-white/90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            Withdraw
-          </button>
-        </div>
-      </section>
-
       {done !== null && (
         <p role="status" className="flex items-start gap-2 rounded-2xl border px-5 py-4 text-sm bg-emerald-500/10 border-emerald-500/30 text-emerald-700">
           <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -89,10 +73,32 @@ export default function EarningsPage() {
         </p>
       )}
 
+      <div className="grid lg:grid-cols-[20rem_minmax(0,1fr)] gap-6 items-start">
+      {/* Card-shaped balance: narrow and tall, pinned beside the lists on desktop */}
+      <section className="w-full max-w-sm mx-auto lg:mx-0 lg:sticky lg:top-28 min-h-[22rem] flex flex-col rounded-[2rem] bg-linear-to-br from-[#ff923e] to-[#c46018] text-white p-7 shadow-[0_20px_48px_rgba(255,146,62,0.35)]">
+        <p className="text-sm text-white/80">Available balance</p>
+        <p className="text-4xl font-bold tabular-nums mt-2 break-all">{naira(data.wallet.balance, 2)}</p>
+        <dl className="mt-auto pt-8 space-y-3 text-sm tabular-nums">
+          <div className="flex justify-between gap-4 border-t border-white/20 pt-3">
+            <dt className="text-white/80">Earned</dt>
+            <dd className="font-semibold">{naira(data.wallet.earned)}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t border-white/20 pt-3">
+            <dt className="text-white/80">Withdrawn</dt>
+            <dd className="font-semibold">{naira(data.wallet.withdrawn)}</dd>
+          </div>
+        </dl>
+        <button onClick={() => { setDone(null); setWithdrawing(true) }} disabled={data.wallet.balance <= 0}
+          className="mt-6 w-full py-3.5 rounded-full bg-white text-[#b4520c] font-semibold hover:bg-white/90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+          Withdraw
+        </button>
+      </section>
+
+      <div className="space-y-6 min-w-0">
       <section className="rounded-3xl bg-inv-surface border border-inv-line overflow-hidden">
         <h2 className="text-lg font-bold text-inv-text px-6 pt-6 pb-4">Weekly earnings</h2>
         {data.weeks.length === 0 ? (
-          <p className="text-sm text-inv-muted px-6 pb-8 text-center">Your first weekly earnings will show here.</p>
+          <p className="text-sm text-inv-muted px-6 py-14 text-center border-t border-inv-line">Your first weekly earnings will show here.</p>
         ) : (
           <ul className="divide-y divide-inv-line border-t border-inv-line">
             {data.weeks.map((w) => {
@@ -151,7 +157,7 @@ export default function EarningsPage() {
       <section className="rounded-3xl bg-inv-surface border border-inv-line p-6">
         <h2 className="text-lg font-bold text-inv-text mb-4">Withdrawals</h2>
         {data.withdrawals.length === 0 ? (
-          <p className="text-sm text-inv-muted py-4 text-center">No withdrawals yet.</p>
+          <p className="text-sm text-inv-muted py-10 text-center">No withdrawals yet.</p>
         ) : (
           <ul className="divide-y divide-inv-line">
             {data.withdrawals.map((w) => (
@@ -169,6 +175,8 @@ export default function EarningsPage() {
           </ul>
         )}
       </section>
+      </div>
+      </div>
 
       {withdrawing && (
         <WithdrawModal balance={data.wallet.balance} onClose={() => setWithdrawing(false)}

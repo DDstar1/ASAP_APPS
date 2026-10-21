@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, Newspaper } from 'lucide-react'
 import { getInvestMessages, markInvestMessageRead, shortDate, type InvestMessage } from '@/lib/invest'
 import { useInvest } from '@/components/invest/InvestContext'
+import EmptyState from '@/components/invest/EmptyState'
 
 export default function NewsPage() {
   const { userId, refreshUnread } = useInvest()
@@ -31,10 +32,7 @@ export default function NewsPage() {
       {items === null ? (
         <div className="h-64 rounded-3xl bg-inv-surface border border-inv-line animate-pulse" />
       ) : items.length === 0 ? (
-        <div className="rounded-3xl bg-inv-surface border border-inv-line p-12 text-center">
-          <Newspaper className="w-10 h-10 text-inv-muted/40 mx-auto mb-3" />
-          <p className="text-inv-muted">No news yet.</p>
-        </div>
+        <EmptyState icon={Newspaper} title="No news yet" body="Updates from ASAP for owners will show up here." />
       ) : (
         <ul className="space-y-3">
           {items.map((m) => {

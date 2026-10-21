@@ -218,9 +218,20 @@
   --inv-muted: #586074;
   --inv-accent: #ff923e;
   --inv-accent-text: #b4520c;
-  background: var(--inv-bg);
+  /* Faint grey shade over the left 35% of the page; light mode only */
+  --inv-shade: rgba(13, 21, 37, 0.06);
+  background: var(--inv-page);
   color: var(--inv-text);
   color-scheme: light;
+}
+
+/* The page background, also painted on the sticky header so the two read as one surface */
+.invest-theme {
+  --inv-page: linear-gradient(to right, var(--inv-shade), transparent 35%) var(--inv-bg);
+}
+
+.inv-page-bg {
+  background: var(--inv-page);
 }
 
 @keyframes fadeIn {
@@ -233,10 +244,11 @@
 }
 
 .invest-theme[data-theme="dark"] {
-  --inv-bg: #080e1c;
-  --inv-surface: #152035;
-  --inv-soft: #1c2a42;
-  --inv-line: #253350;
+  --inv-bg: #000000;
+  --inv-shade: transparent;
+  --inv-surface: #111111;
+  --inv-soft: #1a1a1a;
+  --inv-line: #262626;
   --inv-text: #e0e5f9;
   --inv-muted: #a5abbd;
   --inv-accent-text: #ff923e;

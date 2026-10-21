@@ -135,12 +135,12 @@ export default function PlanDetailsPage() {
                   const disabled = n > available
                   return (
                     <button key={n} role="radio" aria-checked={active} disabled={disabled} onClick={() => setSlots(n)}
-                      className={`w-[92px] flex flex-col items-center gap-2 rounded-full px-2 pt-4 pb-5 border transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+                      className={`w-[92px] flex flex-col items-center gap-2 rounded-full px-2 pt-4 pb-5 border transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-20 ${
                         active
                           ? 'bg-linear-to-b from-[#ff923e] to-[#c46018] border-transparent text-white shadow-[0_12px_28px_rgba(255,146,62,0.4)] -translate-y-1.5'
-                          : 'bg-inv-surface border-inv-line text-inv-text hover:border-[#ff923e]/50'}`}>
+                          : 'scale-[0.86] opacity-45 bg-inv-surface border-inv-line text-inv-text hover:opacity-80 hover:border-[#ff923e]/50'}`}>
                       <SlotPie filled={n} total={plan.total_slots} active={active} />
-                      <span className="text-base font-bold tabular-nums">{naira(plan.slot_price * n)}</span>
+                      <span className="text-sm font-bold tabular-nums">{naira(plan.slot_price * n)}</span>
                       <span className={`text-xs leading-tight text-center ${active ? 'text-white/90' : 'text-inv-muted'}`}>
                         {n === plan.total_slots && n > 1 ? 'Whole bike' : `${n} of ${plan.total_slots}`}
                         <br />{pct(share * n)} per fare

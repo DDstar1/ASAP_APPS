@@ -71,59 +71,58 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#080e1c] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#ff923e]" />
       </div>
     )
   }
 
+  const pill = 'flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border border-[#ff923e]/40 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition'
+
   return (
-    <div className="min-h-screen bg-[#080e1c]">
-      <header className="sticky top-0 z-40 bg-[#0d1525] border-b border-[#a5abbd]/10">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="bg-linear-to-br from-[#ff923e] to-[#c46018] p-1.5 rounded-lg">
-              <Package className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-black text-[#e0e5f9]">
+      <header className="sticky top-0 z-40 bg-black/85 backdrop-blur border-b border-white/10">
+        <div className="px-4 sm:px-6 lg:px-[7.5%] h-[72px] flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="ASAP home">
+            <div className="bg-linear-to-br from-[#ff923e] to-[#c46018] p-2 rounded-xl">
+              <Package className="w-6 h-6 text-white" />
             </div>
-            <span className="text-lg font-bold bg-linear-to-r from-[#ff923e] to-[#c46018] bg-clip-text text-transparent">ASAP.</span>
+            <span className="hidden sm:inline text-2xl font-bold bg-linear-to-r from-[#ff923e] to-[#c46018] bg-clip-text text-transparent">ASAP.</span>
           </Link>
 
           <div className="flex items-center gap-2">
-            <Link href="/invest"
-              className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition">
+            <Link href="/invest" className={pill}>
               <Bike className="w-4 h-4" /> Invest
             </Link>
             {isVendor ? (
-              <Link href="/vendor/dashboard"
-                className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition">
-                <Store className="w-4 h-4" /> Vendor Dashboard
+              <Link href="/vendor/dashboard" className={pill}>
+                <Store className="w-4 h-4" /> <span className="hidden sm:inline">Vendor </span>Dashboard
               </Link>
             ) : (
-              <Link href="/become-vendor"
-                className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff923e]/30 text-[#ff923e] text-sm font-medium hover:bg-[#ff923e]/10 transition">
-                <Store className="w-4 h-4" /> Become a Vendor
+              <Link href="/become-vendor" className={pill}>
+                <Store className="w-4 h-4" /> <span className="hidden sm:inline">Become a </span>Vendor
               </Link>
             )}
-            <button onClick={handleSignOut} className="p-2 rounded-xl text-[#a5abbd] hover:text-red-400 hover:bg-red-500/10 transition" title="Sign out">
-              <LogOut className="w-4 h-4" />
+            <button onClick={handleSignOut} className="p-2.5 rounded-full text-[#a5abbd] hover:text-red-400 hover:bg-red-500/10 transition cursor-pointer" title="Sign out" aria-label="Sign out">
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <main className="px-4 sm:px-6 lg:px-[7.5%] py-10 sm:py-14 space-y-10">
         <div>
-          <h1 className="text-2xl font-bold text-[#e0e5f9]">Hey, {user?.email?.split('@')[0]} 👋</h1>
-          <p className="text-[#a5abbd] mt-1">Here&apos;s your delivery history</p>
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white">Hey, {user?.email?.split('@')[0]}</h1>
+          <p className="text-lg text-[#a5abbd] mt-2">Here&apos;s your delivery history</p>
         </div>
 
-        <div className="bg-linear-to-r from-[#ff923e] to-[#c46018] rounded-2xl p-6 flex items-center justify-between gap-4">
+        <div className="bg-linear-to-r from-[#ff923e] to-[#c46018] rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
-            <h2 className="text-white font-bold text-lg">Want to send a package?</h2>
-            <p className="text-white/80 text-sm mt-0.5">Download the ASAP app to create deliveries on the go.</p>
+            <h2 className="text-white font-bold text-xl sm:text-2xl">Want to send a package?</h2>
+            <p className="text-white/85 mt-1">Download the ASAP app to create deliveries on the go.</p>
           </div>
           <div className="shrink-0">
-            <div className="flex items-center gap-2 bg-[#080e1c] text-[#ff923e] px-4 py-2.5 rounded-full font-semibold text-sm">
+            <div className="inline-flex items-center gap-2 bg-black text-[#ff923e] px-5 py-3 rounded-full font-semibold">
               <Smartphone className="w-4 h-4" /> Get the App
             </div>
           </div>
@@ -136,12 +135,12 @@ export default function Home() {
         )}
 
         <div>
-          <h2 className="text-lg font-semibold text-[#e0e5f9] mb-4 flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-[#ff923e]" /> Your Deliveries
+          <h2 className="text-xl sm:text-2xl font-semibold text-white mb-5 flex items-center gap-2.5">
+            <ClipboardList className="w-6 h-6 text-[#ff923e]" /> Your Deliveries
           </h2>
 
           {orders.length === 0 ? (
-            <div className="bg-[#1c2a42] rounded-2xl p-10 text-center">
+            <div className="bg-[#111111] border border-white/5 rounded-3xl p-12 text-center">
               <Package className="w-10 h-10 text-[#a5abbd]/40 mx-auto mb-3" />
               <p className="text-[#a5abbd]">No deliveries yet</p>
               <p className="text-sm text-[#a5abbd]/60 mt-1">Your orders will appear here once you use the app.</p>
@@ -149,8 +148,8 @@ export default function Home() {
           ) : (
             <div className="space-y-3">
               {orders.map((order) => (
-                <div key={order.id} className="bg-[#1c2a42] rounded-2xl p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#152035] flex items-center justify-center shrink-0">
+                <div key={order.id} className="bg-[#111111] border border-white/5 rounded-2xl p-4 sm:p-5 flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                     {statusIcon[order.status] ?? <Package className="w-4 h-4 text-[#a5abbd]" />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -191,7 +190,7 @@ function DriverCard({ application, onApply }: { application: DriverApplication |
         : { icon: Clock, tone: 'bg-yellow-500/15 text-yellow-400', title: 'Application received',
             body: 'The ASAP team will call or email you to book an in-person visit.' }
     return (
-      <div className="bg-[#1c2a42] rounded-2xl p-6 flex items-start gap-4">
+      <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 sm:p-8 flex items-start gap-4">
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${view.tone}`}>
           <view.icon className="w-5 h-5" />
         </div>
@@ -209,7 +208,7 @@ function DriverCard({ application, onApply }: { application: DriverApplication |
   }
 
   return (
-    <div className="bg-[#1c2a42] rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="bg-[#111111] border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-start gap-4">
         <div className="w-11 h-11 rounded-xl bg-[#ff923e]/15 text-[#ff923e] flex items-center justify-center shrink-0">
           {application?.status === 'rejected' ? <XCircle className="w-5 h-5" /> : <Bike className="w-5 h-5" />}
@@ -223,7 +222,7 @@ function DriverCard({ application, onApply }: { application: DriverApplication |
       </div>
       <div className="flex gap-2 shrink-0">
         <Link href="/become-driver"
-          className="px-4 py-2.5 rounded-full border border-[#a5abbd]/20 text-[#e0e5f9] text-sm font-medium hover:bg-[#253350] transition">
+          className="px-4 py-2.5 rounded-full border border-[#a5abbd]/20 text-[#e0e5f9] text-sm font-medium hover:bg-white/5 transition">
           I have a bike
         </Link>
         <button onClick={onApply}

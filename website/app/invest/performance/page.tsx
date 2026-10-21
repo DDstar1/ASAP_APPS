@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Minus, BarChart3 } from 'lucide-react'
+import EmptyState from '@/components/invest/EmptyState'
 import {
   getMyAssets, getAssetWeeklyStats, assetType, isoWeek, weekRange,
   type InvestAssetWithPlan, type WeeklyStat,
@@ -52,9 +53,7 @@ export default function PerformancePage() {
     return (
       <div className="space-y-8">
         <h1 className="text-3xl font-bold text-inv-text">Performance</h1>
-        <div className="rounded-3xl bg-inv-surface border border-inv-line p-12 text-center text-inv-muted">
-          Performance shows here once your asset is on the road.
-        </div>
+        <EmptyState icon={BarChart3} title="Nothing to show yet" body="Performance shows here once your asset is on the road." />
       </div>
     )
   }
@@ -99,9 +98,7 @@ export default function PerformancePage() {
       {loading ? (
         <div className="h-72 rounded-3xl bg-inv-surface border border-inv-line animate-pulse" />
       ) : !latest ? (
-        <div className="rounded-3xl bg-inv-surface border border-inv-line p-12 text-center text-inv-muted">
-          The first weekly update for this asset is on its way.
-        </div>
+        <EmptyState icon={BarChart3} title="No weekly update yet" body="The first weekly update for this asset is on its way." />
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -10,6 +10,7 @@ import {
   type InvestNotification, type InvestNotificationKind,
 } from '@/lib/invest'
 import { useInvest } from '@/components/invest/InvestContext'
+import EmptyState from '@/components/invest/EmptyState'
 
 type Data = Record<string, unknown>
 
@@ -68,10 +69,7 @@ export default function NotificationsPage() {
       {items === null ? (
         <div className="h-64 rounded-3xl bg-inv-surface border border-inv-line animate-pulse" />
       ) : items.length === 0 ? (
-        <div className="rounded-3xl bg-inv-surface border border-inv-line p-12 text-center">
-          <Bell className="w-10 h-10 text-inv-muted/40 mx-auto mb-3" />
-          <p className="text-inv-muted">No notifications yet.</p>
-        </div>
+        <EmptyState icon={Bell} title="No notifications yet" body="Payments, payouts and changes to your assets will show up here." />
       ) : (
         <ul className="rounded-3xl bg-inv-surface border border-inv-line divide-y divide-inv-line overflow-hidden">
           {items.map((n) => {

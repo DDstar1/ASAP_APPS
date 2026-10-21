@@ -7,7 +7,7 @@ import { submitApplication, toE164, type DriverApplication } from '@/lib/driverA
 type Props = { defaultName?: string; onClose: () => void; onSubmitted: (application: DriverApplication) => void }
 
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-[#a5abbd]/15 bg-[#0d1525] text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm'
+  'w-full px-4 py-3 rounded-xl border border-white/10 bg-black text-[#e0e5f9] placeholder:text-[#a5abbd]/40 focus:outline-none focus:border-[#ff923e]/40 focus:ring-1 focus:ring-[#ff923e]/40 transition text-sm'
 const labelClass = 'block text-sm font-medium text-[#e0e5f9] mb-1.5'
 
 export default function DriverApplicationSheet({ defaultName = '', onClose, onSubmitted }: Props) {
@@ -59,11 +59,11 @@ export default function DriverApplicationSheet({ defaultName = '', onClose, onSu
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
       <div role="dialog" aria-modal="true" aria-labelledby="apply-title"
-        className="relative w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-[#1c2a42] rounded-t-3xl sm:rounded-3xl shadow-[0_-12px_40px_rgba(8,14,28,0.6)]">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 pt-5 pb-4 bg-[#1c2a42] border-b border-[#a5abbd]/10">
+        className="relative w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto bg-[#111111] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-[0_-12px_40px_rgba(0,0,0,0.6)]">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 pt-5 pb-4 bg-[#111111] border-b border-white/10">
           <h2 id="apply-title" className="text-lg font-bold text-[#e0e5f9]">{done ? 'Application sent' : 'Ride an ASAP vehicle'}</h2>
           <button onClick={onClose} disabled={busy} aria-label="Close"
-            className="p-2 -m-2 rounded-full text-[#a5abbd] hover:text-[#e0e5f9] hover:bg-[#253350] cursor-pointer">
+            className="p-2 -m-2 rounded-full text-[#a5abbd] hover:text-[#e0e5f9] hover:bg-white/10 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
