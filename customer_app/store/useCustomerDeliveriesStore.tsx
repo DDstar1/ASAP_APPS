@@ -35,6 +35,8 @@ export interface CustomerDelivery {
   pickup_code?: string;
   dropoff_code?: string;
   payment_reference?: string | null; // Korapay; null on Telegram and older orders
+  price?: number | null; // naira, written by Rust at checkout; includes insurance
+  insurance?: number | null; // naira; null on orders from before insurance
 }
 
 interface CustomerDeliveryStore {

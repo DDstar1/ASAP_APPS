@@ -59,6 +59,14 @@ export default function SelectItemTypeScreen({
       Alert.alert("Please specify what you are sending.");
       return;
     }
+    // Rust refuses these at quote, checkout and ride request
+    if (selectedType === "Hazardous / Restricted Items") {
+      Alert.alert(
+        "We can't carry this",
+        "Hazardous and restricted items can't be sent with ASAP. Choose another item type.",
+      );
+      return;
+    }
 
     const finalType =
       selectedType === "Other" ? customType.trim() : selectedType;

@@ -18,6 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 google-play-service-account.json
+# Firebase config for Android push; EAS gets it as the GOOGLE_SERVICES_JSON file variable
+google-services.json
+GoogleService-Info.plist
 
 # Metro
 .metro-health-check*

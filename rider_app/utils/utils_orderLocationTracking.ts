@@ -3,6 +3,7 @@
 import * as TaskManager from "expo-task-manager";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 
 export const BACKGROUND_LOCATION_TASK = "background-location-task";
@@ -165,6 +166,23 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   await checkAndSync();
 });
 
+// Prominent disclosure: what is collected, that it happens with the app closed or not in
+// use, and why. Resolves true when the rider chooses to continue.
+const confirmBackgroundLocation = () =>
+  new Promise<boolean>((resolve) => {
+    Alert.alert(
+      "Share your location during deliveries",
+      "Asap Rider collects your location to share your live route with the customer during an active delivery, " +
+        "even when the app is closed or not in use. Tracking stops as soon as the delivery ends.\n\n" +
+        "On the next screen, choose “Allow all the time” (Android) or “Always” (iPhone).",
+      [
+        { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+        { text: "Continue", onPress: () => resolve(true) },
+      ],
+      { cancelable: false },
+    );
+  });
+
 // Start tracking
 export const startTracking = async (orderId: number) => {
   const { status: fg } = await Location.requestForegroundPermissionsAsync();
@@ -174,10 +192,12 @@ export const startTracking = async (orderId: number) => {
     return;
   }
 
-  const { status: bg } = await Location.requestBackgroundPermissionsAsync();
-
-  if (bg !== "granted") {
-    console.log("⚠️ Background permission denied");
+  // Google Play requires this disclosure before the system's background prompt.
+  // Declining still lets the delivery go ahead with foreground-only tracking.
+  const { status: current } = await Location.getBackgroundPermissionsAsync();
+  if (current !== "granted" && (await confirmBackgroundLocation())) {
+    const { status: bg } = await Location.requestBackgroundPermissionsAsync();
+    if (bg !== "granted") console.log("⚠️ Background permission denied");
   }
 
   await AsyncStorage.setItem(ACTIVE_ORDER_KEY, String(orderId));

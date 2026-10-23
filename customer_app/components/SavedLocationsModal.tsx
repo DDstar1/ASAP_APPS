@@ -31,7 +31,8 @@ export default function SavedLocationsModal({
   SharedlocationDetails: any;
   onClearSharedDetails: () => void;
 }) {
-  const [locations, setLocations] = useState(INITIAL_LOCATIONS);
+  // Starts empty: the dummy list used to show until (or instead of, on error) the real one
+  const [locations, setLocations] = useState<typeof INITIAL_LOCATIONS>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedName, setEditedName] = useState("");
   const [newName, setNewName] = useState("");

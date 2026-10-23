@@ -19,6 +19,8 @@ export type ItemDetails = {
   quantity: number;
   weight: number;
   image_url: string | null;
+  // Package type from the item type screen; Rust can price by it without an app update
+  type: string | null;
 };
 
 export type CreateRideRequest = {
@@ -43,19 +45,25 @@ export type RideQuote = {
   ride_type: RideType;
   estimated_price: number;
   original_price: number | null; // set when a discount applies
+  // Package insurance in naira, already inside estimated_price; 0 for the route-only quote
+  insurance: number;
   estimated_time_min: number;
   distance_km: number;
 };
 
+// items is empty until the specifications screen fills it; sending it lets
+// Rust price by package type, weight or size later with no app update
 export async function getRideQuotes(
   pick_up: GeoPointJson,
   drop_off: GeoPointJson,
+  items: ItemDetails[] = [],
 ): Promise<RideQuote[]> {
   try {
     return (
       (await apiPost<RideQuote[]>("/riders/ride-quote", {
         pick_up,
         drop_off,
+        items,
       })) ?? []
     );
   } catch (err) {

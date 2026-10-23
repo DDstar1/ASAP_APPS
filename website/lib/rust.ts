@@ -4,7 +4,7 @@ export class RustError extends Error {
   constructor(message: string, public status: number) { super(message) }
 }
 
-export async function rust<T>(path: string, body?: unknown, method: 'GET' | 'POST' | 'PUT' = 'POST'): Promise<T> {
+export async function rust<T>(path: string, body?: unknown, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST'): Promise<T> {
   const base = process.env.NEXT_PUBLIC_RUST_API_URL
   if (!base) throw new Error('NEXT_PUBLIC_RUST_API_URL is not set')
   const { data: { session } } = await supabase.auth.getSession()

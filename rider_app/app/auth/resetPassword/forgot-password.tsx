@@ -71,7 +71,7 @@ export default function ForgotPasswordScreen() {
             </Text>
 
             <Text className="text-[#a5abbd] text-sm leading-6 mb-16">
-              No worries. Enter the email tied to your account and we'll send a
+              No worries. Enter the email tied to your account and we&apos;ll send a
               secure reset link.
             </Text>
 

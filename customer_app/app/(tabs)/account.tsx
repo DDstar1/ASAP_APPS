@@ -10,7 +10,9 @@ import {
   Switch,
   RefreshControl,
   Alert,
+  Linking,
 } from "react-native";
+import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/constants/support";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   deleteOwnAccount,
@@ -25,6 +27,7 @@ import { useSettingsStore } from "@/store/useUserSettingsStore";
 import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
 import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
 import { openWebsite } from "@/utils/website";
+import { SHOW_INVEST } from "@/constants/features";
 
 const ORANGE = "#EE7F3A";
 
@@ -213,12 +216,17 @@ export default function AccountScreen() {
 
         {/* PERSONAL INFO / SECURITY / MESSAGES */}
         <Card>
+          {/* Read-only until real SMS verification exists: UpdatePhoneModal only
+              simulates the OTP, so it isn't opened (setPhoneModalVisible) */}
           <Row
             title="Personal info"
-            subtitle={user?.phone ?? "Add your phone number"}
+            subtitle={user?.phone ?? "No phone number added"}
             icon="person-outline"
-            onPress={() => setPhoneModalVisible(true)}
           />
+          <Text className="text-gray-400 text-xs -mt-2 pb-3 pl-14">
+            Your rider and our support team use this number to reach you about
+            your deliveries, so it needs to be accurate.
+          </Text>
           <Divider />
           <Row
             title="Login & security"
@@ -244,14 +252,18 @@ export default function AccountScreen() {
             external
             onPress={() => openWebsite("/become-vendor")}
           />
-          <Divider />
-          <Row
-            title="Invest"
-            subtitle="Own a part of ASAP"
-            icon="show-chart"
-            external
-            onPress={() => openWebsite("/invest")}
-          />
+          {SHOW_INVEST && (
+            <>
+              <Divider />
+              <Row
+                title="Invest"
+                subtitle="Own a part of ASAP"
+                icon="show-chart"
+                external
+                onPress={() => openWebsite("/invest")}
+              />
+            </>
+          )}
         </Card>
 
         {/* SETTINGS */}
@@ -278,6 +290,27 @@ export default function AccountScreen() {
             icon="sms"
             value={settings?.sms_updates ?? true}
             onValueChange={(val) => handleToggle("sms_updates", val)}
+          />
+        </Card>
+
+        {/* HELP & LEGAL */}
+        <Text className="text-gray-400 text-xs font-semibold uppercase tracking-widest mx-6 mt-6">
+          Help &amp; legal
+        </Text>
+        <Card className="mt-2">
+          <Row
+            title="Contact support"
+            subtitle={`${SUPPORT_EMAIL} · ${SUPPORT_PHONE}`}
+            icon="support-agent"
+            onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})}
+          />
+          <Divider />
+          <Row
+            title="Privacy policy"
+            subtitle="How we use your information"
+            icon="privacy-tip"
+            external
+            onPress={() => openWebsite("/privacy/customer")}
           />
         </Card>
 
@@ -363,14 +396,16 @@ function Row({
   title: string;
   subtitle: string;
   icon: IconName;
-  onPress: () => void;
+  // Without it the row only displays its value
+  onPress?: () => void;
   // Opens the website rather than a screen
   external?: boolean;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      accessibilityRole={external ? "link" : "button"}
+      disabled={!onPress}
+      accessibilityRole={!onPress ? "text" : external ? "link" : "button"}
       accessibilityLabel={`${title}. ${subtitle}`}
       className="flex-row items-center gap-4 py-4"
     >
@@ -383,11 +418,13 @@ function Row({
           {subtitle}
         </Text>
       </View>
-      <MaterialIcons
-        name={external ? "open-in-new" : "chevron-right"}
-        size={external ? 18 : 22}
-        color="#9CA3AF"
-      />
+      {onPress && (
+        <MaterialIcons
+          name={external ? "open-in-new" : "chevron-right"}
+          size={external ? 18 : 22}
+          color="#9CA3AF"
+        />
+      )}
     </TouchableOpacity>
   );
 }

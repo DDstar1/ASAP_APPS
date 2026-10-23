@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { Package, Instagram, Facebook, Linkedin, Youtube } from 'lucide-react'
+import { COMPANY } from '@/components/legal/Policy'
 
-// Same inbox the customer app uses (customer_app/constants/support.ts)
-const SUPPORT_EMAIL = 'support@asap.ng'
+// Same contacts the customer app uses (customer_app/constants/support.ts)
+const SUPPORT_EMAIL = COMPANY.email
 
 // Fill in each href once the accounts are live; empty ones show but go nowhere
 const SOCIALS = [
@@ -30,6 +31,7 @@ const COLUMNS = [
       { label: 'Get started', href: '/signup' },
       { label: 'Vendor dashboard', href: '/vendor/dashboard' },
       { label: 'Delete account', href: '/delete-account' },
+      { label: 'Privacy', href: '/privacy' },
     ],
   },
 ]
@@ -58,13 +60,16 @@ export default function Footer() {
       <div className="mt-12 pt-12 border-t border-black/15 grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
         <div>
           <h3 className="text-2xl sm:text-3xl font-bold">Address</h3>
-          <p className="mt-6 text-black/80 leading-relaxed">Benin City, Edo State, Nigeria</p>
+          <p className="mt-6 text-black/80 leading-relaxed">{COMPANY.address}</p>
         </div>
 
         <div>
           <h3 className="text-2xl sm:text-3xl font-bold">Contact</h3>
           <a href={`mailto:${SUPPORT_EMAIL}`} className="mt-6 block text-black/80 hover:text-black transition-colors">
             {SUPPORT_EMAIL}
+          </a>
+          <a href={`tel:${COMPANY.phone.replace(/\s/g, '')}`} className="mt-3 block text-black/80 hover:text-black transition-colors">
+            {COMPANY.phone}
           </a>
         </div>
 
@@ -83,7 +88,7 @@ export default function Footer() {
       </div>
 
       <div className="mt-12 pt-8 border-t border-black/15 flex flex-col-reverse sm:flex-row items-center justify-between gap-6">
-        <p className="text-black/80">&copy; {new Date().getFullYear()} ASAP</p>
+        <p className="text-black/80">&copy; {new Date().getFullYear()} {COMPANY.name}</p>
         <div className="flex gap-3">
           {SOCIALS.map((s) => (
             <a key={s.label} href={s.href || undefined} target={s.href ? '_blank' : undefined} rel="noopener noreferrer"

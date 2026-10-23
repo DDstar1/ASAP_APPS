@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SHOW_INVEST } from "@/constants/features";
 
 const ORANGE = "#EE7F3A";
 
@@ -217,12 +218,14 @@ const HomeScreen = () => {
             subtitle="Sell and deliver with ASAP"
             path="/become-vendor"
           />
-          <WebsiteCard
-            icon="trending-up"
-            title="Invest"
-            subtitle="Own a part of ASAP"
-            path="/invest"
-          />
+          {SHOW_INVEST && (
+            <WebsiteCard
+              icon="trending-up"
+              title="Invest"
+              subtitle="Own a part of ASAP"
+              path="/invest"
+            />
+          )}
         </View>
 
         {/* Bottom panel */}

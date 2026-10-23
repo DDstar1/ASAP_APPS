@@ -589,6 +589,9 @@ const CLIENT_DELIVERY_COLUMNS = [
   "dropoff_code",
   "is_pickup_code_authenticated",
   "payment_reference",
+  // Price breakdown on the track screen; insurance needs its column added first
+  "price",
+  "insurance",
 ].join(",");
 
 export async function getAllClientDeliveries(): Promise<{

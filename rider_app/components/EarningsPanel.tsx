@@ -68,7 +68,7 @@ export default function EarningsPanel({
 
       {!tier && !loading && (
         <Text className="text-gray-400 text-xs">
-          Your payout tier hasn't been set yet, so earnings show the {ratePercent}%
+          Your payout tier hasn&apos;t been set yet, so earnings show the {ratePercent}%
           rate. Contact support if you own your bike outright.
         </Text>
       )}

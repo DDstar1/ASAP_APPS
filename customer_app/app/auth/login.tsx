@@ -16,6 +16,7 @@ import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import { signInUser } from "@/lib/supabase-app-functions";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
+import { openWebsite } from "@/utils/website";
 
 const resetRedirectTo = makeRedirectUri({
   scheme: "asapcustomer",
@@ -209,8 +210,16 @@ export default function AuthScreen() {
           </Text>
         </TouchableOpacity>
 
-        <Text className="text-[11px] text-[#3d4560] text-center mt-6 leading-relaxed">
-          By continuing, you agree to our Terms &amp; Privacy Policy.
+        <Text className="text-[11px] text-[#7a8199] text-center mt-6 leading-relaxed">
+          By continuing, you confirm you&apos;re 18 or older and agree to our{" "}
+          <Text
+            accessibilityRole="link"
+            onPress={() => openWebsite("/privacy/customer")}
+            className="text-[#ff923e] underline"
+          >
+            Privacy Policy
+          </Text>
+          .
         </Text>
       </ScrollView>
     </MyKeyboardAvoidingWrapper>

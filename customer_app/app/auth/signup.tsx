@@ -18,6 +18,7 @@ import {
 } from "@/lib/supabase-app-functions";
 import { normalizePhone } from "@/lib/phone";
 import { MyKeyboardAvoidingWrapper } from "@/components/MyKeyboardAvoidingWrapper";
+import { openWebsite } from "@/utils/website";
 
 const createSessionFromUrl = async (url: string) => {
   const { params } = QueryParams.getQueryParams(url);
@@ -180,6 +181,10 @@ export default function SignUpScreen() {
           }}
           theme={inputTheme}
         />
+        <Text className="text-[#a5abbd] text-xs -mt-2 mb-4 px-1">
+          Your rider and our support team will use this number to reach you
+          about your deliveries, so make sure it&apos;s accurate.
+        </Text>
 
         {/* Password */}
         <TextInput
@@ -267,8 +272,16 @@ export default function SignUpScreen() {
           </Text>
         </TouchableOpacity>
 
-        <Text className="text-[11px] text-[#3d4560] text-center mt-6 leading-relaxed">
-          By signing up, you agree to our Terms &amp; Privacy Policy.
+        <Text className="text-[11px] text-[#7a8199] text-center mt-6 leading-relaxed">
+          By signing up, you confirm you&apos;re 18 or older and agree to our{" "}
+          <Text
+            accessibilityRole="link"
+            onPress={() => openWebsite("/privacy/customer")}
+            className="text-[#ff923e] underline"
+          >
+            Privacy Policy
+          </Text>
+          .
         </Text>
       </ScrollView>
     </MyKeyboardAvoidingWrapper>

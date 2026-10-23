@@ -23,8 +23,9 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA"
       ],
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
-      "hardwareAccelerated": true,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -38,6 +39,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-router",
       [
         "expo-camera",
         {
@@ -80,11 +82,12 @@
     "experiments": {
       "typedRoutes": true
     },
+    "owner": "slamanii",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "691b63ab-2d6e-4a89-9cf4-72fe45aff10d"
+        "projectId": "9b36bbb6-031c-495a-b243-18fec9699b28"
       }
-    },
-    "owner": "ddhaven"
+    }
   }
 }

@@ -78,6 +78,7 @@ export type Database = {
           cancelled_by: string | null
           order_ref: string
           price: number | null
+          insurance: number | null
         }
         Insert: {
           client_id?: string
@@ -115,6 +116,7 @@ export type Database = {
           cancelled_by?: string | null
           order_ref?: string
           price?: number | null
+          insurance?: number | null
         }
         Update: {
           client_id?: string
@@ -152,6 +154,7 @@ export type Database = {
           cancelled_by?: string | null
           order_ref?: string
           price?: number | null
+          insurance?: number | null
         }
         Relationships: [
           {
@@ -458,6 +461,22 @@ export type Database = {
           vehicle?: string | null
           vehicle_type?: string
         }
+        Relationships: []
+      }
+      // Hand-added (the table was made in the SQL editor): only the columns the
+      // customer app reads. RLS returns disputes on the signed-in customer's orders.
+      back_package_disputes: {
+        Row: {
+          id: number
+          order_id: number
+          reason: string
+          status: "pending" | "upheld" | "rejected"
+          refund_amount: number | null
+          refund_status: "pending" | "sent" | "failed" | "none" | null
+          created_at: string
+        }
+        Insert: never
+        Update: never
         Relationships: []
       }
       back_ride_request: {

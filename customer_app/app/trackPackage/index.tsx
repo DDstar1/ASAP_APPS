@@ -45,6 +45,7 @@ import Svg, { Circle } from "react-native-svg";
 import { mapStyleFor } from "@/constants/mapStyle";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import CancellationNotice from "@/components/CancellationNotice";
+import PriceBreakdown from "@/components/PriceBreakdown";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
 const ORANGE = "#EE7F3A";
@@ -655,6 +656,14 @@ export default function RiderTrackingScreen() {
             </View>
           </View>
         </View>
+
+        {order?.price != null && (
+          <>
+            <View className="h-px bg-white/10 mt-4" />
+            <Text className="text-gray-400 text-xs mt-4 mb-2">Payment</Text>
+            <PriceBreakdown total={Number(order.price)} insurance={order.insurance != null ? Number(order.insurance) : null} />
+          </>
+        )}
 
         {hasDriver && !isDelivered && contactButtons}
 

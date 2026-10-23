@@ -38,6 +38,8 @@ export default function MapScreen() {
 
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
+  // Bumped to fetch fresh quotes when checkout says the price has changed
+  const [quoteRefresh, setQuoteRefresh] = useState(0);
   const [booking, setBooking] = useState(false);
   const [checkingArea, setCheckingArea] = useState(false);
   // Set once Korapay reports success; opens the awaiting-rider modal
@@ -104,7 +106,13 @@ export default function MapScreen() {
     }
   }, [pickup, destination]);
 
-  // Rust prices both ride types once the locations are set
+  // What the quote depends on besides the route. The photo doesn't change the
+  // price, so a new image_url alone doesn't refetch.
+  const quoteItemsKey = JSON.stringify(items.map(({ image_url, ...rest }) => rest));
+
+  // Rust prices both ride types once the locations are set, and again once
+  // the item details (package type, weight, size) are in, so the booking
+  // sheet shows the same price Rust checks at checkout
   useEffect(() => {
     if (!pickup?.coordinates || !destination?.coordinates) {
       setQuotes([]);
@@ -112,7 +120,11 @@ export default function MapScreen() {
     }
     let cancelled = false;
     setQuotesLoading(true);
-    getRideQuotes(pickup.coordinates, destination.coordinates).then((q) => {
+    getRideQuotes(
+      pickup.coordinates,
+      destination.coordinates,
+      useRideDraftStore.getState().items,
+    ).then((q) => {
       if (cancelled) return;
       setQuotes(q);
       setQuotesLoading(false);
@@ -120,7 +132,7 @@ export default function MapScreen() {
     return () => {
       cancelled = true;
     };
-  }, [pickup?.coordinates, destination?.coordinates]);
+  }, [pickup?.coordinates, destination?.coordinates, quoteItemsKey, quoteRefresh]);
 
   const handleContinue = async () => {
     if (!pickup || !destination) {
@@ -236,7 +248,12 @@ export default function MapScreen() {
 
     if (payment.status === "paid")
       setCheckout({ reference: payment.reference, orderRef: payment.orderRef });
-    else if (payment.status === "error") Alert.alert("Payment failed", payment.error);
+    // 409: Rust's price no longer matches the quote shown (e.g. it changed
+    // since the sheet loaded), so show the new price instead of charging
+    else if (payment.status === "error" && payment.error.includes("API 409")) {
+      setQuoteRefresh((n) => n + 1);
+      Alert.alert("Price updated", "The price for this delivery has changed. Check the new price and book again.");
+    } else if (payment.status === "error") Alert.alert("Payment failed", payment.error);
   };
 
   // ----------------- RENDER -----------------

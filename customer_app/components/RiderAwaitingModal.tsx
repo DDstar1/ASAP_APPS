@@ -54,6 +54,14 @@ type Props = {
 
 type Phase = "searching" | "no_riders" | "error";
 
+// One expanding ring of the searching pulse
+function useCircleStyle(progress: SharedValue<number>) {
+  return useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0, 4]) }],
+    opacity: interpolate(progress.value, [0, 1], [0.5, 0]),
+  }));
+}
+
 export default function RiderAwaitingModal({
   visible,
   paymentReference,
@@ -272,15 +280,9 @@ export default function RiderAwaitingModal({
     }
   }, [visible, phase]);
 
-  const getCircleStyle = (progress: SharedValue<number>) =>
-    useAnimatedStyle(() => ({
-      transform: [{ scale: interpolate(progress.value, [0, 1], [0, 4]) }],
-      opacity: interpolate(progress.value, [0, 1], [0.5, 0]),
-    }));
-
-  const circle1 = getCircleStyle(progress1);
-  const circle2 = getCircleStyle(progress2);
-  const circle3 = getCircleStyle(progress3);
+  const circle1 = useCircleStyle(progress1);
+  const circle2 = useCircleStyle(progress2);
+  const circle3 = useCircleStyle(progress3);
 
   return (
     <Modal visible={visible} transparent animationType="fade">

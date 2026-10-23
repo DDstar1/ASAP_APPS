@@ -36,7 +36,8 @@ export default function SpecificationsScreen() {
   const handleSet = () => {
     const fields = [height, length, width, weight, quantity, price];
     const values = fields.map(Number);
-    if (fields.some((f) => !f.trim()) || values.some((v) => isNaN(v) || v < 0)) {
+    // isFinite also rules out Infinity, which JSON sends as null and Rust's f64 rejects
+    if (fields.some((f) => !f.trim()) || values.some((v) => !Number.isFinite(v) || v < 0)) {
       Alert.alert("Missing details", "Fill in every field with a number.");
       return;
     }
@@ -54,6 +55,7 @@ export default function SpecificationsScreen() {
         quantity: qty,
         weight: kg,
         image_url: existing?.image_url ?? null,
+        type: itemType ?? existing?.type ?? null,
       },
     ]);
 

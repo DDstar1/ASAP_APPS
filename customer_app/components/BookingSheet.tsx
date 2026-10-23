@@ -1,11 +1,14 @@
 import { IMAGES } from "@/assets/assetsData";
+import PriceBreakdown from "@/components/PriceBreakdown";
 import type { RideQuote, RideType } from "@/lib/ride-request";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
   ImageSourcePropType,
+  Modal,
+  Pressable,
   Text,
   TouchableOpacity,
   View,
@@ -40,6 +43,10 @@ export default function BookingSheet({
 }: Props) {
   const selected = RIDE_TYPES.find((r) => r.type === rideType);
   const canBook = !!rideType && !booking;
+  // Ride type whose price breakdown is open (held down)
+  const [breakdownFor, setBreakdownFor] = useState<RideType | null>(null);
+  const breakdownQuote = quotes.find((q) => q.ride_type === breakdownFor);
+  const breakdownLabel = RIDE_TYPES.find((r) => r.type === breakdownFor)?.label;
 
   // Biggest saving Rust is offering on either ride type
   const discountPct = quotes.reduce((best, q) => {
@@ -87,9 +94,12 @@ export default function BookingSheet({
           <TouchableOpacity
             key={type}
             onPress={() => onSelectRideType(type)}
+            onLongPress={quote ? () => setBreakdownFor(type) : undefined}
+            delayLongPress={350}
             accessibilityRole="radio"
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={label}
+            accessibilityHint="Hold to see the price breakdown"
             className={`flex-row items-center rounded-2xl p-3 bg-[#212126] border-2 ${
               isSelected ? "border-[#EE7F3A]" : "border-transparent opacity-60"
             }`}
@@ -146,6 +156,51 @@ export default function BookingSheet({
           </Text>
         )}
       </TouchableOpacity>
+
+      <Text className="text-gray-500 text-xs text-center">
+        Hold a ride type to see the price breakdown
+      </Text>
+
+      <Modal
+        visible={!!breakdownQuote}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBreakdownFor(null)}
+      >
+        <Pressable
+          onPress={() => setBreakdownFor(null)}
+          className="flex-1 bg-black/60 justify-center px-6"
+        >
+          <Pressable onPress={() => {}} className="bg-[#1C1C21] rounded-3xl p-6">
+            {breakdownQuote && (
+              <>
+                <Text className="text-white text-xl font-bold mb-1">
+                  {breakdownLabel} price
+                </Text>
+                <Text className="text-gray-400 text-sm mb-5">
+                  {Math.ceil(breakdownQuote.estimated_time_min)} min ·{" "}
+                  {breakdownQuote.distance_km.toFixed(1)}km
+                </Text>
+                <PriceBreakdown
+                  total={breakdownQuote.estimated_price}
+                  insurance={breakdownQuote.insurance ?? 0}
+                  saved={
+                    breakdownQuote.original_price != null
+                      ? breakdownQuote.original_price - breakdownQuote.estimated_price
+                      : 0
+                  }
+                />
+                <TouchableOpacity
+                  onPress={() => setBreakdownFor(null)}
+                  className="h-12 rounded-full bg-[#2C2C30] justify-center items-center mt-6"
+                >
+                  <Text className="text-white font-semibold">Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

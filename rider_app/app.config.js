@@ -52,6 +52,7 @@ module.exports = ({ config }) => ({
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
     rustApiUrl: process.env.RUST_API_URL || undefined,
-    websiteUrl: process.env.WEBSITE_URL || undefined,
+    // Falls back to the live site so links like the privacy policy always open
+    websiteUrl: process.env.WEBSITE_URL || "https://asap-apps.vercel.app",
   },
 });
