@@ -4,6 +4,8 @@ import RiderAwaitingModal from "@/components/RiderAwaitingModal";
 import { payWithKorapay } from "@/lib/payments";
 import { checkServiceArea, getRideQuotes, RideQuote } from "@/lib/ride-request";
 import { useRideDraftStore } from "@/store/useRideDraftStore";
+import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
+import { getRebookItems } from "@/lib/supabase-app-functions";
 import { useUserStore } from "@/store/useUserStore";
 import { fitAll, reverseGeocode } from "@/utils/mapUtils";
 import { Coordinates } from "@/utils/my_types";
@@ -30,6 +32,16 @@ async function resolvePlaceName(place: any) {
   return name;
 }
 
+// Orders store "Name, address"; the map's places keep them apart
+function placeFromName(full: string, lat: number, lng: number) {
+  const [name, ...rest] = (full ?? "").split(",");
+  return {
+    name: name.trim() || "Saved stop",
+    address: rest.join(",").trim() || null,
+    coordinates: { latitude: Number(lat), longitude: Number(lng) },
+  };
+}
+
 export default function MapScreen() {
   const [pickup, setPickup] = useState<any>(null);
   const [destination, setDestination] = useState<any>(null);
@@ -38,6 +50,8 @@ export default function MapScreen() {
 
   const [quotes, setQuotes] = useState<RideQuote[]>([]);
   const [quotesLoading, setQuotesLoading] = useState(false);
+  // Why the last quote failed, shown on the booking sheet
+  const [quoteError, setQuoteError] = useState<string | null>(null);
   // Bumped to fetch fresh quotes when checkout says the price has changed
   const [quoteRefresh, setQuoteRefresh] = useState(0);
   const [booking, setBooking] = useState(false);
@@ -67,18 +81,36 @@ export default function MapScreen() {
 
   // From the landing screen: a recent place as the destination, and/or the
   // search opened straight away
-  const { search, dest_lat, dest_lng, dest_name, dest_address } =
+  const { search, dest_lat, dest_lng, dest_name, dest_address, rebook } =
     useLocalSearchParams<{
       search?: "from" | "to";
       dest_lat?: string;
       dest_lng?: string;
       dest_name?: string;
       dest_address?: string;
+      rebook?: string;
     }>();
 
   // Each visit to the map starts a fresh booking
   useEffect(() => {
     reset();
+
+    // Rebook: same stops and items as a past order, straight to the ride types
+    const past = rebook
+      ? useCustomerDeliveryStore.getState().AllDeliveries.find((d) => String(d.id) === rebook)
+      : null;
+    if (past) {
+      setPickup(placeFromName(past.pickup_name, past.pickup_lat, past.pickup_long));
+      setDestination(placeFromName(past.dropoff_name, past.dropoff_lat, past.dropoff_long));
+      getRebookItems(past.id).then((items) => {
+        const { setItemType, setItems } = useRideDraftStore.getState();
+        const type = items[0]?.type ?? past.package_type ?? null;
+        if (type) setItemType(type);
+        if (items.length) setItems(items);
+        else router.push("/map/item-type");
+      });
+      return;
+    }
 
     const latitude = Number(dest_lat);
     const longitude = Number(dest_lng);
@@ -116,6 +148,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (!pickup?.coordinates || !destination?.coordinates) {
       setQuotes([]);
+      setQuoteError(null);
       return;
     }
     let cancelled = false;
@@ -124,9 +157,10 @@ export default function MapScreen() {
       pickup.coordinates,
       destination.coordinates,
       useRideDraftStore.getState().items,
-    ).then((q) => {
+    ).then(({ quotes: q, error }) => {
       if (cancelled) return;
       setQuotes(q);
+      setQuoteError(error);
       setQuotesLoading(false);
     });
     return () => {
@@ -295,7 +329,7 @@ export default function MapScreen() {
             destination={destination.coordinates}
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={5}
-            strokeColor="#EE7F3A"
+            strokeColor="#FF7518"
             onReady={(result) => setWaypoints(result.coordinates)}
             onError={(err) =>
               console.warn("Directions error (pickup→dest):", err)
@@ -346,15 +380,18 @@ export default function MapScreen() {
 
           <SafeAreaView
             edges={["bottom"]}
-            className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-[#3C3C43] px-4 pt-3 pb-4 gap-3"
+            className="absolute bottom-0 left-0 right-0 rounded-t-3xl bg-[#1C1C21] px-4 pt-3 pb-4 gap-3"
           >
             <View className="self-center w-10 h-1 rounded-full bg-white/20" />
-            <Text className="text-gray-400 text-xs">
-              Move the map to place the pin on your {pickingField === "from" ? "pickup" : "destination"}
+            <Text className="text-white text-lg font-bold">
+              Set your {pickingField === "from" ? "pickup" : "destination"}
             </Text>
-            <View className="bg-[#212126] rounded-2xl px-4 py-4 flex-row items-center gap-3 min-h-[60px]">
+            <Text className="text-gray-400 text-sm -mt-2">
+              Move the map until the pin is on the exact spot
+            </Text>
+            <View className="bg-[#2C2C30] rounded-2xl px-4 py-4 flex-row items-center gap-3 min-h-[60px]">
               {pinLoading ? (
-                <ActivityIndicator color="#EE7F3A" />
+                <ActivityIndicator color="#FF7518" />
               ) : (
                 <Ionicons name="location-outline" size={20} color="#9CA3AF" />
               )}
@@ -376,7 +413,7 @@ export default function MapScreen() {
                 onPress={confirmPin}
                 disabled={!pinCenter || pinLoading}
                 accessibilityRole="button"
-                className={`flex-1 h-14 rounded-full bg-[#EE7F3A] justify-center items-center ${
+                className={`flex-1 h-14 rounded-full bg-[#FF7518] justify-center items-center ${
                   !pinCenter || pinLoading ? "opacity-50" : ""
                 }`}
               >
@@ -395,7 +432,8 @@ export default function MapScreen() {
         accessibilityRole="button"
         accessibilityLabel="Show the whole route"
         className="absolute right-4 w-11 h-11 bg-[#2C2C30] rounded-full justify-center items-center z-50"
-        style={{ bottom: hasItem ? 440 : 280 }}
+        // Just above whichever sheet is showing (the ride type sheet is taller)
+        style={{ bottom: hasItem ? 480 : 280 }}
         onPress={() =>
           fitAll({
             mapRef: mapRef as React.RefObject<MapView>,
@@ -413,7 +451,7 @@ export default function MapScreen() {
       <SafeAreaView
         edges={["bottom"]}
         className={`absolute bottom-0 left-0 right-0 rounded-t-3xl ${
-          hasItem ? "bg-black" : "bg-[#3C3C43]"
+          hasItem ? "bg-black" : "bg-[#1C1C21]"
         } ${pickingField ? "hidden" : ""}`}
       >
         {hasItem ? (
@@ -421,6 +459,8 @@ export default function MapScreen() {
             itemLabel={itemType ?? "Item description"}
             quotes={quotes}
             quotesLoading={quotesLoading}
+            quoteError={quoteError}
+            onRetryQuotes={() => setQuoteRefresh((n) => n + 1)}
             rideType={rideType}
             booking={booking}
             onEditItem={() =>
@@ -434,7 +474,7 @@ export default function MapScreen() {
             <View className="self-center w-10 h-1 rounded-full bg-white/20" />
 
             {/* Pick up / Deliver to, joined by a dotted line */}
-            <View className="bg-[#212126] rounded-2xl px-4">
+            <View className="bg-[#2C2C30] rounded-2xl px-4">
               <TouchableOpacity
                 className="flex-row items-center gap-3 py-4"
                 onPress={() => setActiveField("from")}
@@ -477,7 +517,7 @@ export default function MapScreen() {
             <TouchableOpacity
               onPress={handleContinue}
               disabled={!pickup || !destination || checkingArea}
-              className={`h-14 rounded-full bg-[#EE7F3A] justify-center items-center ${
+              className={`h-14 rounded-full bg-[#FF7518] justify-center items-center ${
                 pickup && destination ? "" : "opacity-50"
               }`}
             >
@@ -497,7 +537,7 @@ export default function MapScreen() {
         field={activeField || "from"}
         originLabel={pickup?.name}
         onClose={() => setActiveField(null)}
-        onChooseOnMap={() => startPicking(activeField || "from")}
+        onChooseOnMap={startPicking}
         onSelect={(location) => {
           if (activeField === "from") setPickup(location);
           if (activeField === "to") setDestination(location);

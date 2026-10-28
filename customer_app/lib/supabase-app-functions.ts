@@ -14,6 +14,7 @@ import type {
   SavedLocationInput,
 } from "@/utils/my_types";
 import { formatMessageTime } from "./supabase-utils";
+import type { ItemDetails } from "./ride-request";
 
 /* -------------------------------------------------
  * Auth Helpers
@@ -226,7 +227,8 @@ export const updateProfileImage = async (
   mimeType?: string,
 ): Promise<string> => {
   const fileExt = imageUri.split(".").pop() ?? "jpg";
-  const fileName = `${userId}_${Date.now()}.${fileExt}`;
+  // One folder per user: the bucket's storage policy only lets you write to yours
+  const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
   // Use signed upload URL + upload task (consistent with uploadDeliveryImage)
   const { data: signedData, error: signedError } = await supabase.storage
@@ -260,6 +262,27 @@ export const updateProfileImage = async (
 
   return publicUrl;
 };
+
+/**
+ * Name and phone go through Rust, which validates the phone and keeps its own
+ * copy (back_custom_users) in step; the app doesn't write app_custom_users.
+ * Rust replies with the saved values.
+ */
+export async function updateProfileDetails(details: {
+  username: string;
+  phone: string; // E.164
+}) {
+  return apiPost<{ username: string; phone: string }>("/riders/profile", details);
+}
+
+/**
+ * Supabase Auth sends a confirmation link; the email only changes once it's
+ * followed, so the current one keeps working until then.
+ */
+export async function requestEmailChange(email: string) {
+  const { error } = await supabase.auth.updateUser({ email });
+  if (error) throw error;
+}
 
 /* -------------------------------------------------
  * Package / Delivery Images
@@ -705,7 +728,7 @@ export async function deleteDeliveryByOrderCode(
       driver_package_current_lat,
       driver_package_current_long,
       image_url,
-      rider:custom_users!delivery_orders_driver_id_fkey (
+      rider:app_custom_users!driver_id (
         username,
         phone
       )
@@ -763,6 +786,18 @@ export const getReturnCode = async (orderId: number): Promise<string | null> => 
     return null;
   }
   return data ?? null;
+};
+
+// The items Rust priced for a past order, for Rebook; empty if it can't find them
+export const getRebookItems = async (orderId: number): Promise<ItemDetails[]> => {
+  const { data, error } = await supabase.rpc("get_rebook_items", {
+    p_order_id: orderId,
+  });
+  if (error) {
+    console.error("❌ Failed to load rebook items:", error.message);
+    return [];
+  }
+  return Array.isArray(data) ? (data as unknown as ItemDetails[]) : [];
 };
 
 export const ridesCompleted = async (
@@ -942,12 +977,12 @@ export const getMessagesList = async () => {
           order_code,
           status
         ),
-        sender:custom_users!sender_id (
+        sender:app_custom_users!sender_id (
           id,
           username,
           phone
         ),
-        receiver:custom_users!receiver_id (
+        receiver:app_custom_users!receiver_id (
           id,
           username,
           phone

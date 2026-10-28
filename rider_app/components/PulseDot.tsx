@@ -43,7 +43,7 @@ export const PulseDot = ({
         isOnline && color ? { backgroundColor: color } : null,
       ]}
       className={`w-2 h-2 rounded-full ${
-        isOnline ? "bg-[#ff923e]" : "bg-[#a5abbd]"
+        isOnline ? "bg-[#FF7518]" : "bg-[#a5abbd]"
       }`}
     />
   );

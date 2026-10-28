@@ -63,36 +63,40 @@ export default function CameraModal({
         visible={visible}
         onRequestClose={onClose}
       >
-        <SafeAreaView className="flex-1 bg-gray-900 items-center justify-center p-6">
-          <Ionicons name="camera-outline" size={70} color="#f97316" />
-          <Text className="text-white text-2xl font-semibold mt-4 text-center">
-            Take a Picture?
-          </Text>
-          <Text className="text-gray-400 text-center mt-2 mb-6">
-            Do you want to take a picture of the package now?
-          </Text>
-
-          <TouchableOpacity
-            className="bg-orange-500 px-6 py-3 rounded-full w-60 mb-5"
-            onPress={() => handleWorkflowChoice("yes")}
-          >
-            <Text className="text-white font-semibold text-center">
-              Yes, Take Picture
+        <SafeAreaView className="flex-1 bg-black px-6">
+          <View className="flex-1 items-center justify-center">
+            <View className="w-24 h-24 rounded-full bg-[#FF7518]/15 items-center justify-center">
+              <Ionicons name="camera" size={44} color="#FF7518" />
+            </View>
+            <Text className="text-white text-2xl font-bold mt-6 text-center">
+              Add a photo of your package?
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-gray-800 px-6 py-3 rounded-full w-60 mb-5"
-            onPress={() => handleWorkflowChoice("no")}
-          >
-            <Text className="text-gray-300 font-semibold text-center">
-              No, Skip
+            <Text className="text-gray-400 text-base text-center mt-2 leading-6 max-w-xs">
+              It helps your rider find the right package at pickup. You can skip
+              this and still book.
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity className="mt-6" onPress={onClose}>
-            <Text className="text-gray-500 text-sm">Cancel</Text>
-          </TouchableOpacity>
+          <View className="gap-3 pb-4">
+            <TouchableOpacity
+              className="h-14 rounded-full bg-[#FF7518] flex-row items-center justify-center gap-2"
+              onPress={() => handleWorkflowChoice("yes")}
+              accessibilityRole="button"
+            >
+              <Ionicons name="camera-outline" size={20} color="white" />
+              <Text className="text-white text-base font-bold">Take a photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="h-14 rounded-full bg-[#2C2C30] items-center justify-center"
+              onPress={() => handleWorkflowChoice("no")}
+              accessibilityRole="button"
+            >
+              <Text className="text-white text-base font-semibold">Skip for now</Text>
+            </TouchableOpacity>
+            <TouchableOpacity className="py-3 items-center" onPress={onClose} accessibilityRole="button">
+              <Text className="text-gray-400 text-sm">Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
       </Modal>
     );
@@ -106,26 +110,31 @@ export default function CameraModal({
         visible={visible}
         onRequestClose={onClose}
       >
-        <View className="flex-1 items-center justify-center bg-black">
-          <View className="items-center p-6">
-            <Ionicons name="camera" size={64} color="white" />
-            <Text className="text-white text-xl font-semibold mb-2 text-center">
-              Camera Permission Required
+        <SafeAreaView className="flex-1 bg-black px-6">
+          <View className="flex-1 items-center justify-center">
+            <View className="w-24 h-24 rounded-full bg-[#2C2C30] items-center justify-center">
+              <Ionicons name="camera-outline" size={44} color="white" />
+            </View>
+            <Text className="text-white text-2xl font-bold mt-6 text-center">
+              Allow camera access
             </Text>
-            <Text className="text-gray-300 text-center mb-6">
-              We need access to your camera to take package photos
+            <Text className="text-gray-400 text-base text-center mt-2 leading-6 max-w-xs">
+              ASAP needs your camera to photograph the package you&apos;re sending.
             </Text>
+          </View>
+          <View className="gap-3 pb-4">
             <TouchableOpacity
-              className="bg-orange-500 px-6 py-3 rounded-full"
+              className="h-14 rounded-full bg-[#FF7518] items-center justify-center"
               onPress={requestPermission}
+              accessibilityRole="button"
             >
-              <Text className="text-white font-semibold">Grant Permission</Text>
+              <Text className="text-white text-base font-bold">Allow camera</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="mt-4 px-6 py-3" onPress={onClose}>
-              <Text className="text-gray-400">Cancel</Text>
+            <TouchableOpacity className="py-3 items-center" onPress={onClose} accessibilityRole="button">
+              <Text className="text-gray-400 text-sm">Cancel</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     );
   }
@@ -219,12 +228,35 @@ export default function CameraModal({
           />
         )}
 
-        {/* Header */}
-        <SafeAreaView className="absolute top-0 rounded-b-[50px] bg-gray-900 p-3 w-full items-center z-10">
-          <Text className="text-white text-lg font-semibold text-center px-4">
-            Take a picture of the package
-          </Text>
+        {/* Header: close, title, flip */}
+        <SafeAreaView edges={["top"]} className="absolute top-0 left-0 right-0 z-10">
+          <View className="flex-row items-center justify-between px-4 pt-2">
+            <TouchableOpacity
+              className="w-11 h-11 rounded-full bg-black/60 items-center justify-center"
+              onPress={onClose}
+              disabled={isUploading}
+              accessibilityRole="button"
+              accessibilityLabel="Close camera"
+            >
+              <Ionicons name="close" size={24} color={isUploading ? "#6B7280" : "white"} />
+            </TouchableOpacity>
+            <Text className="text-white text-base font-semibold">Photograph your package</Text>
+            <TouchableOpacity
+              className="w-11 h-11 rounded-full bg-black/60 items-center justify-center"
+              onPress={toggleCameraFacing}
+              disabled={isUploading}
+              accessibilityRole="button"
+              accessibilityLabel="Switch camera"
+            >
+              <Ionicons name="camera-reverse-outline" size={22} color={isUploading ? "#6B7280" : "white"} />
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
+
+        {/* Framing guide */}
+        <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
+          <View className="w-[78%] aspect-square rounded-3xl border-2 border-white/70" />
+        </View>
 
         {/* Camera not ready overlay */}
         {!isReady && !isUploading && (
@@ -240,7 +272,7 @@ export default function CameraModal({
               size={90}
               progress={uploadProgress}
               showsText={true}
-              color="#f97316"
+              color="#FF7518"
               unfilledColor="#374151"
               borderWidth={0}
               fill="white"
@@ -256,39 +288,19 @@ export default function CameraModal({
           </View>
         )}
 
-        {/* Controls */}
-        <SafeAreaView className="absolute bottom-10 w-full flex-row justify-around items-center px-6 z-10">
-          <TouchableOpacity
-            className="bg-gray-800 p-3 rounded-full"
-            onPress={onClose}
-            disabled={isUploading}
-          >
-            <Ionicons
-              name="close"
-              size={28}
-              color={isUploading ? "#6B7280" : "white"}
-            />
-          </TouchableOpacity>
-
-          {/* Capture button */}
+        {/* Shutter */}
+        <SafeAreaView edges={["bottom"]} className="absolute bottom-0 left-0 right-0 items-center pb-6 z-10">
+          <Text className="text-white/80 text-sm mb-4">Fit the whole package inside the frame</Text>
           <TouchableOpacity
             onPress={takePicture}
             disabled={!isReady || isUploading}
-            className="bg-white p-4 rounded-full"
+            accessibilityRole="button"
+            accessibilityLabel="Take photo"
+            className={`w-20 h-20 rounded-full border-4 border-white items-center justify-center ${
+              !isReady || isUploading ? "opacity-50" : ""
+            }`}
           >
-            <Ionicons name="camera" size={36} color="#f97316" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="bg-gray-800 p-3 rounded-full"
-            onPress={toggleCameraFacing}
-            disabled={isUploading}
-          >
-            <Ionicons
-              name="camera-reverse"
-              size={28}
-              color={isUploading ? "#6B7280" : "white"}
-            />
+            <View className="w-16 h-16 rounded-full bg-white" />
           </TouchableOpacity>
         </SafeAreaView>
       </SafeAreaView>

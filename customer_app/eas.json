@@ -7,7 +7,8 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "environment": "development"
+      "environment": "development",
+      "channel": "development"
     },
     "development-simulator": {
       "extends": "development",
@@ -18,13 +19,18 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a"
       }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       }

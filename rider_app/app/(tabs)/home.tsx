@@ -400,8 +400,8 @@ const RiderHomeScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#EE7F3A"
-            colors={["#EE7F3A"]}
+            tintColor="#FF7518"
+            colors={["#FF7518"]}
           />
         }
       >
@@ -478,7 +478,7 @@ const RiderHomeScreen = () => {
             accessibilityRole="button"
             accessibilityState={{ disabled: !canConfirmTrip }}
             style={{
-              backgroundColor: canConfirmTrip ? "#EE7F3A" : "#212126",
+              backgroundColor: canConfirmTrip ? "#FF7518" : "#212126",
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",

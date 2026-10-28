@@ -93,7 +93,7 @@ export default function LocationDebugScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#FF6C00"
+          tintColor="#FF7518"
         />
       }
     >
@@ -199,7 +199,7 @@ export default function LocationDebugScreen() {
             value={waypoints.length - synced}
             color={
               waypoints.length - synced > 0
-                ? "text-[#FF6C00]"
+                ? "text-[#FF7518]"
                 : "text-[#4A4A6A]"
             }
           />
@@ -227,7 +227,7 @@ export default function LocationDebugScreen() {
               >
                 <View className="flex-row items-center gap-2 flex-1">
                   <View
-                    className={`w-2 h-2 rounded-full ${wp.synced ? "bg-[#00E57B]" : "bg-[#FF6C00]"}`}
+                    className={`w-2 h-2 rounded-full ${wp.synced ? "bg-[#00E57B]" : "bg-[#FF7518]"}`}
                   />
                   <View>
                     <Text className="text-xs text-white font-mono">
@@ -239,7 +239,7 @@ export default function LocationDebugScreen() {
                   </View>
                 </View>
                 <Text
-                  className={`text-[10px] font-bold uppercase ${wp.synced ? "text-[#00E57B]" : "text-[#FF6C00]"}`}
+                  className={`text-[10px] font-bold uppercase ${wp.synced ? "text-[#00E57B]" : "text-[#FF7518]"}`}
                 >
                   {wp.synced ? "synced" : "pending"}
                 </Text>
@@ -255,7 +255,7 @@ export default function LocationDebugScreen() {
 
       {/* Buttons */}
       <TouchableOpacity
-        className="bg-[#FF6C00] rounded-xl py-3.5 items-center"
+        className="bg-[#FF7518] rounded-xl py-3.5 items-center"
         onPress={onRefresh}
       >
         <Text className="text-white font-bold text-sm">Refresh Now</Text>

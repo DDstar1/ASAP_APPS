@@ -164,17 +164,17 @@ export default function SavedLocationsModal({
       <View className="flex-1 justify-end bg-black/80">
         <SafeAreaView
           style={{ height: 500 }}
-          className="w-full bg-gray-900 rounded-t-[25px] p-4"
+          className="w-full bg-[#1C1C21] rounded-t-[25px] p-4"
         >
-          <View className="self-center w-12 h-1.5 bg-gray-600 rounded-full mb-3" />
+          <View className="self-center w-12 h-1.5 bg-[#4A4A52] rounded-full mb-3" />
 
           {/* Header */}
           <View className="flex-row items-center mb-4">
             <TouchableOpacity
               onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full bg-gray-800"
+              className="h-10 w-10 items-center justify-center rounded-full bg-[#2C2C30]"
             >
-              <Ionicons name="close" size={22} color="#f97316" />
+              <Ionicons name="close" size={22} color="#FF7518" />
             </TouchableOpacity>
             <Text className="ml-3 text-lg font-semibold text-gray-100">
               Saved Locations
@@ -189,17 +189,17 @@ export default function SavedLocationsModal({
             stickyHeaderIndices={cameFromSharedLink ? [0] : undefined}
             ListHeaderComponent={
               SharedlocationDetails.modal && SharedlocationDetails.edit ? (
-                <View className="bg-gray-800/95 p-4 rounded-xl mb-4 border-2 border-orange-500/30 shadow-2xl relative">
+                <View className="bg-[#2C2C30]/95 p-4 rounded-xl mb-4 border-2 border-[#FF7518]/30 shadow-2xl relative">
                   {/* X Button */}
                   <TouchableOpacity
                     onPress={onClearSharedDetails}
-                    className="absolute top-2 right-2 bg-gray-700/70 rounded-full p-1.5"
+                    className="absolute top-2 right-2 bg-[#3C3C43]/70 rounded-full p-1.5"
                   >
                     <Ionicons name="close" size={18} color="white" />
                   </TouchableOpacity>
 
                   <View className="flex-row items-center mb-2">
-                    <View className="bg-orange-500 p-1.5 rounded-full mr-2">
+                    <View className="bg-[#FF7518] p-1.5 rounded-full mr-2">
                       <Ionicons name="add-circle" size={16} color="white" />
                     </View>
                     <Text className="text-white font-bold text-base">
@@ -207,16 +207,16 @@ export default function SavedLocationsModal({
                     </Text>
                   </View>
 
-                  <View className="flex-row justify-evenly bg-gray-800/50 p-3 rounded-lg mb-3 border border-gray-700">
+                  <View className="flex-row justify-evenly bg-[#2C2C30]/50 p-3 rounded-lg mb-3 border border-white/10">
                     <Text className="text-gray-300 text-sm">
                       📍 Latitude:
-                      <Text className="text-orange-400 font-mono">
+                      <Text className="text-[#FF7518] font-mono">
                         {SharedlocationDetails.lat}
                       </Text>
                     </Text>
                     <Text className="text-gray-300 text-sm">
                       📍 Longitude:
-                      <Text className="text-orange-400 font-mono">
+                      <Text className="text-[#FF7518] font-mono">
                         {SharedlocationDetails.lng}
                       </Text>
                     </Text>
@@ -228,12 +228,12 @@ export default function SavedLocationsModal({
                       onChangeText={setNewName}
                       placeholder="Enter location name"
                       placeholderTextColor="#9CA3AF"
-                      className="bg-gray-800 text-white px-4 py-3 rounded-lg flex-1 border border-gray-700"
+                      className="bg-[#2C2C30] text-white px-4 py-3 rounded-lg flex-1 border border-white/10"
                     />
 
                     <TouchableOpacity
                       onPress={handleAddNewLocation}
-                      className="bg-orange-500 px-5 py-3 rounded-lg shadow-lg active:bg-orange-600"
+                      className="bg-[#FF7518] px-5 py-3 rounded-lg shadow-lg active:bg-[#E5650F]"
                       disabled={isSaving}
                     >
                       {isSaving ? (
@@ -249,19 +249,19 @@ export default function SavedLocationsModal({
               ) : null
             }
             renderItem={({ item }) => (
-              <View className="flex-row items-center justify-between bg-gray-800 p-4 rounded-xl mb-3">
+              <View className="flex-row items-center justify-between bg-[#2C2C30] p-4 rounded-xl mb-3">
                 <View className="flex-1 mr-2">
                   {editingId === item.id ? (
                     <View className="flex-row items-center">
                       <TextInput
                         value={editedName}
                         onChangeText={setEditedName}
-                        className="flex-1 bg-gray-700 text-white px-2 py-1 rounded-lg"
+                        className="flex-1 bg-[#3C3C43] text-white px-2 py-1 rounded-lg"
                         autoFocus
                       />
                       <TouchableOpacity
                         onPress={() => handleSaveName(item.id)}
-                        className="ml-2 p-2 bg-gray-700 rounded-full"
+                        className="ml-2 p-2 bg-[#3C3C43] rounded-full"
                       >
                         <Ionicons name="checkmark" size={15} color="#22c55e" />
                       </TouchableOpacity>
@@ -277,7 +277,7 @@ export default function SavedLocationsModal({
                           setEditedName(item.name);
                         }}
                       >
-                        <Ionicons name="pencil" size={16} color="#f97316" />
+                        <Ionicons name="pencil" size={16} color="#FF7518" />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -293,9 +293,9 @@ export default function SavedLocationsModal({
                   <View className="flex-row gap-2">
                     <TouchableOpacity
                       onPress={() => openInMaps(item.lat, item.lng)}
-                      className="p-2 bg-gray-700 rounded-full"
+                      className="p-2 bg-[#3C3C43] rounded-full"
                     >
-                      <Ionicons name="map-outline" size={20} color="#f97316" />
+                      <Ionicons name="map-outline" size={20} color="#FF7518" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleDeleteLocation(item.id)}
@@ -314,7 +314,7 @@ export default function SavedLocationsModal({
             ListEmptyComponent={
               loading ? (
                 <View className="flex-1 justify-center items-center mt-12">
-                  <ActivityIndicator size="large" color="#f97316" />
+                  <ActivityIndicator size="large" color="#FF7518" />
                   <Text className="text-gray-400 mt-2">Loading...</Text>
                 </View>
               ) : (

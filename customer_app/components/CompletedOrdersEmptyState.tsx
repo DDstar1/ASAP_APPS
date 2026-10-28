@@ -102,7 +102,7 @@ const CompletedOrdersEmptyState = ({
         <TouchableOpacity
           onPress={onSendPackage}
           activeOpacity={0.75}
-          className="self-start mt-3 h-14 justify-center w-full rounded-full bg-[#EE7F3A]"
+          className="self-start mt-3 h-14 justify-center w-full rounded-full bg-[#FF7518]"
         >
           <Text className="text-base font-bold text-white text-center">
             Send your first package

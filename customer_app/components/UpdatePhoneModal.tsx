@@ -136,8 +136,8 @@ export function UpdatePhoneModal({
 
           {/* Header */}
           <View className="flex-row items-center gap-3 mb-6">
-            <View className="w-10 h-10 rounded-2xl bg-[#ff923e]/15 items-center justify-center">
-              <MaterialIcons name="phone-android" size={20} color="#ff923e" />
+            <View className="w-10 h-10 rounded-2xl bg-[#FF7518]/15 items-center justify-center">
+              <MaterialIcons name="phone-android" size={20} color="#FF7518" />
             </View>
             <View>
               <Text className="text-[#e0e5f9] text-lg font-bold">
@@ -161,7 +161,7 @@ export function UpdatePhoneModal({
             className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-4 gap-3"
             style={{
               borderWidth: step === "otp" ? 1 : 0,
-              borderColor: "#ff923e40",
+              borderColor: "#FF751840",
             }}
           >
             <MaterialIcons name="phone" size={18} color="#a5abbd" />
@@ -176,7 +176,7 @@ export function UpdatePhoneModal({
             />
             {step === "otp" && (
               <TouchableOpacity onPress={goBackToPhone}>
-                <MaterialIcons name="edit" size={16} color="#ff923e" />
+                <MaterialIcons name="edit" size={16} color="#FF7518" />
               </TouchableOpacity>
             )}
           </View>
@@ -195,7 +195,7 @@ export function UpdatePhoneModal({
                 <MaterialIcons
                   name="mark-email-unread"
                   size={14}
-                  color="#ff923e"
+                  color="#FF7518"
                 />
                 <Text className="text-[#a5abbd] text-[11px] tracking-widest">
                   OTP CODE
@@ -203,7 +203,7 @@ export function UpdatePhoneModal({
               </View>
 
               {/* OTP input */}
-              <View className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-4 gap-3 border border-[#ff923e]/20">
+              <View className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-4 gap-3 border border-[#FF7518]/20">
                 <MaterialIcons name="dialpad" size={18} color="#a5abbd" />
                 <TextInput
                   value={otp}
@@ -217,7 +217,7 @@ export function UpdatePhoneModal({
               </View>
 
               <TouchableOpacity className="mt-2 self-end">
-                <Text className="text-[#ff923e] text-xs">Resend OTP</Text>
+                <Text className="text-[#FF7518] text-xs">Resend OTP</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -229,8 +229,8 @@ export function UpdatePhoneModal({
             className="mt-6 py-4 rounded-full items-center justify-center flex-row gap-2"
             style={{
               backgroundColor: isCtaActive
-                ? "#ff923e"
-                : "rgba(255,146,62,0.25)",
+                ? "#FF7518"
+                : "rgba(255,117,24,0.25)",
             }}
           >
             {loading ? (

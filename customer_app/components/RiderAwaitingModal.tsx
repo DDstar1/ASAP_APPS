@@ -21,20 +21,17 @@ import {
   Modal,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-import Animated, {
-  interpolate,
-  SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BikeMarker, Radar, RADAR_ORANGE, RadarSpot } from "./Radar";
 
 // Backstop in case Rust never marks the order no_driver. Kept above Rust's
-// 3-minute driver search so the row, not this timer, normally ends the wait.
-const SEARCH_TIMEOUT_MS = 3.5 * 60 * 1000;
+// 30-minute driver search so the row, not this timer, normally ends the wait.
+const SEARCH_TIMEOUT_MS = 31 * 60 * 1000;
+// Cancelling mid-search only shows once the search has had a fair go
+const CANCEL_AFTER_MS = 5 * 60 * 1000;
 
 type Props = {
   visible: boolean;
@@ -54,13 +51,16 @@ type Props = {
 
 type Phase = "searching" | "no_riders" | "error";
 
-// One expanding ring of the searching pulse
-function useCircleStyle(progress: SharedValue<number>) {
-  return useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(progress.value, [0, 1], [0, 4]) }],
-    opacity: interpolate(progress.value, [0, 1], [0.5, 0]),
-  }));
-}
+// Illustrative only, not real rider positions: degrees clockwise from north,
+// and distance as a fraction of the radar's radius
+const BIKE_SPOTS = [
+  [-50, 0.62],
+  [25, 0.9],
+  [110, 0.55],
+  [160, 0.86],
+  [215, 0.66],
+  [290, 0.88],
+];
 
 export default function RiderAwaitingModal({
   visible,
@@ -74,9 +74,9 @@ export default function RiderAwaitingModal({
   onRiderFound,
   onCancelled,
 }: Props) {
-  const progress1 = useSharedValue(0);
-  const progress2 = useSharedValue(0);
-  const progress3 = useSharedValue(0);
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const radarSize = Math.min(width - 48, 340);
 
   const [phase, setPhase] = useState<Phase>("searching");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -88,6 +88,14 @@ export default function RiderAwaitingModal({
   const [cancelling, setCancelling] = useState(false);
   // Stops a rider being "found" while the cancel request is in flight
   const cancellingRef = useRef(false);
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!visible || phase !== "searching") return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [visible, phase]);
 
   useEffect(() => {
     if (!visible) return;
@@ -96,6 +104,8 @@ export default function RiderAwaitingModal({
     let orderId: number | null = null;
     let settled = false;
     setPhase("searching");
+    setStartedAt(Date.now());
+    setNow(Date.now());
 
     const riderFound = (id: number) => {
       if (settled || cancelled || cancellingRef.current) return;
@@ -249,143 +259,142 @@ export default function RiderAwaitingModal({
     );
   };
 
+  const searching = phase === "searching";
+  const elapsed = Math.max(0, now - startedAt);
+  const canCancel = !searching || elapsed >= CANCEL_AFTER_MS;
+
   const cancelButton = (
     <TouchableOpacity
       onPress={cancelOrder}
       disabled={cancelling}
-      className="h-12 px-6 rounded-full border border-red-500/60 justify-center items-center"
+      className="flex-1 h-14 rounded-full border border-red-500/60 justify-center items-center"
     >
       {cancelling ? (
         <ActivityIndicator color="#F87171" />
       ) : (
-        <Text className="text-red-400 font-semibold">Cancel & refund</Text>
+        <Text className="text-red-400 font-semibold">Cancel</Text>
       )}
     </TouchableOpacity>
   );
 
-  // Animation
-  useEffect(() => {
-    if (visible && phase === "searching") {
-      progress1.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
-      setTimeout(() => {
-        progress2.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
-      }, 1000);
-      setTimeout(() => {
-        progress3.value = withRepeat(withTiming(1, { duration: 3000 }), -1);
-      }, 2000);
-    } else {
-      progress1.value = 0;
-      progress2.value = 0;
-      progress3.value = 0;
-    }
-  }, [visible, phase]);
-
-  const circle1 = useCircleStyle(progress1);
-  const circle2 = useCircleStyle(progress2);
-  const circle3 = useCircleStyle(progress3);
-
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View className="flex-1 bg-black/90 justify-center items-center">
-        {phase === "searching" && (
-          <>
-            <TouchableOpacity
-              onPress={onClose}
-              className="absolute top-12 right-6 p-3 bg-black/80 rounded-full z-50"
-            >
-              <Text className="text-white text-2xl">✕</Text>
-            </TouchableOpacity>
-
-            <View className="justify-center items-center">
-              {[circle1, circle2, circle3].map((circle, i) => (
-                <Animated.View
-                  key={i}
-                  style={[
-                    {
-                      position: "absolute",
-                      width: 150,
-                      height: 150,
-                      borderRadius: 75,
-                      backgroundColor: "#F97316",
-                    },
-                    circle,
-                  ]}
-                />
-              ))}
-
-              <View className="justify-center items-center p-5 bg-gray-400 rounded-full">
-                <Ionicons name="search" size={70} color="white" />
-              </View>
-            </View>
-
-            <Text className="text-white text-xl mt-10 font-semibold text-center">
-              Awaiting rider confirmation…
-            </Text>
-            <Text className="text-gray-400 text-sm mt-2 text-center">
-              Please wait while we find nearby riders
-            </Text>
-
-            {(pickupName || dropoffName) && (
-              <View className="mt-6 px-8 gap-1">
-                {pickupName && (
-                  <Text
-                    className="text-gray-400 text-xs text-center"
-                    numberOfLines={1}
-                  >
-                    📍 From: {pickupName}
-                  </Text>
-                )}
-                {dropoffName && (
-                  <Text
-                    className="text-gray-400 text-xs text-center"
-                    numberOfLines={1}
-                  >
-                    🏁 To: {dropoffName}
-                  </Text>
-                )}
-              </View>
-            )}
-
-            <View className="mt-10">{cancelButton}</View>
-          </>
+      <View className="flex-1 bg-black">
+        {searching && (
+          <TouchableOpacity
+            onPress={onClose}
+            accessibilityLabel="Hide"
+            style={{ top: insets.top + 8 }}
+            className="absolute right-5 w-11 h-11 rounded-full bg-[#2C2C30] justify-center items-center z-50"
+          >
+            <Ionicons name="chevron-down" size={22} color="white" />
+          </TouchableOpacity>
         )}
 
-        {phase !== "searching" && (
-          <View className="px-8 items-center gap-3">
-            <View className="p-5 bg-gray-700 rounded-full">
-              <Ionicons
-                name={phase === "no_riders" ? "bicycle" : "alert-circle"}
-                size={60}
-                color="white"
-              />
-            </View>
-            <Text className="text-white text-xl font-semibold text-center mt-4">
-              {phase === "no_riders"
-                ? "No riders found"
-                : "Couldn't request a rider"}
-            </Text>
-            <Text className="text-gray-400 text-sm text-center">
-              {phase === "no_riders"
-                ? "No rider accepted your delivery. You can try again now."
-                : errorMessage}
-            </Text>
+        <View className="flex-1 justify-center items-center">
+          {/* Remount per attempt so the bikes pop in again */}
+          <Radar
+            key={`${attempt}-${phase}`}
+            size={radarSize}
+            active={searching}
+            center={
+              <View
+                className="w-16 h-16 rounded-full bg-[#1C1C21] justify-center items-center"
+                style={{ borderWidth: 2, borderColor: searching ? RADAR_ORANGE : "#3A3A3F" }}
+              >
+                <Ionicons
+                  name={searching ? "cube" : phase === "no_riders" ? "bicycle" : "alert-circle"}
+                  size={28}
+                  color={searching ? RADAR_ORANGE : "#9CA3AF"}
+                />
+              </View>
+            }
+          >
+            {searching &&
+              BIKE_SPOTS.map(([deg, r], i) => {
+                const rad = (deg * Math.PI) / 180;
+                const dist = (r * radarSize) / 2 - 22;
+                return (
+                  <RadarSpot
+                    key={i}
+                    x={Math.sin(rad) * dist}
+                    y={-Math.cos(rad) * dist}
+                    radarSize={radarSize}
+                    width={40}
+                    height={40}
+                  >
+                    <BikeMarker delay={600 + i * 1400} />
+                  </RadarSpot>
+                );
+              })}
+          </Radar>
+        </View>
 
-            <View className="flex-row gap-3 mt-6">
-              {/* Already paid, so leaving here means a refund, not just going back */}
-              {cancelButton}
+        <View
+          className="bg-[#1C1C21] rounded-t-3xl px-6 pt-6 gap-5"
+          style={{ paddingBottom: insets.bottom + 20 }}
+        >
+          <View className="gap-1.5">
+            <Text className="text-white text-2xl font-bold">
+              {searching
+                ? "Finding your rider"
+                : phase === "no_riders"
+                  ? "No riders found"
+                  : "Couldn't request a rider"}
+            </Text>
+            <Text className="text-gray-400 text-sm">
+              {searching
+                ? "We're asking riders near your pickup. This usually takes under 3 minutes."
+                : phase === "no_riders"
+                  ? "No rider accepted your delivery. You can try again now."
+                  : errorMessage}
+            </Text>
+          </View>
+
+          {(pickupName || dropoffName) && (
+            <View className="bg-[#26262B] rounded-2xl px-4 py-3">
+              <Stop icon="radio-button-on" color={RADAR_ORANGE} label={pickupName} />
+              <View className="ml-[8px] h-3 border-l border-dashed border-gray-600" />
+              <Stop icon="location" color="white" label={dropoffName} />
+            </View>
+          )}
+
+          {/* Already paid, so leaving here means a refund, not just going back */}
+          <View className="flex-row gap-3">
+            {canCancel && cancelButton}
+            {!searching && (
               <TouchableOpacity
                 onPress={() => {
                   restartSearchRef.current = phase === "no_riders";
                   setAttempt((a) => a + 1);
                 }}
-                className="h-12 px-6 rounded-full bg-[#EE7F3A] justify-center"
+                className="flex-1 h-14 rounded-full bg-[#FF7518] justify-center items-center"
               >
                 <Text className="text-white font-semibold">Try again</Text>
               </TouchableOpacity>
-            </View>
+            )}
           </View>
-        )}
+        </View>
       </View>
     </Modal>
+  );
+}
+
+function Stop({
+  icon,
+  color,
+  label,
+}: {
+  icon: "radio-button-on" | "location";
+  color: string;
+  label: string | null;
+}) {
+  return (
+    <View className="flex-row items-center gap-3">
+      <Ionicons name={icon} size={18} color={color} />
+      <Text className="flex-1 text-white text-sm" numberOfLines={1}>
+        {label || "—"}
+      </Text>
+    </View>
   );
 }

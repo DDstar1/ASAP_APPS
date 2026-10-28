@@ -153,9 +153,9 @@ export default function RootLayout() {
             headerShown: true,
             title: "Order Details",
             headerStyle: {
-              backgroundColor: "#111827", // Primary Background
+              backgroundColor: "#000000",
             },
-            headerTintColor: "#FFFFFF", // Primary Text
+            headerTintColor: "#F5F5F5",
             headerTitleStyle: {
               fontWeight: "bold",
             },
@@ -164,6 +164,10 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
+        {/* Profile sub-pages: full screens, not half-screen modals */}
+        <Stack.Screen name="profile/personal-info" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/security" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/payout" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

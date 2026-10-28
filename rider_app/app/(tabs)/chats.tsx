@@ -60,7 +60,7 @@ const ChatsListPage = () => {
     >
       {/* Unread Messages Info */}
       {item.unreadCount > 0 && (
-        <View className="bg-orange-500 absolute -right-1.5 -top-1.5 rounded-full w-6 h-6 items-center justify-center">
+        <View className="bg-[#FF7518] absolute -right-1.5 -top-1.5 rounded-full w-6 h-6 items-center justify-center">
           <Text className="text-white text-xs font-bold">
             {item.unreadCount}
           </Text>
@@ -68,7 +68,7 @@ const ChatsListPage = () => {
       )}
 
       {/* Avatar */}
-      <View className="w-14 h-14 rounded-full bg-orange-500 items-center justify-center mr-4">
+      <View className="w-14 h-14 rounded-full bg-[#FF7518] items-center justify-center mr-4">
         <Text className="text-white text-lg font-bold">
           {getInitials(item.clientName)}
         </Text>
@@ -108,7 +108,7 @@ const ChatsListPage = () => {
   );
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-gray-900">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-black">
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 py-10">
         <Text className="text-white text-2xl font-semibold">Messages</Text>
@@ -120,7 +120,7 @@ const ChatsListPage = () => {
       {/* Loading State */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#FB923C" />
+          <ActivityIndicator size="large" color="#FF7518" />
         </View>
       ) : error ? (
         /* Error State */
@@ -128,7 +128,7 @@ const ChatsListPage = () => {
           <Text className="text-red-400 text-base text-center">{error}</Text>
           <TouchableOpacity
             onPress={fetchConversations}
-            className="mt-4 bg-orange-500 px-6 py-3 rounded-lg"
+            className="mt-4 bg-[#FF7518] px-6 py-3 rounded-lg"
           >
             <Text className="text-white font-semibold">Retry</Text>
           </TouchableOpacity>

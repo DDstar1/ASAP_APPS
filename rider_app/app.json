@@ -3,6 +3,12 @@
     "name": "Asap Rider",
     "slug": "asap_rider",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/af769a3a-927e-4b7f-9ce2-3b6af16cc50b"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "asaprider",
@@ -83,7 +89,7 @@
       [
         "expo-notifications",
         {
-          "color": "#F59E0B"
+          "color": "#FF7518"
         }
       ]
     ],

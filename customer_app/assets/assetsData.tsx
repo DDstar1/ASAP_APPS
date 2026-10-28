@@ -2,6 +2,9 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 export const IMAGES = {
+  // Ride type art on the booking sheet (transparent cutouts)
+  rideAsap: require("./images/ride_asap.png"),
+  rideExpress: require("./images/ride_express.png"),
   riderBikePizza: require("./images/rider_bike_pizza.jpg"),
   riderManTransit: require("./images/rider_man_transit.jpg"),
   riderWithPizza: require("./images/rider_with_pizza.jpg"),

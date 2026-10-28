@@ -592,7 +592,7 @@ export const getOrderClientInfo = async (orderId: number) => {
     .select(
       `
       client_id,
-      client:custom_users!client_id (
+      client:app_custom_users!client_id (
         username,
         phone
       )
@@ -741,12 +741,12 @@ export const getMessagesList = async () => {
           order_code,
           status
         ),
-        sender:custom_users!sender_id (
+        sender:app_custom_users!sender_id (
           id,
           username,
           phone
         ),
-        receiver:custom_users!receiver_id (
+        receiver:app_custom_users!receiver_id (
           id,
           username,
           phone
@@ -1015,7 +1015,8 @@ export const updateProfileImage = async (
   mimeType?: string,
 ): Promise<string> => {
   const fileExt = imageUri.split(".").pop() ?? "jpg";
-  const fileName = `${userId}_${Date.now()}.${fileExt}`;
+  // One folder per user: the bucket's storage policy only lets you write to yours
+  const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
   // Use signed upload URL + upload task (consistent with uploadDeliveryImage)
   const { data: signedData, error: signedError } = await supabase.storage
@@ -1051,6 +1052,27 @@ export const updateProfileImage = async (
 
   return publicUrl;
 };
+
+/**
+ * Name and phone go through Rust, which validates the phone and keeps
+ * back_drivers' copy in step; the app doesn't write app_custom_users.
+ * Rust replies with the saved values.
+ */
+export async function updateProfileDetails(details: {
+  username: string;
+  phone: string; // E.164
+}) {
+  return apiPost<{ username: string; phone: string }>("/drivers/profile", details);
+}
+
+/**
+ * Supabase Auth sends a confirmation link; the email only changes once it's
+ * followed, so the current one keeps working until then.
+ */
+export async function requestEmailChange(email: string) {
+  const { error } = await supabase.auth.updateUser({ email });
+  if (error) throw error;
+}
 
 // Driver id comes from the auth token on the Rust side
 export async function updateBankDetails(

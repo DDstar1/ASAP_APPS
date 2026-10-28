@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { getReturnCode } from "@/lib/supabase-app-functions";
 
-const CARD_COLOR = "#EE7F3A";
+const CARD_COLOR = "#FF7518";
 // Dark enough to read on the orange card
 const DELIVERED_CHEVRON = "#0F7A36";
 const CANCELLED_CHEVRON = "#C81E1E";

@@ -80,14 +80,14 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
       <MyKeyboardAvoidingWrapper>
         <Pressable className="flex-1 bg-black/90" onPress={handleClose} />
 
-        <SafeAreaView edges={["bottom"]} className="bg-[#0f1626] rounded-t-[28px] px-6 pt-6 pb-10">
+        <SafeAreaView edges={["bottom"]} className="bg-[#1C1C21] rounded-t-[28px] px-6 pt-6 pb-10">
           {/* Handle */}
-          <View className="w-10 h-1 rounded-full bg-[#2a3245] self-center mb-6" />
+          <View className="w-10 h-1 rounded-full bg-[#3C3C43] self-center mb-6" />
 
           {/* Header */}
           <View className="flex-row items-center gap-3 mb-6">
-            <View className="w-10 h-10 rounded-2xl bg-[#ff923e]/15 items-center justify-center">
-              <MaterialIcons name="account-balance" size={20} color="#ff923e" />
+            <View className="w-10 h-10 rounded-2xl bg-[#FF7518]/15 items-center justify-center">
+              <MaterialIcons name="account-balance" size={20} color="#FF7518" />
             </View>
             <View>
               <Text className="text-[#e0e5f9] text-lg font-bold">Bank Details</Text>
@@ -97,7 +97,7 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
 
           {/* Account number */}
           <Text className="text-[#a5abbd] text-[11px] tracking-widest mb-2">ACCOUNT NUMBER</Text>
-          <View className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-4 gap-3 mb-4 border border-[#ff923e]/20">
+          <View className="flex-row items-center bg-[#2C2C30] rounded-2xl px-4 py-4 gap-3 mb-4 border border-[#FF7518]/20">
             <MaterialIcons name="dialpad" size={18} color="#a5abbd" />
             <TextInput
               value={accountNumber}
@@ -115,7 +115,7 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
           <TouchableOpacity
             onPress={() => (banksState === "error" ? loadBanks() : setShowPicker(true))}
             disabled={banksState === "loading"}
-            className="flex-row items-center justify-between bg-[#121a2b] rounded-2xl px-4 py-4 mb-6 border border-[#ff923e]/20"
+            className="flex-row items-center justify-between bg-[#2C2C30] rounded-2xl px-4 py-4 mb-6 border border-[#FF7518]/20"
           >
             <View className="flex-row items-center gap-3 flex-1">
               <MaterialIcons name="account-balance" size={18} color="#a5abbd" />
@@ -144,7 +144,7 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
             onPress={handleSave}
             disabled={loading || !isReady}
             className="py-4 rounded-full items-center justify-center flex-row gap-2"
-            style={{ backgroundColor: isReady ? "#ff923e" : "rgba(255,146,62,0.25)" }}
+            style={{ backgroundColor: isReady ? "#FF7518" : "rgba(255,117,24,0.25)" }}
           >
             {loading ? (
               <ActivityIndicator color="#000" />
@@ -162,11 +162,11 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={closePicker}>
         <MyKeyboardAvoidingWrapper>
         <Pressable className="flex-1 bg-black/80" onPress={closePicker} />
-        <SafeAreaView edges={["bottom"]} className="bg-[#0f1626] rounded-t-[28px] px-4 pt-4 pb-6" style={{ maxHeight: "70%" }}>
-          <View className="w-10 h-1 rounded-full bg-[#2a3245] self-center mb-4" />
+        <SafeAreaView edges={["bottom"]} className="bg-[#1C1C21] rounded-t-[28px] px-4 pt-4 pb-6" style={{ maxHeight: "70%" }}>
+          <View className="w-10 h-1 rounded-full bg-[#3C3C43] self-center mb-4" />
           <Text className="text-[#e0e5f9] text-base font-bold mb-3 px-2">Select Bank</Text>
           {/* The full list runs to hundreds of banks */}
-          <View className="flex-row items-center bg-[#121a2b] rounded-2xl px-4 py-3 gap-3 mb-3 mx-1">
+          <View className="flex-row items-center bg-[#2C2C30] rounded-2xl px-4 py-3 gap-3 mb-3 mx-1">
             <MaterialIcons name="search" size={18} color="#a5abbd" />
             <TextInput
               value={search}
@@ -189,7 +189,7 @@ export function UpdateBankDetailsModal({ visible, onClose, onSaved }: Props) {
               >
                 <Text className="text-[#e0e5f9] text-sm">{bank.name}</Text>
                 {bankCode === bank.code && (
-                  <MaterialIcons name="check-circle" size={18} color="#ff923e" />
+                  <MaterialIcons name="check-circle" size={18} color="#FF7518" />
                 )}
               </TouchableOpacity>
             ))}

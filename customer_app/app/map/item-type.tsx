@@ -111,7 +111,7 @@ export default function ItemTypeScreen() {
         <SafeAreaView edges={["bottom"]} className="bg-[#1C1C21] px-6 pt-5 pb-2">
           <TouchableOpacity
             onPress={handleSet}
-            className="h-14 rounded-full bg-[#EE7F3A] justify-center items-center"
+            className="h-14 rounded-full bg-[#FF7518] justify-center items-center"
           >
             <Text className="text-white text-lg font-bold">Set</Text>
           </TouchableOpacity>

@@ -16,14 +16,17 @@ import {
 
 const RIDE_TYPES: { type: RideType; label: string; image: ImageSourcePropType }[] =
   [
-    { type: "ASAP", label: "Asap", image: IMAGES.riderBikePizza },
-    { type: "ASAPEXPRESS", label: "Asap Express", image: IMAGES.riderManTransit },
+    { type: "ASAP", label: "Asap", image: IMAGES.rideAsap },
+    { type: "ASAPEXPRESS", label: "Asap Express", image: IMAGES.rideExpress },
   ];
 
 type Props = {
   itemLabel: string;
   quotes: RideQuote[];
   quotesLoading: boolean;
+  // Why prices didn't load, if they didn't
+  quoteError?: string | null;
+  onRetryQuotes?: () => void;
   rideType: RideType | null;
   booking: boolean;
   onEditItem: () => void;
@@ -35,6 +38,8 @@ export default function BookingSheet({
   itemLabel,
   quotes,
   quotesLoading,
+  quoteError,
+  onRetryQuotes,
   rideType,
   booking,
   onEditItem,
@@ -59,11 +64,11 @@ export default function BookingSheet({
   }, 0);
 
   return (
-    <View className="bg-black rounded-t-3xl px-3 pt-3 pb-2 gap-3">
+    <View className="bg-black rounded-t-3xl px-4 pt-3 pb-3 gap-3.5">
       {/* Discount tab sits on the sheet's top edge */}
       {discountPct > 0 && (
         <View
-          className="absolute -top-8 left-6 bg-[#EE7F3A] rounded-t-xl px-4 h-8 justify-center"
+          className="absolute -top-8 left-6 bg-[#FF7518] rounded-t-xl px-4 h-8 justify-center"
           accessibilityLabel={`${discountPct} percent discount applied`}
         >
           <Text className="text-white text-sm font-bold">
@@ -79,7 +84,7 @@ export default function BookingSheet({
         onPress={onEditItem}
         accessibilityRole="button"
         accessibilityLabel={`Item: ${itemLabel}. Edit item`}
-        className="self-start flex-row items-center gap-1 border border-[#EE7F3A] rounded-full px-4 min-h-[36px]"
+        className="self-start flex-row items-center gap-1 border border-[#FF7518] rounded-full px-4 min-h-[36px]"
       >
         <Text className="text-white text-lg font-semibold" numberOfLines={1}>
           {itemLabel}
@@ -100,19 +105,19 @@ export default function BookingSheet({
             accessibilityState={{ selected: isSelected }}
             accessibilityLabel={label}
             accessibilityHint="Hold to see the price breakdown"
-            className={`flex-row items-center rounded-2xl p-3 bg-[#212126] border-2 ${
-              isSelected ? "border-[#EE7F3A]" : "border-transparent opacity-60"
+            className={`flex-row items-center rounded-3xl px-4 py-4 min-h-[104px] bg-[#212126] border-2 ${
+              isSelected ? "border-[#FF7518]" : "border-transparent opacity-60"
             }`}
           >
             <Image
               source={image}
-              className="w-20 h-16 rounded-lg"
-              resizeMode="cover"
+              className="w-24 h-20"
+              resizeMode="contain"
             />
             <View className="flex-1 ml-4">
-              <Text className="text-white text-lg font-semibold">{label}</Text>
+              <Text className="text-white text-xl font-semibold">{label}</Text>
               {quote && (
-                <Text className="text-gray-300 text-sm">
+                <Text className="text-gray-300 text-sm mt-1">
                   {Math.ceil(quote.estimated_time_min)} min{"   "}
                   {quote.distance_km.toFixed(1)}km
                 </Text>
@@ -123,7 +128,7 @@ export default function BookingSheet({
                 <ActivityIndicator color="white" />
               ) : quote ? (
                 <>
-                  <Text className="text-white text-2xl font-bold">
+                  <Text className="text-white text-[26px] font-bold">
                     ₦{quote.estimated_price.toLocaleString()}
                   </Text>
                   {quote.original_price != null &&
@@ -141,10 +146,22 @@ export default function BookingSheet({
         );
       })}
 
+      {!quotesLoading && !!quoteError && (
+        <View className="flex-row items-start gap-2 rounded-2xl bg-red-500/10 px-4 py-3">
+          <Ionicons name="alert-circle-outline" size={18} color="#F87171" />
+          <Text className="flex-1 text-red-300 text-sm">{quoteError}</Text>
+          {onRetryQuotes && (
+            <TouchableOpacity onPress={onRetryQuotes} accessibilityRole="button" hitSlop={8}>
+              <Text className="text-white text-sm font-semibold">Retry</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <TouchableOpacity
         onPress={onBook}
         disabled={!canBook}
-        className={`h-14 rounded-full bg-[#EE7F3A] justify-center items-center mt-1 ${
+        className={`h-14 rounded-full bg-[#FF7518] justify-center items-center mt-1 ${
           canBook ? "" : "opacity-50"
         }`}
       >

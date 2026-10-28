@@ -3,6 +3,12 @@
     "name": "Asap Customer",
     "slug": "asap_customer",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9b36bbb6-031c-495a-b243-18fec9699b28"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "asapcustomer",
@@ -75,7 +81,7 @@
       [
         "expo-notifications",
         {
-          "color": "#F59E0B"
+          "color": "#FF7518"
         }
       ]
     ],

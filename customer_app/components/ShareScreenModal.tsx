@@ -118,18 +118,18 @@ export default function ShareScreenModal({
       <View className="flex-1 justify-end bg-black/80">
         <SafeAreaView
           style={{ height: 520 }}
-          className="w-full bg-gray-900 rounded-t-[25px] p-4"
+          className="w-full bg-[#1C1C21] rounded-t-[25px] p-4"
         >
           {/* Top indicator */}
-          <View className="self-center w-12 h-1.5 bg-gray-600 rounded-full mb-3" />
+          <View className="self-center w-12 h-1.5 bg-[#4A4A52] rounded-full mb-3" />
 
           {/* Header */}
           <View className="flex-row items-center mb-4">
             <TouchableOpacity
               onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full bg-gray-800"
+              className="h-10 w-10 items-center justify-center rounded-full bg-[#2C2C30]"
             >
-              <Ionicons name="close" size={22} color="#f97316" />
+              <Ionicons name="close" size={22} color="#FF7518" />
             </TouchableOpacity>
             <Text className="ml-3 text-lg font-semibold text-gray-100">
               Share Current Location
@@ -145,7 +145,7 @@ export default function ShareScreenModal({
             left={<TextInput.Icon icon="magnify" color="#aaa" />}
             textColor="#fff"
             outlineColor="#333"
-            activeOutlineColor="#f97316"
+            activeOutlineColor="#FF7518"
             style={{
               backgroundColor: "#2c2c2e",
               marginBottom: 16,
@@ -171,14 +171,14 @@ export default function ShareScreenModal({
                 <TouchableOpacity
                   onPress={() => toggleUser(item.id)}
                   className={`flex-row items-center justify-between p-3 mb-2 rounded-xl ${
-                    selected ? "bg-orange-600/30" : "bg-gray-800"
+                    selected ? "bg-[#FF7518]/30" : "bg-[#2C2C30]"
                   }`}
                 >
                   <View className="flex-row items-center">
                     <Ionicons
                       name="person-circle-outline"
                       size={40}
-                      color={selected ? "#f97316" : "#aaa"}
+                      color={selected ? "#FF7518" : "#aaa"}
                     />
                     <View className="ml-2">
                       <Text className="text-gray-100 text-lg">{item.name}</Text>
@@ -191,7 +191,7 @@ export default function ShareScreenModal({
                     <Ionicons
                       name="checkmark-circle"
                       size={22}
-                      color="#f97316"
+                      color="#FF7518"
                     />
                   )}
                 </TouchableOpacity>
@@ -204,7 +204,7 @@ export default function ShareScreenModal({
             {/* Send Button */}
             <TouchableOpacity
               onPress={handleSendToUsers}
-              className="flex-1 bg-orange-500 py-3 rounded-xl mr-2"
+              className="flex-1 bg-[#FF7518] py-3 rounded-xl mr-2"
             >
               <Text className="text-center text-white font-semibold text-md">
                 Send to Selected Users
@@ -215,18 +215,18 @@ export default function ShareScreenModal({
             <TouchableOpacity
               onPress={handleShareViaLink}
               disabled={loading}
-              className="flex-1 flex-row items-center justify-center bg-gray-800 py-3 rounded-xl ml-2"
+              className="flex-1 flex-row items-center justify-center bg-[#2C2C30] py-3 rounded-xl ml-2"
             >
               {loading ? (
-                <ActivityIndicator color="#f97316" />
+                <ActivityIndicator color="#FF7518" />
               ) : (
                 <>
                   <Ionicons
                     name="share-social-outline"
                     size={18}
-                    color="#f97316"
+                    color="#FF7518"
                   />
-                  <Text className="ml-2 text-orange-500 font-medium text-md">
+                  <Text className="ml-2 text-[#FF7518] font-medium text-md">
                     Share via Link
                   </Text>
                 </>

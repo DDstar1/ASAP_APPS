@@ -232,6 +232,10 @@ export default function RootLayout() {
 
         <Stack.Screen name="auth" options={{ headerShown: false }} />
 
+        {/* Account sub-pages (Personal info, Login & security): full screens */}
+        <Stack.Screen name="profile/personal-info" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/security" options={{ headerShown: false }} />
+
         <Stack.Screen name="+not-found" />
       </Stack>
 

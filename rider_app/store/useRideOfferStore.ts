@@ -6,51 +6,64 @@ import {
 } from "@/lib/ride-offers";
 
 type RideOfferState = {
-  // The offer currently on screen; the rest wait in `queue`
+  // The offer whose card is on screen; the rest show as pins on the radar
   offer: OfferDetails | null;
-  queue: string[];
+  others: OfferDetails[];
 
   showOffer: (offerId: string) => Promise<void>;
   dismissOffer: (offerId?: string) => void;
+  focusOffer: (offerId: string) => void;
 };
 
 const isOpen = (o: OfferDetails) =>
   isAwaitingRider(o) && new Date(o.expires_at).getTime() > Date.now();
 
+// Push tap, realtime and the launch check can ask for the same offer at once
+const loading = new Set<string>();
+
 export const useRideOfferStore = create<RideOfferState>((set, get) => ({
   offer: null,
-  queue: [],
+  others: [],
 
-  // Safe to call repeatedly with the same id (push tap + realtime + launch check)
   showOffer: async (offerId) => {
-    const { offer, queue } = get();
-    if (offer?.offer_id === offerId || queue.includes(offerId)) return;
-
-    if (offer) {
-      set({ queue: [...queue, offerId] });
+    const { offer, others } = get();
+    if (
+      offer?.offer_id === offerId ||
+      others.some((o) => o.offer_id === offerId) ||
+      loading.has(offerId)
+    )
       return;
-    }
 
+    loading.add(offerId);
     const details = await getOfferDetails(offerId);
+    loading.delete(offerId);
     if (!details || !isOpen(details)) return;
-    if (get().offer) {
-      set({ queue: [...get().queue, offerId] });
-      return;
-    }
-    set({ offer: details });
+
+    if (get().offer) set({ others: [...get().others, details] });
+    else set({ offer: details });
   },
 
   // Close the given offer (or the current one) and show the next open one
   dismissOffer: (offerId) => {
-    const { offer, queue } = get();
+    const { offer, others } = get();
     if (offerId && offer?.offer_id !== offerId) {
-      set({ queue: queue.filter((id) => id !== offerId) });
+      set({ others: others.filter((o) => o.offer_id !== offerId) });
       return;
     }
+    const [next = null, ...rest] = others.filter(isOpen);
+    set({ offer: next, others: rest });
+  },
 
-    set({ offer: null });
-    const [next, ...rest] = queue;
-    set({ queue: rest });
-    if (next) get().showOffer(next);
+  focusOffer: (offerId) => {
+    const { offer, others } = get();
+    const target = others.find((o) => o.offer_id === offerId);
+    if (!target) return;
+    set({
+      offer: target,
+      others: [
+        ...others.filter((o) => o.offer_id !== offerId),
+        ...(offer ? [offer] : []),
+      ],
+    });
   },
 }));

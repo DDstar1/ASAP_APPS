@@ -76,7 +76,7 @@ const CompletedOrdersEmptyState = ({
       <View className="flex-row items-center gap-3.5 py-3.5">
         {/* Archive icon tile — shimmer via animated opacity */}
         <Animated.View
-          className="w-[52px] h-[52px] rounded-[14px] bg-[#1a2235] items-center justify-center border border-white/[0.15]"
+          className="w-[52px] h-[52px] rounded-[14px] bg-[#2C2C30] items-center justify-center border border-white/[0.15]"
           style={{ opacity: iconOpacity }}
         >
           {/* Swap with MY_ICONS.archive or similar */}
@@ -105,9 +105,9 @@ const CompletedOrdersEmptyState = ({
         <TouchableOpacity
           onPress={onSendPackage}
           activeOpacity={0.75}
-          className="self-start mt-3 py-3 px-3.5 w-full  rounded-full border border-[#ff923e]/25 bg-[#ff923e]/[0.07]"
+          className="self-start mt-3 py-3 px-3.5 w-full  rounded-full border border-[#FF7518]/25 bg-[#FF7518]/[0.07]"
         >
-          <Text className="text-md font-semibold text-[#ff923e] text-center tracking-[0.1px]">
+          <Text className="text-md font-semibold text-[#FF7518] text-center tracking-[0.1px]">
             + Send your first package
           </Text>
         </TouchableOpacity>

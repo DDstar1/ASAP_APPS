@@ -68,7 +68,7 @@ export default function ReturnCodeModal({
       <SafeAreaView
         edges={["bottom"]}
         style={{
-          backgroundColor: "#0f1626",
+          backgroundColor: "#1C1C21",
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           paddingHorizontal: 24,
@@ -81,7 +81,7 @@ export default function ReturnCodeModal({
             width: 40,
             height: 4,
             borderRadius: 2,
-            backgroundColor: "#2a3245",
+            backgroundColor: "#3C3C43",
             alignSelf: "center",
             marginBottom: 24,
           }}
@@ -100,12 +100,12 @@ export default function ReturnCodeModal({
               width: 44,
               height: 44,
               borderRadius: 14,
-              backgroundColor: "rgba(255,146,62,0.15)",
+              backgroundColor: "rgba(255,117,24,0.15)",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <MaterialIcons name="assignment-return" size={22} color="#ff923e" />
+            <MaterialIcons name="assignment-return" size={22} color="#FF7518" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: "#e0e5f9", fontSize: 16, fontWeight: "700" }}>
@@ -128,9 +128,9 @@ export default function ReturnCodeModal({
           placeholderTextColor="#3a4358"
           autoFocus
           style={{
-            backgroundColor: "#121a2b",
+            backgroundColor: "#2C2C30",
             borderWidth: 1.5,
-            borderColor: code.length ? "#ff923e" : "#1e2a40",
+            borderColor: code.length ? "#FF7518" : "#1e2a40",
             borderRadius: 16,
             color: "#e0e5f9",
             fontSize: 26,
@@ -153,7 +153,7 @@ export default function ReturnCodeModal({
             justifyContent: "center",
             flexDirection: "row",
             gap: 8,
-            backgroundColor: ready ? "#ff923e" : "rgba(255,146,62,0.2)",
+            backgroundColor: ready ? "#FF7518" : "rgba(255,117,24,0.2)",
           }}
         >
           {submitting ? (

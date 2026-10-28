@@ -25,7 +25,7 @@ import ReturnCodeModal from "@/components/ReturnCodeModal";
 import { useUserStore } from "@/store/useUserStore";
 
 const HIGHLIGHT_WINDOW = 120_000; // 2 minutes
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 const GREEN = "#16A34A";
 
 type Tab = "deliveries" | "earnings";

@@ -3,7 +3,7 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 // Same card as the customer app's My Orders history
-const CARD_COLOR = "#EE7F3A";
+const CARD_COLOR = "#FF7518";
 // Dark enough to read on the orange card
 const DELIVERED_CHEVRON = "#0F7A36";
 const CANCELLED_CHEVRON = "#C81E1E";

@@ -68,7 +68,7 @@ export default function CancellationNotice({ orderId }: { orderId: number }) {
         <TouchableOpacity
           onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE}`).catch(() => {})}
           accessibilityRole="button"
-          className="flex-1 h-11 rounded-full bg-[#EE7F3A] flex-row items-center justify-center gap-2"
+          className="flex-1 h-11 rounded-full bg-[#FF7518] flex-row items-center justify-center gap-2"
         >
           <Ionicons name="call" size={16} color="white" />
           <Text className="text-white font-bold text-sm">Call support</Text>
@@ -80,10 +80,10 @@ export default function CancellationNotice({ orderId }: { orderId: number }) {
             ).catch(() => {})
           }
           accessibilityRole="button"
-          className="flex-1 h-11 rounded-full border border-[#EE7F3A] flex-row items-center justify-center gap-2"
+          className="flex-1 h-11 rounded-full border border-[#FF7518] flex-row items-center justify-center gap-2"
         >
-          <Ionicons name="mail" size={16} color="#EE7F3A" />
-          <Text className="text-[#EE7F3A] font-bold text-sm">Email support</Text>
+          <Ionicons name="mail" size={16} color="#FF7518" />
+          <Text className="text-[#FF7518] font-bold text-sm">Email support</Text>
         </TouchableOpacity>
       </View>
     </View>

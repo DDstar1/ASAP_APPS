@@ -40,8 +40,8 @@ const inputTheme = {
   colors: {
     onSurfaceVariant: "#e0e5f9",
     outline: "rgba(255,255,255,0.08)",
-    surfaceVariant: "#131a2e",
-    primary: "#ff923e",
+    surfaceVariant: "#1C1C21",
+    primary: "#FF7518",
   },
 };
 
@@ -104,11 +104,11 @@ export default function AuthScreen() {
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        className="bg-[#080e1c] px-6"
+        className="bg-[#000000] px-6"
       >
         {/* Logo Row */}
         <View className="flex-row items-center mb-8">
-          <View className="w-2.5 h-2.5 rounded-full bg-[#ff923e] mr-2.5" />
+          <View className="w-2.5 h-2.5 rounded-full bg-[#FF7518] mr-2.5" />
           <Text className="text-xs font-semibold text-[#a5abbd] tracking-widest uppercase">
             ASAP Delivery
           </Text>
@@ -134,9 +134,9 @@ export default function AuthScreen() {
           autoCapitalize="none"
           textColor="#e0e5f9"
           outlineColor="rgba(255,255,255,0.08)"
-          activeOutlineColor="#ff923e"
+          activeOutlineColor="#FF7518"
           style={{
-            backgroundColor: "#131a2e",
+            backgroundColor: "#1C1C21",
             marginBottom: 16,
             borderRadius: 12,
           }}
@@ -161,9 +161,9 @@ export default function AuthScreen() {
           }
           textColor="#e0e5f9"
           outlineColor="rgba(255,255,255,0.08)"
-          activeOutlineColor="#ff923e"
+          activeOutlineColor="#FF7518"
           style={{
-            backgroundColor: "#131a2e",
+            backgroundColor: "#1C1C21",
             marginBottom: 8,
             borderRadius: 12,
           }}
@@ -184,7 +184,7 @@ export default function AuthScreen() {
         <TouchableOpacity
           onPress={handleSignIn}
           disabled={loading}
-          className="w-full py-4 rounded-full bg-[#ff923e] items-center mb-6"
+          className="w-full py-4 rounded-full bg-[#FF7518] items-center mb-6"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -203,9 +203,9 @@ export default function AuthScreen() {
         {/* Create Account — full width outlined pill */}
         <TouchableOpacity
           onPress={() => router.navigate("/auth/signup")}
-          className="w-full py-4 rounded-full border border-[#ff923e]/35 items-center"
+          className="w-full py-4 rounded-full border border-[#FF7518]/35 items-center"
         >
-          <Text className="text-base font-semibold text-[#ff923e]">
+          <Text className="text-base font-semibold text-[#FF7518]">
             Create Account
           </Text>
         </TouchableOpacity>
@@ -215,7 +215,7 @@ export default function AuthScreen() {
           <Text
             accessibilityRole="link"
             onPress={() => openWebsite("/privacy/customer")}
-            className="text-[#ff923e] underline"
+            className="text-[#FF7518] underline"
           >
             Privacy Policy
           </Text>

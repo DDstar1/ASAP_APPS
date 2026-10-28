@@ -230,7 +230,7 @@ export const startTracking = async (orderId: number) => {
     foregroundService: {
       notificationTitle: "Delivery in Progress",
       notificationBody: "Tracking route",
-      notificationColor: "#FF6C00",
+      notificationColor: "#FF7518",
     },
   });
 

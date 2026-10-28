@@ -20,7 +20,7 @@ export const LIGHT_MAP_STYLE = [
   { featureType: "transit", stylers: [{ visibility: "off" }] },
   { featureType: "road", elementType: "geometry", stylers: [{ color: "#f6d3bb" }] },
   { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#f2b48a" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#EE7F3A" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#FF7518" }] },
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfd8e3" }] },
 ];
 

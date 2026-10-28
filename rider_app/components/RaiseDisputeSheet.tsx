@@ -121,15 +121,15 @@ export default function RaiseDisputeSheet({ visible, orderRef, onClose, onReport
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
                 className={`flex-row items-center p-3.5 rounded-2xl mb-2 border ${
-                  selected ? "bg-[#EE7F3A]/15 border-[#EE7F3A]" : "bg-[#3C3C43] border-transparent"
+                  selected ? "bg-[#FF7518]/15 border-[#FF7518]" : "bg-[#3C3C43] border-transparent"
                 }`}
               >
                 <View
                   className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
-                    selected ? "border-[#EE7F3A]" : "border-gray-500"
+                    selected ? "border-[#FF7518]" : "border-gray-500"
                   }`}
                 >
-                  {selected && <View className="w-2.5 h-2.5 rounded-full bg-[#EE7F3A]" />}
+                  {selected && <View className="w-2.5 h-2.5 rounded-full bg-[#FF7518]" />}
                 </View>
                 <View className="flex-1">
                   <Text className="text-white text-sm font-semibold">{label}</Text>
@@ -144,7 +144,7 @@ export default function RaiseDisputeSheet({ visible, orderRef, onClose, onReport
             <View className="mb-4">
               <Image source={{ uri: photoUri }} className="w-full h-48 rounded-2xl" resizeMode="cover" />
               <TouchableOpacity onPress={() => setCameraOpen(true)} className="mt-2 self-start">
-                <Text className="text-[#EE7F3A] text-sm font-semibold">Retake photo</Text>
+                <Text className="text-[#FF7518] text-sm font-semibold">Retake photo</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -173,7 +173,7 @@ export default function RaiseDisputeSheet({ visible, orderRef, onClose, onReport
           <TouchableOpacity
             onPress={confirmAndSubmit}
             disabled={sending}
-            className="h-14 rounded-full bg-[#EE7F3A] items-center justify-center mb-3"
+            className="h-14 rounded-full bg-[#FF7518] items-center justify-center mb-3"
           >
             {sending ? (
               <ActivityIndicator color="#fff" />

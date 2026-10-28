@@ -80,42 +80,59 @@ export default function SpecificationsScreen() {
           <Text className="text-white text-2xl font-bold">Specifications</Text>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 32, gap: 56 }}>
-          <View>
-            <Text className="text-white text-xl mb-1">Dimensions</Text>
-            <View className="flex-row items-center gap-4">
-              <Field label="H" value={height} onChange={setHeight} />
-              <Field label="L" value={length} onChange={setLength} />
-              <Field label="W" value={width} onChange={setWidth} />
+        <ScrollView
+          contentContainerStyle={{ padding: 20, gap: 28 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {!!itemType && (
+            <View className="self-start flex-row items-center gap-2 bg-[#1C1C21] rounded-full px-4 py-2">
+              <Ionicons name="cube-outline" size={16} color="#FF7518" />
+              <Text className="text-white text-sm font-medium">{itemType}</Text>
+            </View>
+          )}
+
+          <Section title="Dimensions" hint="The packed size, in centimetres">
+            {/* flex-1 on these wrappers splits the row's width; the fields
+                themselves don't flex, or they collapse in vertical layouts */}
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <Field label="Length" unit="cm" value={length} onChange={setLength} />
+              </View>
+              <View className="flex-1">
+                <Field label="Width" unit="cm" value={width} onChange={setWidth} />
+              </View>
+              <View className="flex-1">
+                <Field label="Height" unit="cm" value={height} onChange={setHeight} />
+              </View>
+            </View>
+          </Section>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Section title="Weight">
+                <Field label="Per item" unit="kg" value={weight} onChange={setWeight} />
+              </Section>
+            </View>
+            <View className="flex-1">
+              <Section title="Quantity">
+                <Field label="Items" value={quantity} onChange={setQuantity} keyboardType="number-pad" />
+              </Section>
             </View>
           </View>
 
-          <View>
-            <Text className="text-white text-xl mb-1">Weight</Text>
-            <Field label="Kg" value={weight} onChange={setWeight} />
-          </View>
-
-          <View>
-            <Text className="text-white text-xl mb-1">Quantity</Text>
-            <Field
-              label="Qty"
-              value={quantity}
-              onChange={setQuantity}
-              keyboardType="number-pad"
-            />
-          </View>
-
-          <View>
-            <Text className="text-white text-xl mb-1">Current Price</Text>
-            <Field label="₦" value={price} onChange={setPrice} wide />
-          </View>
+          <Section
+            title="Item value"
+            hint="What the package is worth. Some package types are insured against this amount."
+          >
+            <Field label="Value" prefix="₦" value={price} onChange={setPrice} />
+          </Section>
         </ScrollView>
 
         {/* Footer */}
         <SafeAreaView edges={["bottom"]} className="bg-[#1C1C21] px-6 pt-5 pb-2">
           <TouchableOpacity
             onPress={handleSet}
-            className="h-14 rounded-full bg-[#EE7F3A] justify-center items-center"
+            className="h-14 rounded-full bg-[#FF7518] justify-center items-center"
           >
             <Text className="text-white text-lg font-bold">Set</Text>
           </TouchableOpacity>
@@ -140,28 +157,57 @@ function numText(value?: number) {
   return value != null ? String(value) : "";
 }
 
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View>
+      <Text className="text-white text-lg font-semibold">{title}</Text>
+      {hint && <Text className="text-gray-400 text-xs mt-0.5">{hint}</Text>}
+      <View className="mt-3">{children}</View>
+    </View>
+  );
+}
+
+// Full-size field: the label sits above the number and the unit stays inside,
+// so nothing the customer types is cut off
 function Field({
   label,
   value,
   onChange,
-  wide,
+  unit,
+  prefix,
   keyboardType = "decimal-pad",
 }: {
   label: string;
   value: string;
   onChange: (text: string) => void;
-  wide?: boolean;
+  unit?: string;
+  prefix?: string;
   keyboardType?: "decimal-pad" | "number-pad";
 }) {
   return (
-    <View className="flex-row items-center gap-1">
-      <Text className="text-white text-base">{label} :</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        keyboardType={keyboardType}
-        className={`h-8 border border-white text-white px-1 ${wide ? "w-52" : "w-14"}`}
-      />
+    <View className="bg-[#1C1C21] rounded-2xl px-4 pt-2.5 pb-3">
+      <Text className="text-gray-400 text-xs">{label}</Text>
+      <View className="flex-row items-center gap-1.5 mt-1">
+        {prefix && <Text className="text-gray-300 text-lg">{prefix}</Text>}
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          keyboardType={keyboardType}
+          accessibilityLabel={unit ? `${label} in ${unit}` : label}
+          placeholder="0"
+          placeholderTextColor="#4B5563"
+          className="flex-1 text-white text-lg font-semibold p-0"
+        />
+        {unit && <Text className="text-gray-400 text-sm">{unit}</Text>}
+      </View>
     </View>
   );
 }

@@ -72,7 +72,7 @@ export default function DeliveryButton({
     <View className="mt-4 flex-1">
       {/* Main button */}
       <TouchableOpacity
-        className={`rounded-xl px-4 py-4 bg-orange-500 ${
+        className={`rounded-xl px-4 py-4 bg-[#FF7518] ${
           isDisabled ? "opacity-50" : ""
         }`}
         disabled={isDisabled}
@@ -90,7 +90,7 @@ export default function DeliveryButton({
       {/* Secondary “Cycle Rider” button */}
       {hasMultipleRiders && (
         <TouchableOpacity
-          className="mt-3  bg-gray-700 p-1 rounded-lg w-full self-center"
+          className="mt-3  bg-[#3C3C43] p-1 rounded-lg w-full self-center"
           onPress={onCycleRider}
         >
           <Text className="text-white text-center text-sm ">

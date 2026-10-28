@@ -48,12 +48,12 @@ export default function ViewLocationScreen() {
             <Marker
               coordinate={{ latitude, longitude }}
               title="Shared location"
-              pinColor="#FB923C"
+              pinColor="#FF7518"
             />
           </MapView>
           <TouchableOpacity
             onPress={openNavigation}
-            className="m-4 py-4 rounded-full bg-[#f97316] items-center"
+            className="m-4 py-4 rounded-full bg-[#FF7518] items-center"
           >
             <Text className="text-white font-semibold text-base">
               Navigate with Google Maps

@@ -72,14 +72,14 @@ export default function DestinationSearchModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-gray-900 p-4">
+      <View className="flex-1 bg-[#1C1C21] p-4">
         {/* Header */}
         <View className="flex-row items-center mb-4">
           <TouchableOpacity
             onPress={onClose}
-            className="h-10 w-10 items-center justify-center rounded-full bg-gray-800"
+            className="h-10 w-10 items-center justify-center rounded-full bg-[#2C2C30]"
           >
-            <Ionicons name="close" size={22} color="#f97316" />
+            <Ionicons name="close" size={22} color="#FF7518" />
           </TouchableOpacity>
           <Text className="ml-3 text-lg font-semibold text-gray-100">
             Select {field === "from" ? "Pickup" : "Destination"}
@@ -87,8 +87,8 @@ export default function DestinationSearchModal({
         </View>
 
         {/* Search Box */}
-        <View className="flex-row items-center bg-gray-800 rounded-lg px-3 h-12 border border-gray-700">
-          <Ionicons name="search" size={18} color="#fb923c" />
+        <View className="flex-row items-center bg-[#2C2C30] rounded-lg px-3 h-12 border border-white/10">
+          <Ionicons name="search" size={18} color="#FF7518" />
           <TextInput
             className="ml-2 flex-1 text-base text-gray-100"
             placeholder={`Search for ${
@@ -109,13 +109,13 @@ export default function DestinationSearchModal({
 
         {/* Suggestions */}
         <ScrollView
-          className="mt-4 rounded-lg border border-gray-800 bg-gray-900"
+          className="mt-4 rounded-lg border border-white/10 bg-[#1C1C21]"
           keyboardShouldPersistTaps="handled"
         >
           {filteredSuggestions.map((location) => (
             <TouchableOpacity
               key={location.id}
-              className="flex-row items-center p-4 border-b border-gray-800 active:bg-gray-800"
+              className="flex-row items-center p-4 border-b border-white/10 active:bg-[#2C2C30]"
               onPress={() => {
                 onSelect(location);
                 onClose();
@@ -124,7 +124,7 @@ export default function DestinationSearchModal({
               <Ionicons
                 name="location-outline"
                 size={18}
-                color="#fb923c"
+                color="#FF7518"
                 style={{ marginRight: 12 }}
               />
               <View className="flex-1">

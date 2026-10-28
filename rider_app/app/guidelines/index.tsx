@@ -109,12 +109,12 @@ export default function GuidelinesScreen() {
   const canContinue = isReview || agreed;
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#080e1c]">
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#000000]">
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
         {/* HEADER */}
         <View className="mx-4 mt-8">
-          <View className="w-12 h-12 rounded-2xl bg-[#ff923e]/15 items-center justify-center">
-            <MaterialIcons name="menu-book" size={24} color="#ff923e" />
+          <View className="w-12 h-12 rounded-2xl bg-[#FF7518]/15 items-center justify-center">
+            <MaterialIcons name="menu-book" size={24} color="#FF7518" />
           </View>
           <Text className="text-[#e0e5f9] text-2xl font-bold mt-4">
             Rider Guidelines
@@ -130,21 +130,21 @@ export default function GuidelinesScreen() {
         {GUIDELINES.map((section, i) => (
           <View key={section.title} className="mx-4 mt-6">
             <View className="flex-row items-center gap-2 mb-3">
-              <Text className="text-[#ff923e] text-xs font-bold">
+              <Text className="text-[#FF7518] text-xs font-bold">
                 {String(i + 1).padStart(2, "0")}
               </Text>
               <Text className="text-[#a5abbd] text-xs tracking-widest">
                 {section.title.toUpperCase()}
               </Text>
             </View>
-            <View className="bg-[#121a2b] rounded-3xl p-4 flex-row gap-3">
-              <View className="w-8 h-8 rounded-xl bg-[#0f1626] items-center justify-center">
-                <MaterialIcons name={section.icon} size={16} color="#ff923e" />
+            <View className="bg-[#2C2C30] rounded-3xl p-4 flex-row gap-3">
+              <View className="w-8 h-8 rounded-xl bg-[#1C1C21] items-center justify-center">
+                <MaterialIcons name={section.icon} size={16} color="#FF7518" />
               </View>
               <View className="flex-1 gap-2">
                 {section.points.map((point) => (
                   <View key={point} className="flex-row gap-2">
-                    <Text className="text-[#ff923e] text-sm">•</Text>
+                    <Text className="text-[#FF7518] text-sm">•</Text>
                     <Text className="text-[#e0e5f9] text-sm flex-1 leading-5">
                       {point}
                     </Text>
@@ -157,7 +157,7 @@ export default function GuidelinesScreen() {
       </ScrollView>
 
       {/* FOOTER */}
-      <View className="px-4 pt-3 pb-2 border-t border-[#1e2a40] bg-[#080e1c]">
+      <View className="px-4 pt-3 pb-2 border-t border-[#1e2a40] bg-[#000000]">
         {!isReview && (
           <TouchableOpacity
             onPress={() => setAgreed((v) => !v)}
@@ -167,7 +167,7 @@ export default function GuidelinesScreen() {
             <MaterialIcons
               name={agreed ? "check-box" : "check-box-outline-blank"}
               size={22}
-              color={agreed ? "#ff923e" : "#a5abbd"}
+              color={agreed ? "#FF7518" : "#a5abbd"}
             />
             <Text className="text-[#e0e5f9] text-sm flex-1">
               I have read and agree to follow these guidelines
@@ -180,7 +180,7 @@ export default function GuidelinesScreen() {
           disabled={!canContinue || saving}
           className="py-5 rounded-full items-center justify-center flex-row gap-2"
           style={{
-            backgroundColor: canContinue ? "#ff923e" : "rgba(255,146,62,0.2)",
+            backgroundColor: canContinue ? "#FF7518" : "rgba(255,117,24,0.2)",
           }}
         >
           {saving ? (

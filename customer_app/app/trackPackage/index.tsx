@@ -48,7 +48,7 @@ import CancellationNotice from "@/components/CancellationNotice";
 import PriceBreakdown from "@/components/PriceBreakdown";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 // Each route/ETA refresh is a paid Directions request
 const ROUTE_REFRESH_MS = 60 * 1000;
 // Close to the rider app's 5 s upload, so the marker keeps gliding
@@ -489,7 +489,7 @@ export default function RiderTrackingScreen() {
       <TouchableOpacity
         onPress={callRider}
         accessibilityRole="button"
-        className="flex-1 h-14 rounded-full bg-[#EE7F3A] flex-row justify-center items-center gap-2"
+        className="flex-1 h-14 rounded-full bg-[#FF7518] flex-row justify-center items-center gap-2"
       >
         <Ionicons name="call" size={20} color="white" />
         <Text className="text-white text-lg font-bold">Call Driver</Text>
@@ -499,7 +499,7 @@ export default function RiderTrackingScreen() {
         onPress={() => openOrderChat(Number(order!.id))}
         accessibilityRole="button"
         accessibilityLabel="Chat with rider"
-        className="w-14 h-14 rounded-full bg-[#EE7F3A] justify-center items-center"
+        className="w-14 h-14 rounded-full bg-[#FF7518] justify-center items-center"
       >
         <Ionicons name="chatbubble-ellipses" size={24} color="white" />
       </TouchableOpacity>
@@ -598,7 +598,7 @@ export default function RiderTrackingScreen() {
       {/* Track package sheet */}
       <SafeAreaView
         edges={["bottom"]}
-        className="absolute bottom-0 left-0 right-0 bg-black rounded-t-3xl border-t-2 border-[#EE7F3A] px-5 pt-5 pb-2"
+        className="absolute bottom-0 left-0 right-0 bg-black rounded-t-3xl border-t-2 border-[#FF7518] px-5 pt-5 pb-2"
       >
         <View className="self-center w-10 h-1 rounded-full bg-[#3A3A3F] mb-4" />
 
@@ -693,7 +693,7 @@ export default function RiderTrackingScreen() {
           <Pressable onPress={() => {}}>
             <SafeAreaView
               edges={["bottom"]}
-              className="bg-black rounded-t-3xl border-t-2 border-[#EE7F3A] px-5 pt-3 pb-2"
+              className="bg-black rounded-t-3xl border-t-2 border-[#FF7518] px-5 pt-3 pb-2"
             >
               <TouchableOpacity
                 onPress={() => setShowDriver(false)}

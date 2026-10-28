@@ -24,7 +24,7 @@ import { openOrderChat } from "@/utils/my_utils";
 import { cancelledOrderMessage, cancelPaidOrder } from "@/lib/payments";
 import { router } from "expo-router";
 
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 
 const STATUS: Record<string, { label: string; color: string }> = {
   pending: { label: "Finding a rider", color: "#FACC15" },

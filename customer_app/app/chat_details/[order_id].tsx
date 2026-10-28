@@ -177,19 +177,21 @@ export default function ChatDetailScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 50}
     >
       <SafeAreaView
-        className="flex-1 bg-gray-900"
+        className="flex-1 bg-[#1C1C21]"
         edges={["left", "right", "bottom"]}
       >
         <Stack.Screen
           options={{
+            headerStyle: { backgroundColor: "#000000" },
+            headerTintColor: "#F5F5F5",
             headerTitle: () => (
               <View className="flex-row items-center gap-2">
-                <View className="w-10 h-10 rounded-full bg-gray-700 items-center justify-center">
+                <View className="w-10 h-10 rounded-full bg-[#3C3C43] items-center justify-center">
                   <Text className="text-white font-semibold text-base">
                     {name ? String(name).charAt(0).toUpperCase() : "#"}
                   </Text>
                 </View>
-                <Text className="text-black text-lg font-semibold">
+                <Text className="text-[#F5F5F5] text-lg font-semibold">
                   {name ? String(name) : `Chat #${order_id}`}
                 </Text>
               </View>
@@ -201,7 +203,7 @@ export default function ChatDetailScreen() {
                 }
                 className="mr-2"
               >
-                <Ionicons name="call" size={24} color="black" />
+                <Ionicons name="call" size={24} color="#F5F5F5" />
               </TouchableOpacity>
             ),
           }}
@@ -226,12 +228,12 @@ export default function ChatDetailScreen() {
               ListHeaderComponent={() => (
                 <View className="items-center py-3">
                   <View className="flex-row items-center gap-2 px-4">
-                    <View className="flex-1 h-[0.5px] bg-gray-700" />
+                    <View className="flex-1 h-[0.5px] bg-[#3C3C43]" />
                     <Text className="text-gray-600 text-xs tracking-widest uppercase">
                       {messages.length} message
                       {messages.length !== 1 ? "s" : ""}
                     </Text>
-                    <View className="flex-1 h-[0.5px] bg-gray-700" />
+                    <View className="flex-1 h-[0.5px] bg-[#3C3C43]" />
                   </View>
                 </View>
               )}
@@ -250,11 +252,11 @@ export default function ChatDetailScreen() {
                   <>
                     {isFirstUnread && (
                       <View className="flex-row items-center gap-2 px-4 my-2">
-                        <View className="flex-1 h-[0.5px] bg-blue-100/60" />
-                        <Text className="text-blue-900/60 text-[10px] tracking-widest uppercase">
+                        <View className="flex-1 h-[0.5px] bg-white/15" />
+                        <Text className="text-gray-500 text-[10px] tracking-widest uppercase">
                           Unread
                         </Text>
-                        <View className="flex-1 h-[0.5px] bg-blue-100/60" />
+                        <View className="flex-1 h-[0.5px] bg-white/15" />
                       </View>
                     )}
 
@@ -266,8 +268,8 @@ export default function ChatDetailScreen() {
                       <View
                         className={`max-w-[80%] px-4 py-2 rounded-2xl ${
                           isMyMessage
-                            ? "bg-blue-500 rounded-br-none"
-                            : "bg-gray-700 rounded-bl-none"
+                            ? "bg-[#FF7518] rounded-br-none"
+                            : "bg-[#3C3C43] rounded-bl-none"
                         }`}
                       >
                         {(item.local_uri || item.image_url) && (
@@ -278,7 +280,7 @@ export default function ChatDetailScreen() {
                                 item.local_uri ?? imageUrls[item.image_url],
                               )
                             }
-                            className="w-56 h-56 rounded-xl overflow-hidden bg-gray-800 mb-1 justify-center items-center"
+                            className="w-56 h-56 rounded-xl overflow-hidden bg-[#2C2C30] mb-1 justify-center items-center"
                           >
                             {(item.local_uri || imageUrls[item.image_url]) && (
                               <Image
@@ -312,7 +314,7 @@ export default function ChatDetailScreen() {
 
                         <Text
                           className={`text-xs mt-1 ${
-                            isMyMessage ? "text-blue-100" : "text-gray-400"
+                            isMyMessage ? "text-white/80" : "text-gray-400"
                           }`}
                         >
                           {timeAgo(item.created_at)}
@@ -334,16 +336,16 @@ export default function ChatDetailScreen() {
         </View>
 
         {/* Input bar */}
-        <View className="flex-row items-center px-4 py-3 border-t border-gray-800">
+        <View className="flex-row items-center px-4 py-3 border-t border-white/10">
           <TouchableOpacity
             onPress={() => setCameraVisible(true)}
             activeOpacity={0.8}
-            className="p-3 rounded-full bg-gray-800 mr-2"
+            className="p-3 rounded-full bg-[#2C2C30] mr-2"
           >
             <Ionicons name="camera" size={20} color="white" />
           </TouchableOpacity>
           <TextInput
-            className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-2xl mr-2"
+            className="flex-1 bg-[#2C2C30] text-white px-4 py-3 rounded-2xl mr-2"
             placeholder="Type a message..."
             placeholderTextColor="#9CA3AF"
             value={message}
@@ -357,7 +359,7 @@ export default function ChatDetailScreen() {
             onPress={sendMessage}
             activeOpacity={0.8}
             className={`p-3 rounded-full ${
-              message.trim() ? "bg-blue-500" : "bg-gray-700"
+              message.trim() ? "bg-[#FF7518]" : "bg-[#3C3C43]"
             }`}
             disabled={!message.trim()}
           >

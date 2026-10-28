@@ -12,7 +12,7 @@ function loadRootEnv() {
     if (!match || line.trim().startsWith("#")) continue;
     const [, key, raw = ""] = match;
     if (process.env[key] === undefined) {
-      process.env[key] = raw.replace(/^(['"])(.*)\1$/, "$2");
+      process.env[key] = raw.trim().replace(/^(['"])(.*)\1$/, "$2");
     }
   }
 }

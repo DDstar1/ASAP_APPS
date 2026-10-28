@@ -13,7 +13,7 @@ import { IMAGES } from "@/assets/assetsData";
 import { useUnreadCountStore } from "@/store/useUnreadCountStore";
 import { PulseDot } from "@/components/PulseDot";
 
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 
 // What the rider should be doing right now, per status
 const STATUS: Record<string, { label: string; color: string }> = {
@@ -195,7 +195,7 @@ function NavButton({
       accessibilityRole="button"
       accessibilityLabel={`Navigate ${label.toLowerCase()}`}
       className={`flex-1 h-11 rounded-full flex-row items-center justify-center gap-1.5 ${
-        primary ? "bg-[#EE7F3A]" : "bg-[#212126]"
+        primary ? "bg-[#FF7518]" : "bg-[#212126]"
       }`}
     >
       <Ionicons name="navigate" size={15} color="white" />

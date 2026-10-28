@@ -60,7 +60,7 @@ export async function payWithKorapay(
         p_customer_phone: order.customer_phone,
       })
       .single<{ order_id: number; order_ref: string; order_code: string }>();
-    if (createError || !created) {
+    if (createError || !created?.order_ref) {
       throw new Error(createError?.message ?? "Couldn't create your order.");
     }
     orderRef = created.order_ref;

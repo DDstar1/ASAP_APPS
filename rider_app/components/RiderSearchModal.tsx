@@ -79,13 +79,13 @@ export default function RiderSearchModal({
                   resizeMode="contain"
                 />
                 {price && (
-                  <Text className="text-orange-500 text-2xl font-bold text-center">
+                  <Text className="text-[#FF7518] text-2xl font-bold text-center">
                     ₦{price}
                   </Text>
                 )}
               </View>
 
-              <ActivityIndicator size="large" color="#F97316" />
+              <ActivityIndicator size="large" color="#FF7518" />
               <Text className="text-gray-400 mt-4 text-center text-base">
                 Connecting you with nearby riders...
               </Text>
@@ -118,7 +118,7 @@ export default function RiderSearchModal({
                     />
                     <View className="flex-1">
                       {price && (
-                        <Text className="text-orange-500 text-xl font-bold">
+                        <Text className="text-[#FF7518] text-xl font-bold">
                           ₦{price}
                         </Text>
                       )}
@@ -129,7 +129,7 @@ export default function RiderSearchModal({
                   </View>
                 </View>
 
-                <View className="h-px bg-gray-600 mb-6" />
+                <View className="h-px bg-[#4A4A52] mb-6" />
 
                 {/* Rider Info */}
                 {assignedRider && (
@@ -163,7 +163,7 @@ export default function RiderSearchModal({
               {/* Buttons */}
               <View className="space-y-3 mt-auto mb-8">
                 <TouchableOpacity
-                  className="bg-orange-500 w-full py-4 rounded-2xl"
+                  className="bg-[#FF7518] w-full py-4 rounded-2xl"
                   onPress={() =>
                     router.navigate({
                       pathname: "/trackPackage",

@@ -1000,6 +1000,10 @@ export type Database = {
         Args: { p_order_id: number }
         Returns: string | null
       }
+      get_rebook_items: {
+        Args: { p_order_id: number }
+        Returns: Json
+      }
       register_push_token: {
         Args: { p_token: string; p_app: string; p_platform: string }
         Returns: undefined

@@ -1,13 +1,14 @@
-import { IMAGES } from "@/assets/assetsData";
-import { getDeliveryOrderByReference } from "@/lib/supabase-app-functions";
+import { useAcceptedDeliveryStore } from "@/store/useAcceptedDeliveriesStore";
+import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -15,22 +16,38 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MY_ICONS } from "@/assets/assetsData";
 
 const { width, height } = Dimensions.get("window");
 const ASPECT_RATIO = width / height;
 const LATITUDE_DELTA = 0.02;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
+const ORANGE = "#FF7518";
+const PICKUP_GREEN = "#34D399";
+const RIDER_BLUE = "#2563EB";
+
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-1 bg-[#1C1C21] rounded-2xl px-4 py-3">
+      <Text className="text-gray-400 text-xs">{label}</Text>
+      <Text className="text-white text-lg font-bold mt-0.5">{value}</Text>
+    </View>
+  );
+}
 
 export default function DeliveryTrackingScreen() {
   const navigation = useNavigation();
-  const { orderCode, paymentReference } = useLocalSearchParams();
+  const { orderCode } = useLocalSearchParams();
 
   const mapRef = useRef<MapView>(null);
 
-  const [order, setOrder] = useState<any | null>(null);
+  // The deliveries list already holds the order row with its coordinates
+  const order = useAcceptedDeliveryStore((s) =>
+    s.AcceptedDeliveries.find((d) => d.order_code === String(orderCode)),
+  );
+  const loading = useAcceptedDeliveryStore((s) => s.loading);
   const [rider, setRider] = useState<{
     latitude: number;
     longitude: number;
@@ -38,7 +55,6 @@ export default function DeliveryTrackingScreen() {
 
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   /* ---------------- HEADER TITLE ---------------- */
   useLayoutEffect(() => {
@@ -49,47 +65,32 @@ export default function DeliveryTrackingScreen() {
     });
   }, [navigation, orderCode]);
 
-  /* ---------------- FETCH ORDER ---------------- */
+  // Opened from a push before the list loaded
   useEffect(() => {
-    if (!paymentReference) {
-      setLoading(false);
-      return;
-    }
-
-    (async () => {
-      setLoading(true);
-
-      const res = await getDeliveryOrderByReference(String(paymentReference));
-
-      console.log("Fetched order details:", res);
-
-      if (res.success) {
-        setOrder(res.data);
-      } else {
-        console.error("Order fetch failed:", res.error);
-      }
-
-      setLoading(false);
-    })();
-  }, [paymentReference]);
+    if (!order) useAcceptedDeliveryStore.getState().fetchAcceptedDeliveries();
+  }, []);
 
   /* ---------------- GET RIDER LOCATION ---------------- */
+  // The map shows without it; the rider's marker and route join once it's in
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.warn("Location permission denied");
-        return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+
+        const location =
+          (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
+          (await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          }));
+
+        setRider({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      } catch (e) {
+        console.warn("Couldn't get rider location:", e);
       }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      setRider({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
     })();
   }, []);
 
@@ -109,22 +110,38 @@ export default function DeliveryTrackingScreen() {
     : null;
 
   /* ---------------- LOADING STATE ---------------- */
-  if (loading || !order || !rider || !pickup || !destination) {
+  if (!order || !pickup || !destination) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-900">
-        <ActivityIndicator size="large" color="#F97316" />
-        <Text className="mt-2 text-gray-300">Loading delivery details...</Text>
+      <View className="flex-1 justify-center items-center bg-[#1C1C21] px-8">
+        {loading ? (
+          <>
+            <ActivityIndicator size="large" color={ORANGE} />
+            <Text className="mt-2 text-gray-300">Loading delivery details...</Text>
+          </>
+        ) : (
+          <>
+            <Text className="text-white text-lg font-semibold text-center">
+              Couldn't find this delivery
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="mt-5 h-12 px-6 rounded-full bg-[#FF7518] justify-center"
+            >
+              <Text className="text-white font-bold">Back to Orders</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     );
   }
 
   /* ---------------- RENDER ---------------- */
   return (
-    <SafeAreaView edges={["bottom"]} className="flex-1">
+    <View className="flex-1 bg-[#1C1C21]">
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
-        style={{ flex: 1, marginBottom: -40 }}
+        style={StyleSheet.absoluteFill}
         showsUserLocation
         followsUserLocation
         initialRegion={{
@@ -134,99 +151,116 @@ export default function DeliveryTrackingScreen() {
           longitudeDelta: LONGITUDE_DELTA,
         }}
       >
-        {/* Markers */}
-        <Marker coordinate={pickup} title="Pickup Point" pinColor="#34D399" />
-        <Marker
-          coordinate={destination}
-          title="Destination"
-          pinColor="#FB923C"
-        />
-        <Marker coordinate={rider} title="You" pinColor="#2563EB" />
+        <Marker coordinate={pickup} title="Pickup Point" pinColor={PICKUP_GREEN} />
+        <Marker coordinate={destination} title="Destination" pinColor={ORANGE} />
+        {rider && <Marker coordinate={rider} title="You" pinColor={RIDER_BLUE} />}
 
-        {/* Route */}
-        <MapViewDirections
-          origin={rider}
-          waypoints={[pickup]}
-          destination={destination}
-          apikey={GOOGLE_MAPS_API_KEY}
-          strokeWidth={5}
-          strokeColor="#F97316"
-          onReady={(result) => {
-            setDistance(result.distance);
-            setDuration(result.duration);
+        {rider && (
+          <MapViewDirections
+            origin={rider}
+            waypoints={[pickup]}
+            destination={destination}
+            apikey={GOOGLE_MAPS_API_KEY}
+            strokeWidth={5}
+            strokeColor={ORANGE}
+            onReady={(result) => {
+              setDistance(result.distance);
+              setDuration(result.duration);
 
-            mapRef.current?.fitToCoordinates(result.coordinates, {
-              edgePadding: { top: 50, right: 50, bottom: 250, left: 50 },
-            });
-          }}
-          onError={(err) => console.warn("Directions error:", err)}
-        />
+              mapRef.current?.fitToCoordinates(result.coordinates, {
+                edgePadding: { top: 50, right: 50, bottom: 420, left: 50 },
+              });
+            }}
+            onError={(err) => console.warn("Directions error:", err)}
+          />
+        )}
       </MapView>
 
-      {/* Bottom Sheet */}
-      <View
-        className="w-full p-4"
-        style={{
-          backgroundColor: "#3C3C43",
-          borderTopLeftRadius: 40,
-          borderTopRightRadius: 40,
-          shadowColor: "#000",
-          shadowOpacity: 0.2,
-          shadowRadius: 5,
-        }}
+      <SafeAreaView
+        edges={["bottom"]}
+        className="mt-auto bg-black rounded-t-3xl border-t-2 border-[#FF7518] px-5 pt-3 pb-2"
+        style={{ elevation: 12 }}
       >
-        <View className="flex-row justify-between items-center">
-          {/* Left Section - Order Details */}
+        <View className="self-center w-10 h-1 rounded-full bg-[#3A3A3F] mb-4" />
+
+        <View className="flex-row items-center gap-4">
+          <View className="w-24 h-24 rounded-2xl border-2 border-[#FF7518] bg-black overflow-hidden">
+            {order.image_url ? (
+              <Image
+                source={{ uri: order.image_url }}
+                className="w-full h-full"
+                resizeMode="cover"
+              />
+            ) : null}
+          </View>
           <View className="flex-1">
-            <Text className="text-white text-lg font-bold mb-2">
-              Order #{order.order_code}
+            <Text className="text-white text-xl font-bold" numberOfLines={1}>
+              #{order.order_code}
             </Text>
-
-            <Text className="text-gray-400 mb-1">
-              Distance: {distance.toFixed(1)} km
+            <Text className="text-gray-400 text-sm mt-0.5" numberOfLines={2}>
+              {order.package_type || "Package"}
             </Text>
+          </View>
+        </View>
 
-            <Text className="text-gray-400 mb-3">
-              ETA: {Math.ceil(duration)} min
-            </Text>
+        <View className="h-px bg-white/10 mt-5" />
 
-            <TouchableOpacity
-              className="py-2 px-4 rounded-lg self-start"
-              style={{ backgroundColor: "#F97316" }}
-            >
-              <Text className="text-white font-bold">Back to Orders</Text>
-            </TouchableOpacity>
+        {/* Pick up / Drop off, joined by a dotted line */}
+        <View className="mt-4">
+          <View className="flex-row gap-3">
+            <View className="items-center w-4 pt-1.5">
+              <View className="w-3 h-3 rounded-full" style={{ backgroundColor: PICKUP_GREEN }} />
+              <View className="flex-1 border-l border-dashed border-gray-500 my-1" />
+            </View>
+            <View className="flex-1 pb-4">
+              <Text className="text-gray-400 text-xs">Pick up</Text>
+              <Text className="text-white text-base" numberOfLines={2}>
+                {order.pickup_name || "Not specified"}
+              </Text>
+            </View>
           </View>
 
-          {/* Right Section - Package Image */}
-          <Image
-            source={{ uri: order?.image_url || IMAGES.no_package_image }}
-            className="w-32 h-32 rounded-2xl"
-            resizeMode="contain"
-          />
-
-          {/* Center Section - Legend */}
-          <View className="flex-col  gap-2 mr-4">
-            {/* Pickup Location */}
-            <View className="flex-row items-center gap-2">
-              {MY_ICONS.map_marker("#34D399", 28)}
-              <Text className="text-gray-300 text-xs">Pickup</Text>
+          <View className="flex-row gap-3">
+            <View className="items-center w-4 pt-1.5">
+              <View className="w-3 h-3 rounded-full" style={{ backgroundColor: ORANGE }} />
             </View>
-            {/* Your Location */}
-            <View className="flex-row items-center gap-2">
-              {MY_ICONS.map_marker("#2563EB", 28)}
-              <Text className="text-gray-300 text-xs">You</Text>
-            </View>
-
-            {/* Dropoff Location */}
-            <View className="flex-row items-center gap-2">
-              {MY_ICONS.map_marker("#FB923C", 28)}
-
-              <Text className="text-gray-300 text-xs">Dropoff</Text>
+            <View className="flex-1">
+              <Text className="text-gray-400 text-xs">Drop off</Text>
+              <Text className="text-white text-base" numberOfLines={2}>
+                {order.dropoff_name || "Not specified"}
+              </Text>
             </View>
           </View>
         </View>
-      </View>
-    </SafeAreaView>
+
+        <View className="flex-row gap-3 mt-5">
+          <Stat label="Distance" value={distance ? `${distance.toFixed(1)} km` : "—"} />
+          <Stat label="ETA" value={duration ? `${Math.ceil(duration)} min` : "—"} />
+        </View>
+
+        <View className="flex-row items-center gap-4 mt-4">
+          <View className="flex-row items-center gap-1.5">
+            <Ionicons name="location" size={14} color={RIDER_BLUE} />
+            <Text className="text-gray-400 text-xs">You</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5">
+            <Ionicons name="location" size={14} color={PICKUP_GREEN} />
+            <Text className="text-gray-400 text-xs">Pick up</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5">
+            <Ionicons name="location" size={14} color={ORANGE} />
+            <Text className="text-gray-400 text-xs">Drop off</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="mt-5 h-12 rounded-full bg-[#FF7518] justify-center items-center"
+          accessibilityRole="button"
+        >
+          <Text className="text-white font-bold text-base">Back to Orders</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }

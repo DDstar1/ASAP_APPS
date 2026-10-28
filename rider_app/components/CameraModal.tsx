@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import * as FileSystem from "expo-file-system/legacy";
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Text, TouchableOpacity, View } from "react-native";
 
@@ -40,26 +41,31 @@ export default function CameraModal({
         visible={visible}
         onRequestClose={onClose}
       >
-        <View className="flex-1 items-center justify-center bg-black">
-          <View className="items-center p-6">
-            <Ionicons name="camera" size={64} color="white" className="mb-4" />
-            <Text className="text-white text-xl font-semibold mb-2 text-center">
-              Camera Permission Required
+        <SafeAreaView className="flex-1 bg-black px-6">
+          <View className="flex-1 items-center justify-center">
+            <View className="w-24 h-24 rounded-full bg-[#2C2C30] items-center justify-center">
+              <Ionicons name="camera-outline" size={44} color="white" />
+            </View>
+            <Text className="text-white text-2xl font-bold mt-6 text-center">
+              Allow camera access
             </Text>
-            <Text className="text-gray-300 text-center mb-6">
-              We need access to your camera to take package photos
+            <Text className="text-gray-400 text-base text-center mt-2 leading-6 max-w-xs">
+              Photos of the package at pickup and delivery are your proof of handover.
             </Text>
+          </View>
+          <View className="gap-3 pb-4">
             <TouchableOpacity
-              className="bg-orange-500 px-6 py-3 rounded-full"
+              className="h-14 rounded-full bg-[#FF7518] items-center justify-center"
               onPress={requestPermission}
+              accessibilityRole="button"
             >
-              <Text className="text-white font-semibold">Grant Permission</Text>
+              <Text className="text-white text-base font-bold">Allow camera</Text>
             </TouchableOpacity>
-            <TouchableOpacity className="mt-4 px-6 py-3" onPress={onClose}>
-              <Text className="text-gray-400">Cancel</Text>
+            <TouchableOpacity className="py-3 items-center" onPress={onClose} accessibilityRole="button">
+              <Text className="text-gray-400 text-sm">Cancel</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     );
   }
@@ -139,46 +145,56 @@ export default function CameraModal({
           />
         )}
 
-        {/* Header */}
-        <View className="absolute top-0 rounded-b-[50px] bg-gray-900 p-3 w-full items-center z-10">
-          <Text className="text-white text-lg font-semibold text-center px-4">
-            Take a picture of the package
-          </Text>
+        {/* Header: close, title, flip */}
+        <SafeAreaView edges={["top"]} className="absolute top-0 left-0 right-0 z-10">
+          <View className="flex-row items-center justify-between px-4 pt-2">
+            <TouchableOpacity
+              className="w-11 h-11 rounded-full bg-black/60 items-center justify-center"
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close camera"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+            <Text className="text-white text-base font-semibold">Photograph the package</Text>
+            <TouchableOpacity
+              className="w-11 h-11 rounded-full bg-black/60 items-center justify-center"
+              onPress={toggleCameraFacing}
+              accessibilityRole="button"
+              accessibilityLabel="Switch camera"
+            >
+              <Ionicons name="camera-reverse-outline" size={22} color="white" />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+
+        {/* Framing guide */}
+        <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
+          <View className="w-[78%] aspect-square rounded-3xl border-2 border-white/70" />
         </View>
 
         {/* Camera not ready overlay */}
         {!isReady && (
-          <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center z-20">
-            <Text className="text-white text-lg">Initializing camera...</Text>
+          <View className="absolute inset-0 bg-black/60 items-center justify-center z-20">
+            <Text className="text-white text-lg">Starting camera…</Text>
           </View>
         )}
 
-        {/* Controls */}
-        <View className="absolute bottom-8 w-full flex-row justify-around items-center px-6 z-10">
+        {/* Shutter */}
+        <SafeAreaView edges={["bottom"]} className="absolute bottom-0 left-0 right-0 items-center pb-6 z-10">
+          <Text className="text-white/80 text-sm mb-4">Fit the whole package inside the frame</Text>
           <TouchableOpacity
-            className="bg-gray-800 p-3 rounded-full"
-            onPress={onClose}
-          >
-            <Ionicons name="close" size={28} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className={`w-16 h-16 rounded-full border-4 ${
-              isReady
-                ? "bg-white border-gray-400"
-                : "bg-gray-600 border-gray-600"
-            }`}
             onPress={takePicture}
             disabled={!isReady}
-          />
-
-          <TouchableOpacity
-            className="bg-gray-800 p-3 rounded-full"
-            onPress={toggleCameraFacing}
+            accessibilityRole="button"
+            accessibilityLabel="Take photo"
+            className={`w-20 h-20 rounded-full border-4 border-white items-center justify-center ${
+              isReady ? "" : "opacity-50"
+            }`}
           >
-            <Ionicons name="camera-reverse" size={28} color="white" />
+            <View className="w-16 h-16 rounded-full bg-white" />
           </TouchableOpacity>
-        </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );

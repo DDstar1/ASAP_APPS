@@ -21,7 +21,7 @@ import GooglePlacesTextInput from "react-native-google-places-textinput";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 
 // One row of the list: icon in a dark square, title, optional subtitle
 function PlaceRow({
@@ -68,6 +68,21 @@ function PlaceRow({
   );
 }
 
+// Map icon at the end of a stop's input: set that stop by moving a pin instead
+function MapPickButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      className="w-11 h-11 rounded-full bg-[#2C2C30] justify-center items-center"
+    >
+      <Ionicons name="map-outline" size={20} color={ORANGE} />
+    </TouchableOpacity>
+  );
+}
+
 export default function DestinationSearchModal({
   visible,
   onClose,
@@ -79,7 +94,8 @@ export default function DestinationSearchModal({
   visible: boolean;
   onClose: () => void;
   onSelect: (location: any) => void;
-  onChooseOnMap?: () => void;
+  // Opens the map pin picker for that stop
+  onChooseOnMap?: (field: "from" | "to") => void;
   field: "from" | "to";
   // Shown in the top pill while choosing the destination
   originLabel?: string | null;
@@ -160,6 +176,11 @@ export default function DestinationSearchModal({
 
   const fieldLabel = field === "from" ? "pickup" : "destination";
 
+  const pickOnMap = (which: "from" | "to") => {
+    onClose();
+    onChooseOnMap?.(which);
+  };
+
   return (
     <Modal
       visible={visible}
@@ -168,8 +189,8 @@ export default function DestinationSearchModal({
       onRequestClose={onClose}
     >
       <SafeAreaView className="flex-1 bg-black px-4">
-        {/* Where the trip starts, when choosing where it ends */}
-        <View className="flex-row items-center gap-3 mt-2">
+        {/* Back button gets the first row to itself */}
+        <View className="flex-row items-center mt-2 mb-4">
           <TouchableOpacity
             onPress={onClose}
             accessibilityRole="button"
@@ -178,22 +199,38 @@ export default function DestinationSearchModal({
           >
             <Ionicons name="chevron-back" size={22} color="white" />
           </TouchableOpacity>
-          <View className="flex-1 h-11 rounded-full bg-[#2C2C30] flex-row items-center px-4 gap-3">
-            <View
-              className={`w-3 h-3 rounded-full ${
-                field === "from" ? "bg-[#3B82F6]" : "bg-[#EE7F3A]"
-              }`}
-            />
-            <Text className="text-white text-base flex-1" numberOfLines={1}>
-              {field === "to" && originLabel
-                ? originLabel
-                : `Choose ${fieldLabel}`}
-            </Text>
-          </View>
+          <Text className="flex-1 text-center text-white text-xl font-bold mr-11">
+            Set {fieldLabel}
+          </Text>
         </View>
 
-        {/* Search */}
-        <View className="mt-3 z-10">
+        {/* The trip's stops, joined by a dotted line. Choosing the destination
+            shows the pickup above for context; each stop can be set on the map. */}
+        <View className="bg-[#1C1C21] rounded-3xl px-3 py-3 z-10">
+          {field === "to" && (
+            <>
+              <View className="flex-row items-center gap-3 pl-2">
+                <View className="items-center w-3">
+                  <View className="w-3 h-3 rounded-full bg-[#EF4444]" />
+                </View>
+                <Text className="flex-1 text-gray-300 text-base" numberOfLines={1}>
+                  {originLabel ?? "Pickup not set"}
+                </Text>
+                <MapPickButton label="Set pickup on the map" onPress={() => pickOnMap("from")} />
+              </View>
+              <View className="w-3 ml-2 items-center">
+                <View className="h-4 border-l border-dashed border-gray-500" />
+              </View>
+            </>
+          )}
+
+          <View className="flex-row items-center gap-3 pl-2">
+            <View className="items-center w-3">
+              <View
+                className={`w-3 h-3 rounded-full ${field === "from" ? "bg-[#EF4444]" : "bg-[#22C55E]"}`}
+              />
+            </View>
+            <View className="flex-1">
           <GooglePlacesTextInput
             apiKey={GOOGLE_MAPS_API_KEY}
             onPlaceSelect={handlePlaceSelect}
@@ -212,11 +249,11 @@ export default function DestinationSearchModal({
             style={{
               input: {
                 height: 48,
-                borderRadius: 24,
+                borderRadius: 16,
                 borderWidth: 0,
                 backgroundColor: "#2C2C30",
                 color: "white",
-                paddingHorizontal: 20,
+                paddingHorizontal: 16,
                 fontSize: 16,
               },
               placeholder: { color: "#9CA3AF" },
@@ -237,6 +274,9 @@ export default function DestinationSearchModal({
               },
             }}
           />
+            </View>
+            <MapPickButton label={`Set ${fieldLabel} on the map`} onPress={() => pickOnMap(field)} />
+          </View>
         </View>
 
         {!query && (
@@ -259,10 +299,7 @@ export default function DestinationSearchModal({
                 iconColor={ORANGE}
                 title="Choose on map"
                 subtitle={`Move the map to set your ${fieldLabel}`}
-                onPress={() => {
-                  onClose();
-                  onChooseOnMap();
-                }}
+                onPress={() => pickOnMap(field)}
               />
             )}
 

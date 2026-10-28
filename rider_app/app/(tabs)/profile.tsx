@@ -1,5 +1,4 @@
 import { IMAGES } from "@/assets/assetsData";
-import * as ImagePicker from "expo-image-picker";
 import {
   Image,
   ScrollView,
@@ -14,24 +13,17 @@ import {
 } from "react-native";
 import { SUPPORT_EMAIL, SUPPORT_PHONE } from "@/constants/support";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  deleteOwnAccount,
-  handleLogout,
-  updateProfileImage,
-} from "@/lib/supabase-app-functions";
+import { deleteOwnAccount, handleLogout } from "@/lib/supabase-app-functions";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useUserStore } from "@/store/useUserStore";
 import { useSettingsStore } from "@/store/useUserSettingsStore";
-import { UpdatePhoneModal } from "@/components/UpdatePhoneModal";
-import { UpdatePasswordModal } from "@/components/UpdatePasswordModal";
-import { UpdateBankDetailsModal } from "@/components/UpdateBankDetailsModal";
 import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import { SHOW_INVEST } from "@/constants/features";
 
-const ORANGE = "#EE7F3A";
+const ORANGE = "#FF7518";
 
 const WEBSITE_URL = Constants.expoConfig?.extra?.websiteUrl as
   | string
@@ -48,27 +40,13 @@ const openWebsite = (path: string) => {
 export default function AccountScreen() {
   const router = useRouter();
 
-  const { user, fetchUserSession, setUser } = useUserStore();
+  const { user, fetchUserSession } = useUserStore();
   const { settings, fetchSettings, updateSettings } = useSettingsStore();
 
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  // Modals
-  const [phoneModalVisible, setPhoneModalVisible] = useState(false);
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [bankModalVisible, setBankModalVisible] = useState(false);
-
-  // Sync profile image
-  useEffect(() => {
-    if (user?.profileImage) {
-      setProfileImage(user.profileImage);
-    }
-    console.log("User session updated:", user);
-  }, [user]);
+  const profileImage = user?.profileImage ?? null;
 
   // Fetch settings on mount
   useEffect(() => {
@@ -138,44 +116,6 @@ export default function AccountScreen() {
     );
   };
 
-  const onEditProfileImage = async () => {
-    try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permission.granted) {
-        alert("Permission to access media library is required.");
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
-      setUploadingImage(true);
-
-      const publicUrl = await updateProfileImage(
-        user?.id ?? "",
-        asset.uri,
-        asset.mimeType,
-      );
-
-      setProfileImage(publicUrl);
-      if (user) setUser({ ...user, profileImage: publicUrl });
-    } catch (err) {
-      console.error("Image upload failed:", err);
-      alert("Failed to update profile image.");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
   const handleToggle = (
     key: keyof NonNullable<typeof settings>,
     value: boolean,
@@ -199,11 +139,11 @@ export default function AccountScreen() {
       >
         {/* PROFILE */}
         <View className="items-center mt-8">
+          {/* Photo, name, email and phone are all edited in Personal info */}
           <TouchableOpacity
-            onPress={onEditProfileImage}
-            disabled={uploadingImage}
+            onPress={() => router.push("/profile/personal-info")}
             accessibilityRole="button"
-            accessibilityLabel="Change profile photo"
+            accessibilityLabel="Edit personal info and photo"
           >
             <View className="w-28 h-28 rounded-full bg-white overflow-hidden justify-center items-center">
               <Image
@@ -214,11 +154,7 @@ export default function AccountScreen() {
               />
             </View>
             <View className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[#3C3C43] border-2 border-black justify-center items-center">
-              {uploadingImage ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <MaterialIcons name="photo-camera" size={16} color="white" />
-              )}
+              <MaterialIcons name="photo-camera" size={16} color="white" />
             </View>
           </TouchableOpacity>
 
@@ -232,23 +168,18 @@ export default function AccountScreen() {
 
         {/* ACCOUNT */}
         <Card>
-          {/* Read-only until real SMS verification exists: UpdatePhoneModal only
-              simulates the OTP, so it isn't opened (setPhoneModalVisible) */}
           <Row
             title="Personal info"
-            subtitle={user?.phone ?? "No phone number added"}
+            subtitle="Name, email, phone number and photo"
             icon="person-outline"
+            onPress={() => router.push("/profile/personal-info")}
           />
-          <Text className="text-gray-400 text-xs -mt-2 pb-3 pl-14">
-            Customers and our support team use this number to reach you about
-            deliveries, so it needs to be accurate.
-          </Text>
           <Divider />
           <Row
             title="Login & security"
             subtitle="Change password"
             icon="lock-outline"
-            onPress={() => setPasswordModalVisible(true)}
+            onPress={() => router.push("/profile/security")}
           />
           <Divider />
           <Row
@@ -256,7 +187,7 @@ export default function AccountScreen() {
             subtitle="Account number & bank"
             icon="account-balance"
             iconColor="#22C55E"
-            onPress={() => setBankModalVisible(true)}
+            onPress={() => router.push("/profile/payout")}
           />
           <Divider />
           <Row
@@ -345,7 +276,7 @@ export default function AccountScreen() {
           onPress={onLogoutPress}
           disabled={loading}
           accessibilityRole="button"
-          className="mx-4 mt-8 h-14 rounded-full items-center justify-center flex-row gap-2 bg-[#EE7F3A]"
+          className="mx-4 mt-8 h-14 rounded-full items-center justify-center flex-row gap-2 bg-[#FF7518]"
         >
           {loading ? (
             <ActivityIndicator color="white" />
@@ -377,22 +308,6 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <UpdatePhoneModal
-        visible={phoneModalVisible}
-        onClose={() => setPhoneModalVisible(false)}
-      />
-      <UpdatePasswordModal
-        visible={passwordModalVisible}
-        onClose={() => setPasswordModalVisible(false)}
-        onForgotPassword={() =>
-          router.push("/auth/resetPassword/forgot-password")
-        }
-      />
-      <UpdateBankDetailsModal
-        visible={bankModalVisible}
-        onClose={() => setBankModalVisible(false)}
-        onSaved={() => setBankModalVisible(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -493,16 +408,16 @@ function ToggleItem({
 // No longer rendered (placeholder data / no feature behind them) — pending co-dev review
 function PaymentCard({ title, value }: { title: string; value: string }) {
   return (
-    <View className="bg-[#0f1626] p-4 rounded-2xl flex-row justify-between items-center">
+    <View className="bg-[#1C1C21] p-4 rounded-2xl flex-row justify-between items-center">
       <Text className="text-[#e0e5f9]">{title}</Text>
-      <Text className="text-[#ff923e] font-semibold">{value}</Text>
+      <Text className="text-[#FF7518] font-semibold">{value}</Text>
     </View>
   );
 }
 
 function SupportCard({ title }: { title: string }) {
   return (
-    <View className="flex-1 bg-[#0f1626] p-4 rounded-2xl items-center">
+    <View className="flex-1 bg-[#1C1C21] p-4 rounded-2xl items-center">
       <Text className="text-[#e0e5f9] text-sm">{title}</Text>
     </View>
   );

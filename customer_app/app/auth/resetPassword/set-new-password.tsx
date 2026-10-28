@@ -107,10 +107,10 @@ export default function SetNewPassword() {
 
   if (!sessionRestored) {
     return (
-      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#080e1c]">
+      <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#000000]">
         <View className="flex-1 justify-center items-center px-6">
-          <View className="bg-[#0f1626] rounded-2xl p-8 items-center max-w-sm w-full">
-            <MaterialIcons name="lock-reset" size={48} color="#ff923e" />
+          <View className="bg-[#1C1C21] rounded-2xl p-8 items-center max-w-sm w-full">
+            <MaterialIcons name="lock-reset" size={48} color="#FF7518" />
             <Text className="text-[#e0e5f9] text-xl font-bold mt-6 mb-3">
               Validating link
             </Text>
@@ -124,7 +124,7 @@ export default function SetNewPassword() {
   }
 
   return (
-    <SafeAreaView className="flex-1 p-6 py-20 gap-1 bg-[#080e1c] justify-start">
+    <SafeAreaView className="flex-1 p-6 py-20 gap-1 bg-[#000000] justify-start">
       <MyKeyboardAvoidingWrapper>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
@@ -142,7 +142,7 @@ export default function SetNewPassword() {
 
             {/* New Password Input */}
             <TextInput
-              className="bg-[#0d1629] p-4 rounded-md mb-4 text-[#e0e5f9]"
+              className="bg-[#2C2C30] p-4 rounded-md mb-4 text-[#e0e5f9]"
               placeholder="New Password"
               placeholderTextColor="#a5abbd"
               secureTextEntry
@@ -154,7 +154,7 @@ export default function SetNewPassword() {
 
             {/* Confirm Password Input */}
             <TextInput
-              className="bg-[#0d1629] p-4 rounded-md mb-6 text-[#e0e5f9]"
+              className="bg-[#2C2C30] p-4 rounded-md mb-6 text-[#e0e5f9]"
               placeholder="Confirm Password"
               placeholderTextColor="#a5abbd"
               secureTextEntry
@@ -170,7 +170,7 @@ export default function SetNewPassword() {
               disabled={loading}
               className="py-4 rounded-full"
               style={{
-                backgroundColor: "#ff923e", // solid primary orange
+                backgroundColor: "#FF7518", // solid primary orange
                 overflow: "hidden",
               }}
             >
@@ -185,7 +185,7 @@ export default function SetNewPassword() {
 
             <SetPasswordIllustration height={250} width={250} />
 
-            <Text className="text-[#2a3245] text-[10px] tracking-[2px] mt-3 uppercase">
+            <Text className="text-[#3C3C43] text-[10px] tracking-[2px] mt-3 uppercase">
               Secured with Supabase Auth
             </Text>
           </View>

@@ -48,7 +48,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#080e1c]">
+    <SafeAreaView edges={["top", "bottom"]} className="flex-1 bg-[#000000]">
       <MyKeyboardAvoidingWrapper>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1 }}
@@ -60,7 +60,7 @@ export default function ForgotPasswordScreen() {
             {/* Back button */}
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-xl bg-[#121a2b] items-center justify-center mb-9"
+              className="w-10 h-10 rounded-xl bg-[#2C2C30] items-center justify-center mb-9"
             >
               <MaterialIcons name="arrow-back" size={20} color="#a5abbd" />
             </TouchableOpacity>
@@ -76,20 +76,20 @@ export default function ForgotPasswordScreen() {
             </Text>
 
             {/* ── Input card ── */}
-            <View className="bg-[#0f1626] rounded-2xl p-5 mb-4">
+            <View className="bg-[#1C1C21] rounded-2xl p-5 mb-4">
               <Text className="text-[#a5abbd] text-[11px] tracking-[2.5px] font-semibold mb-3 uppercase">
                 Email Address
               </Text>
 
               <View
-                className={`flex-row items-center bg-[#121a2b] rounded-xl px-4 py-3.5 gap-3 border ${
-                  focused ? "border-orange-400/40" : "border-transparent"
+                className={`flex-row items-center bg-[#2C2C30] rounded-xl px-4 py-3.5 gap-3 border ${
+                  focused ? "border-[#FF7518]/40" : "border-transparent"
                 }`}
               >
                 <MaterialIcons
                   name="alternate-email"
                   size={18}
-                  color={focused ? "#ff923e" : "#a5abbd"}
+                  color={focused ? "#FF7518" : "#a5abbd"}
                 />
 
                 <TextInput
@@ -109,7 +109,7 @@ export default function ForgotPasswordScreen() {
                   <MaterialIcons
                     name="check-circle"
                     size={18}
-                    color="#ff923e"
+                    color="#FF7518"
                   />
                 )}
               </View>
@@ -117,11 +117,11 @@ export default function ForgotPasswordScreen() {
 
             {/* ── Success state ── */}
             {sent && (
-              <View className="flex-row items-center bg-orange-400/10 rounded-xl p-3.5 gap-2.5 mb-4 border border-orange-400/20">
+              <View className="flex-row items-center bg-[#FF7518]/10 rounded-xl p-3.5 gap-2.5 mb-4 border border-[#FF7518]/20">
                 <MaterialIcons
                   name="mark-email-read"
                   size={20}
-                  color="#ff923e"
+                  color="#FF7518"
                 />
                 <Text className="text-[#e0e5f9] text-[13px] flex-1 leading-5">
                   Reset link sent! Check your inbox and tap the link to set a
@@ -135,18 +135,18 @@ export default function ForgotPasswordScreen() {
               onPress={handleSend}
               disabled={!canSubmit}
               className={`rounded-full py-4 items-center justify-center flex-row gap-2 mb-5 ${
-                canSubmit ? "bg-[#ff923e]" : "bg-orange-400/20"
+                canSubmit ? "bg-[#FF7518]" : "bg-[#FF7518]/20"
               }`}
             >
               <MaterialIcons
                 name={loading ? "hourglass-top" : "send"}
                 size={18}
-                color={canSubmit ? "#000" : "#ff923e"}
+                color={canSubmit ? "#000" : "#FF7518"}
               />
               <Text
                 numberOfLines={1}
                 className={`font-extrabold text-sm uppercase ${
-                  canSubmit ? "text-black" : "text-orange-400/50"
+                  canSubmit ? "text-black" : "text-[#FF7518]/50"
                 }`}
               >
                 {loading
@@ -164,7 +164,7 @@ export default function ForgotPasswordScreen() {
             >
               <Text className="text-[#a5abbd] text-[13px]">
                 Remember it?{" "}
-                <Text className="text-[#ff923e] font-bold">Back to login</Text>
+                <Text className="text-[#FF7518] font-bold">Back to login</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -175,7 +175,7 @@ export default function ForgotPasswordScreen() {
 
             <ForgotPasswordIllustration className="mt-2" />
 
-            <Text className="text-[#2a3245] text-[10px] tracking-[2px] mt-3 uppercase">
+            <Text className="text-[#3C3C43] text-[10px] tracking-[2px] mt-3 uppercase">
               Secured with Supabase Auth
             </Text>
           </View>

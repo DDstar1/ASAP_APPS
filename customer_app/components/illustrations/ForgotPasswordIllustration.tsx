@@ -3,9 +3,9 @@ import Svg, { G, Path, Circle, SvgProps } from "react-native-svg";
 
 // ─── Kinetic Noir — Color Tokens ────────────────────────────────────────────
 const C = {
-  primary: "#ff923e", // orange accent — dots, lines, question mark
-  surface: "#080e1c", // deepest background — hair, dark shapes
-  surfaceMid: "#0f1626", // card inner / input background
+  primary: "#FF7518", // orange accent — dots, lines, question mark
+  surface: "#000000", // deepest background — hair, dark shapes
+  surfaceMid: "#1C1C21", // card inner / input background
   surfaceHigh: "#1e2d4a", // card shell, clothing, outer containers
   skin: "#c8956b", // skin tone — warm muted to fit noir palette
 };

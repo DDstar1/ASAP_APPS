@@ -112,7 +112,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
       <SafeAreaView
         edges={["bottom"]}
         style={{
-          backgroundColor: "#0f1626",
+          backgroundColor: "#1C1C21",
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           paddingHorizontal: 24,
@@ -124,7 +124,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
         <View
           style={{
             width: 40, height: 4, borderRadius: 2,
-            backgroundColor: "#2a3245",
+            backgroundColor: "#3C3C43",
             alignSelf: "center", marginBottom: 24,
           }}
         />
@@ -134,11 +134,11 @@ const PickupConfirmOTP: React.FC<Props> = ({
           <View
             style={{
               width: 44, height: 44, borderRadius: 14,
-              backgroundColor: "rgba(255,146,62,0.15)",
+              backgroundColor: "rgba(255,117,24,0.15)",
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <MaterialIcons name="verified" size={22} color="#ff923e" />
+            <MaterialIcons name="verified" size={22} color="#FF7518" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: "#e0e5f9", fontSize: 16, fontWeight: "700" }}>
@@ -190,12 +190,12 @@ const PickupConfirmOTP: React.FC<Props> = ({
                 key={i}
                 style={{
                   width: 48, height: 58, borderRadius: 16,
-                  backgroundColor: filled ? "#1c2a42" : "#121a2b",
+                  backgroundColor: filled ? "#2C2C30" : "#2C2C30",
                   borderWidth: 1.5,
                   borderColor: active
-                    ? "#ff923e"
+                    ? "#FF7518"
                     : filled
-                      ? "rgba(255,146,62,0.4)"
+                      ? "rgba(255,117,24,0.4)"
                       : "#1e2a40",
                   alignItems: "center", justifyContent: "center",
                 }}
@@ -208,7 +208,7 @@ const PickupConfirmOTP: React.FC<Props> = ({
                   <View
                     style={{
                       width: 2, height: 26, borderRadius: 1,
-                      backgroundColor: "#ff923e",
+                      backgroundColor: "#FF7518",
                     }}
                   />
                 ) : null}
@@ -238,8 +238,8 @@ const PickupConfirmOTP: React.FC<Props> = ({
           <LinearGradient
             colors={
               code.length === 6 && inRange
-                ? ["#ff923e", "#c46018"]
-                : ["rgba(255,146,62,0.2)", "rgba(196,96,24,0.2)"]
+                ? ["#FF7518", "#E5650F"]
+                : ["rgba(255,117,24,0.2)", "rgba(196,96,24,0.2)"]
             }
             style={{
               paddingVertical: 16,

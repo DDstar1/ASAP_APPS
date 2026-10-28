@@ -11,13 +11,13 @@ const inputTheme = {
   colors: {
     onSurfaceVariant: "#e0e5f9",
     outline: "rgba(255,255,255,0.08)",
-    surfaceVariant: "#131a2e",
-    primary: "#ff923e",
+    surfaceVariant: "#1C1C21",
+    primary: "#FF7518",
   },
 };
 
 const inputStyle = {
-  backgroundColor: "#131a2e",
+  backgroundColor: "#1C1C21",
   marginBottom: 16,
   borderRadius: 12,
 };
@@ -26,7 +26,7 @@ const inputProps = {
   mode: "outlined" as const,
   textColor: "#e0e5f9",
   outlineColor: "rgba(255,255,255,0.08)",
-  activeOutlineColor: "#ff923e",
+  activeOutlineColor: "#FF7518",
   style: inputStyle,
   theme: inputTheme,
 };
@@ -51,7 +51,7 @@ export function ApplicationStatus({ application }: { application: DriverApplicat
             (application.asset_type === "ev" ? " and driver's licence." : "."),
         };
   return (
-    <View className="w-full p-5 rounded-2xl bg-[#131a2e] border border-[#ff923e]/35 mb-6">
+    <View className="w-full p-5 rounded-2xl bg-[#1C1C21] border border-[#FF7518]/35 mb-6">
       <Text className="text-lg font-bold text-[#e0e5f9] mb-1.5">{view.title}</Text>
       <Text className="text-sm text-[#a5abbd] leading-relaxed">{view.body}</Text>
     </View>
@@ -153,10 +153,10 @@ export default function AsapVehicleApplication({
               key={value}
               onPress={() => setAssetType(value)}
               className={`flex-1 py-3.5 rounded-xl items-center border ${
-                selected ? "bg-[#ff923e]/15 border-[#ff923e]" : "bg-[#131a2e] border-white/[0.08]"
+                selected ? "bg-[#FF7518]/15 border-[#FF7518]" : "bg-[#1C1C21] border-white/[0.08]"
               }`}
             >
-              <Text className={`text-sm font-semibold ${selected ? "text-[#ff923e]" : "text-[#e0e5f9]"}`}>
+              <Text className={`text-sm font-semibold ${selected ? "text-[#FF7518]" : "text-[#e0e5f9]"}`}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -243,7 +243,7 @@ export default function AsapVehicleApplication({
       <TouchableOpacity
         onPress={handleSubmit}
         disabled={saving}
-        className="w-full py-4 rounded-full bg-[#ff923e] items-center mb-6"
+        className="w-full py-4 rounded-full bg-[#FF7518] items-center mb-6"
       >
         {saving ? (
           <ActivityIndicator color="#fff" />

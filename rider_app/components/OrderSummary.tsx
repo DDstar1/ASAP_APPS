@@ -101,7 +101,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           <View className="flex-col items-start mb-2">
             <View className="flex-row items-center">
               <View className="w-7 h-7 bg-orange-100 rounded-lg justify-center items-center mr-2">
-                <Ionicons name="restaurant" size={14} color="#F97316" />
+                <Ionicons name="restaurant" size={14} color="#FF7518" />
               </View>
               <Text className="text-xs w-20 text-gray-500">Pickup</Text>
             </View>

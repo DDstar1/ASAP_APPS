@@ -27,13 +27,13 @@ const inputTheme = {
   colors: {
     onSurfaceVariant: "#e0e5f9",
     outline: "rgba(255,255,255,0.08)",
-    surfaceVariant: "#131a2e",
-    primary: "#ff923e",
+    surfaceVariant: "#1C1C21",
+    primary: "#FF7518",
   },
 };
 
 const inputStyle = {
-  backgroundColor: "#131a2e",
+  backgroundColor: "#1C1C21",
   marginBottom: 16,
   borderRadius: 12,
 };
@@ -201,8 +201,8 @@ export default function DriverSetupScreen() {
 
   if (loadingProfile) {
     return (
-      <View className="flex-1 bg-[#080e1c] items-center justify-center">
-        <ActivityIndicator color="#ff923e" />
+      <View className="flex-1 bg-[#000000] items-center justify-center">
+        <ActivityIndicator color="#FF7518" />
       </View>
     );
   }
@@ -213,11 +213,11 @@ export default function DriverSetupScreen() {
         contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        className="bg-[#080e1c] px-6"
+        className="bg-[#000000] px-6"
       >
         {/* Logo Row */}
         <View className="flex-row items-center mb-8">
-          <View className="w-2.5 h-2.5 rounded-full bg-[#ff923e] mr-2.5" />
+          <View className="w-2.5 h-2.5 rounded-full bg-[#FF7518] mr-2.5" />
           <Text className="text-xs font-semibold text-[#a5abbd] tracking-widest uppercase">
             ASAP Delivery
           </Text>
@@ -245,13 +245,13 @@ export default function DriverSetupScreen() {
                 onPress={() => setPath(value)}
                 className={`flex-1 py-3.5 px-2 rounded-xl items-center border ${
                   selected
-                    ? "bg-[#ff923e]/15 border-[#ff923e]"
-                    : "bg-[#131a2e] border-white/[0.08]"
+                    ? "bg-[#FF7518]/15 border-[#FF7518]"
+                    : "bg-[#1C1C21] border-white/[0.08]"
                 }`}
               >
                 <Text
                   className={`text-sm font-semibold text-center ${
-                    selected ? "text-[#ff923e]" : "text-[#e0e5f9]"
+                    selected ? "text-[#FF7518]" : "text-[#e0e5f9]"
                   }`}
                 >
                   {label}
@@ -284,7 +284,7 @@ export default function DriverSetupScreen() {
             left={<TextInput.Icon icon="phone-outline" color="#a5abbd" />}
             textColor="#e0e5f9"
             outlineColor="rgba(255,255,255,0.08)"
-            activeOutlineColor="#ff923e"
+            activeOutlineColor="#FF7518"
             style={inputStyle}
             theme={inputTheme}
           />
@@ -303,13 +303,13 @@ export default function DriverSetupScreen() {
                 onPress={() => selectVehicleType(type)}
                 className={`flex-1 py-3.5 rounded-xl items-center border ${
                   selected
-                    ? "bg-[#ff923e]/15 border-[#ff923e]"
-                    : "bg-[#131a2e] border-white/[0.08]"
+                    ? "bg-[#FF7518]/15 border-[#FF7518]"
+                    : "bg-[#1C1C21] border-white/[0.08]"
                 }`}
               >
                 <Text
                   className={`text-sm font-semibold ${
-                    selected ? "text-[#ff923e]" : "text-[#e0e5f9]"
+                    selected ? "text-[#FF7518]" : "text-[#e0e5f9]"
                   }`}
                 >
                   {type}
@@ -329,7 +329,7 @@ export default function DriverSetupScreen() {
           left={<TextInput.Icon icon="car-outline" color="#a5abbd" />}
           textColor="#e0e5f9"
           outlineColor="rgba(255,255,255,0.08)"
-          activeOutlineColor="#ff923e"
+          activeOutlineColor="#FF7518"
           style={inputStyle}
           theme={inputTheme}
         />
@@ -347,7 +347,7 @@ export default function DriverSetupScreen() {
             left={<TextInput.Icon icon="card-text-outline" color="#a5abbd" />}
             textColor="#e0e5f9"
             outlineColor="rgba(255,255,255,0.08)"
-            activeOutlineColor="#ff923e"
+            activeOutlineColor="#FF7518"
             style={inputStyle}
             theme={inputTheme}
           />
@@ -366,7 +366,7 @@ export default function DriverSetupScreen() {
             }
             textColor="#e0e5f9"
             outlineColor="rgba(255,255,255,0.08)"
-            activeOutlineColor="#ff923e"
+            activeOutlineColor="#FF7518"
             style={{ ...inputStyle, marginBottom: 28 }}
             theme={inputTheme}
           />
@@ -385,14 +385,14 @@ export default function DriverSetupScreen() {
                 ].map(({ label, value }) => (
                   <View
                     key={label}
-                    className="w-full py-3.5 rounded-xl items-center bg-[#131a2e] border border-[#ff923e]/35 mb-2.5"
+                    className="w-full py-3.5 rounded-xl items-center bg-[#1C1C21] border border-[#FF7518]/35 mb-2.5"
                   >
                     <Text className="text-[11px] font-semibold text-[#a5abbd] tracking-widest uppercase mb-1">
                       {label}
                     </Text>
                     <Text
                       selectable
-                      className="text-2xl font-bold text-[#ff923e] tracking-widest"
+                      className="text-2xl font-bold text-[#FF7518] tracking-widest"
                     >
                       {value}
                     </Text>
@@ -410,7 +410,7 @@ export default function DriverSetupScreen() {
                   <View
                     className={`w-5 h-5 rounded border mr-3 items-center justify-center ${
                       idsNoted
-                        ? "bg-[#ff923e] border-[#ff923e]"
+                        ? "bg-[#FF7518] border-[#FF7518]"
                         : "border-white/30"
                     }`}
                   >
@@ -426,9 +426,9 @@ export default function DriverSetupScreen() {
             ) : (
               <TouchableOpacity
                 onPress={handleGenerateIds}
-                className="w-full py-3.5 rounded-xl items-center border border-[#ff923e]/35 bg-[#131a2e]"
+                className="w-full py-3.5 rounded-xl items-center border border-[#FF7518]/35 bg-[#1C1C21]"
               >
-                <Text className="text-sm font-semibold text-[#ff923e]">
+                <Text className="text-sm font-semibold text-[#FF7518]">
                   Generate My IDs
                 </Text>
               </TouchableOpacity>
@@ -442,7 +442,7 @@ export default function DriverSetupScreen() {
         <TouchableOpacity
           onPress={handleFinish}
           disabled={saving}
-          className="w-full py-4 rounded-full bg-[#ff923e] items-center mb-6"
+          className="w-full py-4 rounded-full bg-[#FF7518] items-center mb-6"
         >
           {saving ? (
             <ActivityIndicator color="#fff" />
@@ -458,9 +458,9 @@ export default function DriverSetupScreen() {
         {/* Wrong account — swipe back is off on this screen, so this is the way out */}
         <TouchableOpacity
           onPress={handleLogout}
-          className="w-full py-4 rounded-full border border-[#ff923e]/35 items-center"
+          className="w-full py-4 rounded-full border border-[#FF7518]/35 items-center"
         >
-          <Text className="text-base font-semibold text-[#ff923e]">
+          <Text className="text-base font-semibold text-[#FF7518]">
             Not you? Sign Out
           </Text>
         </TouchableOpacity>

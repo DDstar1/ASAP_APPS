@@ -38,7 +38,7 @@ export default function Index() {
       />
       <ActivityIndicator
         size="small"
-        color="#EE7F3A"
+        color="#FF7518"
         style={{ position: "absolute", bottom: 80 }}
       />
     </View>

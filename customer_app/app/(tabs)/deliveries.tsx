@@ -1,15 +1,12 @@
 // app/(tabs)/deliveries.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   RefreshControl,
   SectionList,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
 import IncompleteDeliveryCard from "@/components/IncompleteDeliveryCard";
 import CompletedOrderCards, {
@@ -19,7 +16,6 @@ import CompletedOrderSkeleton from "@/components/ui/skeletons/CompletedOrderSkel
 import CompletedOrdersEmptyState from "@/components/CompletedOrdersEmptyState";
 import { useCustomerDeliveryStore } from "@/store/useCustomerDeliveriesStore";
 import { router } from "expo-router";
-import SelectItemTypeScreen from "@/components/SelectItemTypeScreen";
 import ReviewCard, { PackageReview } from "@/components/ReviewCard";
 import { supabase } from "@/lib/supabase";
 
@@ -41,7 +37,6 @@ const ACTIVE_STATUSES = [
 ];
 
 const OrdersPage = () => {
-  const [ItemTypeVisible, setItemTypeVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { AllDeliveries, loading, fetchAllDeliveries } =
     useCustomerDeliveryStore();
@@ -135,15 +130,6 @@ const OrdersPage = () => {
       {/* ── Header ── */}
       <View className="flex-row items-center justify-between px-5 pt-3 pb-4">
         <Text className="text-[28px] font-extrabold text-white">My Orders</Text>
-
-        <TouchableOpacity
-          onPress={() => router.push("/all_chats")}
-          accessibilityRole="button"
-          accessibilityLabel="Messages"
-          className="w-11 h-11 rounded-full bg-[#3C3C43] items-center justify-center"
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="white" />
-        </TouchableOpacity>
       </View>
 
       {loading && AllDeliveries.length === 0 ? (
@@ -161,7 +147,9 @@ const OrdersPage = () => {
           renderItem={({ item }) => (
             <CompletedOrderCards
               item={item}
-              onRebook={() => setItemTypeVisible(true)}
+              onRebook={() =>
+                router.navigate({ pathname: "/map", params: { rebook: String(item.id) } })
+              }
             />
           )}
           renderSectionHeader={({ section }) => (
@@ -176,8 +164,8 @@ const OrdersPage = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#EE7F3A"
-              colors={["#EE7F3A"]}
+              tintColor="#FF7518"
+              colors={["#FF7518"]}
             />
           }
           contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
@@ -189,27 +177,6 @@ const OrdersPage = () => {
           )}
         />
       )}
-
-      {/* Select Item Modal */}
-      <SelectItemTypeScreen
-        visible={ItemTypeVisible}
-        onClose={() => setItemTypeVisible(false)}
-        onConfirm={async (packageType, description) => {
-          try {
-            router.navigate({
-              pathname: "/map",
-              params: {
-                packageType,
-                packageDescription: description,
-              },
-            });
-          } catch (error) {
-            console.error("Failed to save package type:", error);
-            Alert.alert("Error", "Failed to save package type");
-            router.navigate("/map");
-          }
-        }}
-      />
     </SafeAreaView>
   );
 };

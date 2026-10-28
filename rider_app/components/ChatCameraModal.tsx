@@ -86,13 +86,13 @@ export default function ChatCameraModal({
             </Text>
             <TouchableOpacity
               onPress={requestPermission}
-              className="bg-[#EE7F3A] px-6 py-3 rounded-full"
+              className="bg-[#FF7518] px-6 py-3 rounded-full"
             >
               <Text className="text-white font-semibold">Allow camera</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={pickFromGallery}
-              className="mt-3 px-6 py-3 rounded-full border border-gray-600 flex-row items-center gap-2"
+              className="mt-3 px-6 py-3 rounded-full border border-white/15 flex-row items-center gap-2"
             >
               <Ionicons name="images-outline" size={18} color="white" />
               <Text className="text-white font-semibold">Choose from gallery</Text>
@@ -122,7 +122,7 @@ export default function ChatCameraModal({
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={send}
-                className="h-12 px-6 rounded-full bg-[#EE7F3A] flex-row items-center gap-2"
+                className="h-12 px-6 rounded-full bg-[#FF7518] flex-row items-center gap-2"
               >
                 <Text className="text-white font-semibold">Send</Text>
                 <Ionicons name="send" size={18} color="white" />

@@ -7,7 +7,7 @@ export type GeoPointJson = {
   longitude: number;
 };
 
-// Serde's default encoding for unit enum variants: ASAP → EV, ASAPEXPRESS → Bike
+// Serde's default encoding for unit enum variants: ASAP → Bike, ASAPEXPRESS → EV
 export type RideType = "ASAP" | "ASAPEXPRESS";
 
 // Mirrors Rust's . dimensions are (length, width, height) in cm,
@@ -53,23 +53,45 @@ export type RideQuote = {
 
 // items is empty until the specifications screen fills it; sending it lets
 // Rust price by package type, weight or size later with no app update
+// error is shown on the booking sheet, so a failed quote says why instead of
+// just leaving the prices empty
 export async function getRideQuotes(
   pick_up: GeoPointJson,
   drop_off: GeoPointJson,
   items: ItemDetails[] = [],
-): Promise<RideQuote[]> {
+): Promise<{ quotes: RideQuote[]; error: string | null }> {
   try {
-    return (
+    const quotes =
       (await apiPost<RideQuote[]>("/riders/ride-quote", {
         pick_up,
         drop_off,
         items,
-      })) ?? []
-    );
-  } catch (err) {
+      })) ?? [];
+    return { quotes, error: quotes.length ? null : "No prices came back for this trip." };
+  } catch (err: any) {
     console.error("❌ Error fetching ride quotes:", err);
-    return [];
+    return { quotes: [], error: quoteErrorMessage(err?.message ?? String(err)) };
   }
+}
+
+// API errors arrive as "API <status>: <body>"; a network failure has no status
+function quoteErrorMessage(raw: string): string {
+  const status = Number(raw.match(/^API (\d{3})/)?.[1]);
+  const body = raw.replace(/^API \d{3}: /, "");
+  const reason = (() => {
+    try {
+      return JSON.parse(body)?.error ?? JSON.parse(body)?.message ?? body;
+    } catch {
+      return body;
+    }
+  })();
+  if (!status) {
+    return /Not authenticated/i.test(raw)
+      ? "You're signed out. Sign in again to see prices."
+      : `Couldn't reach the server (${raw}).`;
+  }
+  if (status === 401) return "The server didn't accept your sign-in (401). Sign out and in again.";
+  return `Couldn't get prices (${status}): ${reason}`;
 }
 
 // Mirrors Rust's AreaCheck: allowed says whether the trip is inside one

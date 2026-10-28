@@ -81,18 +81,18 @@ const ActiveDeliveriesEmptyState = ({ width }: Props) => {
       >
         {/* Orange glow halo — animated opacity + scale, must stay in style */}
         <Animated.View
-          className="absolute w-[88px] h-[88px] rounded-full bg-[#ff923e]"
+          className="absolute w-[88px] h-[88px] rounded-full bg-[#FF7518]"
           style={{ opacity: glowOpacity, transform: [{ scale: glowScale }] }}
         />
 
         {/* Dark icon circle — surface-container-highest */}
-        <View className="w-[72px] h-[72px] rounded-full bg-[#1a2235] items-center justify-center z-10">
-          {/* Swap with MY_ICONS.truck("#ff923e", 30) if preferred */}
+        <View className="w-[72px] h-[72px] rounded-full bg-[#2C2C30] items-center justify-center z-10">
+          {/* Swap with MY_ICONS.truck("#FF7518", 30) if preferred */}
           <Text className="text-[30px]">🚚</Text>
         </View>
 
         {/* Live status dot */}
-        <View className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-[#ff923e] border-2 border-[#111827] z-20" />
+        <View className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-[#FF7518] border-2 border-[#111827] z-20" />
       </Animated.View>
 
       {/* ── Copy ── */}
