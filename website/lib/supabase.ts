@@ -85,7 +85,7 @@ export type ItemRow = {
   image_url: string | null
   name: string
   menu_id: number | null
-  price: number
+  price: number // naira, as Zazu shows it on the menu
   stock: number
   // Packed size, sent to riders with the ride request. size_estimated = still
   // the default food-parcel size the database filled in, not the vendor's.
@@ -102,7 +102,7 @@ export type OrderRow = {
   user_id: number | null
   vendor_id: number | null
   status: 'pending' | 'paid' | 'in_progress' | 'delivered' | 'cancelled'
-  subtotal: number
+  subtotal: number // naira
   // Written by Zazu: what was ordered, then the delivery once a rider takes it
   items: OrderItem[] | null
   driver_name: string | null
@@ -119,7 +119,8 @@ export type OrderRow = {
   updated_at: string
 }
 
-// price is per unit, in kobo like the rest of the order
+// price is per unit, in naira like the rest of the order; Zazu converts to
+// kobo only when it calls Paystack
 export type OrderItem = {
   name: string
   quantity: number

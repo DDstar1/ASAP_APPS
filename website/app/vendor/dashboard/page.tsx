@@ -60,12 +60,12 @@ function ChangeLine({ change, vs }: { change: Change; vs: string }) {
   )
 }
 
-function formatNaira(kobo: number) {
-  return '₦' + (kobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })
+function formatNaira(naira: number) {
+  return '₦' + naira.toLocaleString('en-NG', { minimumFractionDigits: 2 })
 }
 
-function compactNaira(kobo: number) {
-  return '₦' + (kobo / 100).toLocaleString('en-NG', { notation: 'compact', maximumFractionDigits: 1 })
+function compactNaira(naira: number) {
+  return '₦' + naira.toLocaleString('en-NG', { notation: 'compact', maximumFractionDigits: 1 })
 }
 
 // Equal slices of the period, oldest first, for the charts

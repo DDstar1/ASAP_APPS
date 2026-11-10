@@ -24,8 +24,8 @@ const SIZE_FIELDS = [
   { key: 'height_cm', label: 'Height', max: 300 },
 ] as const
 
-function formatNaira(kobo: number) {
-  return '₦' + (kobo / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })
+function formatNaira(naira: number) {
+  return '₦' + naira.toLocaleString('en-NG', { minimumFractionDigits: 2 })
 }
 
 export default function ItemsPage() {
@@ -98,7 +98,7 @@ export default function ItemsPage() {
     const payload = {
       vendor_id: vendor!.id,
       name: form.name,
-      price: Math.round(parseFloat(form.price) * 100),
+      price: Math.round(parseFloat(form.price)),
       stock: parseInt(form.stock),
       menu_id: form.menu_id ? parseInt(form.menu_id) : null,
       image_url,
@@ -260,7 +260,7 @@ export default function ItemsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-v-text mb-1.5">Price (₦)</label>
-                  <input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0.00" className={inputClass} />
+                  <input required type="number" min="0" step="1" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-v-text mb-1.5">Stock</label>
